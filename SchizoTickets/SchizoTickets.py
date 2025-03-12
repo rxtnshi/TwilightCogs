@@ -13,5 +13,5 @@ class SchizoTickets(commands.Cog):
 		name = "startsystem",
 		description = "Starts the ticket panel in a channel of your choosing"
 	)
-	async def start_panel(self, ctx):
-		await ctx.send("This works!")
+	async def start_panel(self, interaction: discord.Interaction):
+		await interaction.response.send_message("Hello World!", ephemeral=True)
