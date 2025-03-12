@@ -1,5 +1,6 @@
-from redbot.core import commands
-from discord import app_commands
+import discord
+
+from redbot.core import commands, app_commands
 from datetime import datetime
 
 class SchizoTickets(commands.Cog):
@@ -8,7 +9,7 @@ class SchizoTickets(commands.Cog):
 	def __init__(self, bot):
 		self.bot = bot 
 
-	@tree.command(
+	@app_commands.command(
 		name = "startsystem",
 		description = "Starts the ticket panel in a channel of your choosing"
 	)
