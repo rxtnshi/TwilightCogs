@@ -41,8 +41,8 @@ class SchizoTickets(commands.Cog):
 
 	@commands.hybrid_group(name="setup")
 	@setup.command(name="schizostart", description="Sets up the panel used for the ticket option selection")
-	"""Sets up the panel used for the ticket option selection"""
 	async def start_panel(self, ctx: commands.Context):
+		"""Sets up the panel used for the ticket option selection"""
 		embed = discord.Embed(title="Ghostz's Schizo Zone Support & Reporting",
                       description="So ya need help with something, right? Well you've come to the right place!\n\nHere's what I can help you with:",
                       colour=0x7a2db9,
