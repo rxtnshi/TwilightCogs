@@ -43,6 +43,6 @@ class SchizoTickets(commands.Cog):
 		await ctx.send("Hello World!")
 
 	@commands.command()
-    async def dropdown(self, ctx: commands.Context):
+	async def dropdown(self, ctx: commands.Context):
 		view = MyView()
         await ctx.send("Choose an option:", view=view)
