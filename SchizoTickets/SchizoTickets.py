@@ -18,7 +18,7 @@ class MySelect(discord.ui.Select):
             modal = MyModal(title="Modal 2")
         
         await interaction.response.send_modal(modal)
-        
+
 class MyModal(discord.ui.Modal):
     def __init__(self, title: str):
         super().__init__(title=title)
@@ -44,10 +44,5 @@ class SchizoTickets(commands.Cog):
 
 	@commands.command()
     async def dropdown(self, ctx: commands.Context):
-        """Sends a dropdown menu"""
-        view = MyView()
+		view = MyView()
         await ctx.send("Choose an option:", view=view)
-
-
-
-    
