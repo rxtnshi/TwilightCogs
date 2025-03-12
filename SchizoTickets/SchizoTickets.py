@@ -9,9 +9,6 @@ class SchizoTickets(commands.Cog):
 	def __init__(self, bot):
 		self.bot = bot 
 
-	@app_commands.command(
-		name = "startsystem",
-		description = "Starts the ticket panel in a channel of your choosing"
-	)
+	@commands.hybrid_command(name="schizostart")
 	async def start_panel(self, interaction: discord.Interaction):
 		await interaction.response.send_message("Hello World!", ephemeral=True)
