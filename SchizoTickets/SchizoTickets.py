@@ -10,5 +10,5 @@ class SchizoTickets(commands.Cog):
 		self.bot = bot 
 
 	@commands.hybrid_command(name="schizostart")
-	async def start_panel(self, interaction: discord.Interaction):
-		await interaction.response.send_message("Hello World!", ephemeral=True)
+	async def start_panel(self, ctx: commands.Context):
+		await ctx.send("Hello World!")
