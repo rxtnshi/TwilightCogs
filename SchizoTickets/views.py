@@ -50,6 +50,7 @@ class DiscordHelpModal(discord.ui.Modal):
         await interaction.response.send_message("Help request submitted!", ephemeral=True)
 
 class TicketView(discord.ui.View):
-    def __init__(self):
+    def __init__(self, bot: commands.Bot) -> None:
         super().__init__()
-        self.add_item(TicketDropdown(self.bot))
+        self.add_item(TicketDropdown())
+        self.bot = bot
