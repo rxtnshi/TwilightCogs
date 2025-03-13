@@ -72,7 +72,7 @@ class PlayerReportModal(discord.ui.Modal):
 		overwrites = {
 			guild.default_role: discord.PermissionOverwrite(view_channel=False),
 			user: discord.PermissionOverwrite(view_channel=True, send_messages=True, attach_files=True, embed_links=True),  
-			discord.utils.get(guild.roles, name="Schizo Team"): discord.PermissionOverwrite(view_channel=True, send_messages=True, attach_files=True, embed_links=True)
+			discord.utils.get(guild.roles, name="guh"): discord.PermissionOverwrite(view_channel=True, send_messages=True, attach_files=True, embed_links=True)
 		}
 
 		channel = await guild.create_text_channel(
