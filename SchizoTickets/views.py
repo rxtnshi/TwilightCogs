@@ -134,5 +134,4 @@ class BugReportStatusView(discord.ui.View):
 	def __init__(self, bot: commands.Bot) -> None:
 		super().__init__()
 		self.add_item(BugReportStatuses())
-		self.bot = bot
 
