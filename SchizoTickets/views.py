@@ -25,49 +25,49 @@ class TicketDropdown(discord.ui.Select):
 
 class BugReportModal(discord.ui.Modal):
 	def __init__(self):
-    	super().__init__(title="Bug Report")
-    	self.bug_description = discord.ui.TextInput(label="Describe the bug in a few sentences", required=True, style=discord.TextStyle.short)
-    	self.bug_reproduce = discord.ui.TextInput(label="Reproduction Steps", required=True, style=discord.TextStyle.paragraph)
+		super().__init__(title="Bug Report")
+		self.bug_description = discord.ui.TextInput(label="Describe the bug in a few sentences", required=True, style=discord.TextStyle.short)
+		self.bug_reproduce = discord.ui.TextInput(label="Reproduction Steps", required=True, style=discord.TextStyle.paragraph)
 
 		self.add_item(bug_description)
 		self.add_item(bug_reproduce)
 
 	async def on_submit(self, interaction: discord.Interaction):
-    	bug_reportchannel_id = 1348781470264590499
-    	bug_report_channel = interaction.guild.get_channel(bug_reportchannel_id)
+		bug_reportchannel_id = 1348781470264590499
+		bug_report_channel = interaction.guild.get_channel(bug_reportchannel_id)
 
 
-    	# SEND THE REPORT TO CHANNEL
-    	embed = discord.Embed(
-    		title = "⚠️ New Bug Report submitted",
-    		description = "{interaction.user} submitted a bug report, please check it out!",
-    		color = 0xFF5733,
-    		timestamp=datetime.now()
-    	)
-    	embed.add_field(name="Description of the bug:",
-    		value = self.bug_description
-    	)
-    	embed.add_field(name="Reproduction Steps:",
-    		value = self.bug_reproduce
-    	)
+		# SEND THE REPORT TO CHANNEL
+		embed = discord.Embed(
+			title = "⚠️ New Bug Report submitted",
+			description = "{interaction.user} submitted a bug report, please check it out!",
+			color = 0xFF5733,
+			timestamp=datetime.now()
+		)
+		embed.add_field(name="Description of the bug:",
+			value = self.bug_description
+		)
+		embed.add_field(name="Reproduction Steps:",
+			value = self.bug_reproduce
+		)
 
-    	await bug_report_channel.send(embed=embed)
+		await bug_report_channel.send(embed=embed)
 
-    	# BUG REPORT CHANNEL CHECK
+		# BUG REPORT CHANNEL CHECK
 		if not bug_report_channel:
-    		await interaction.response.send_message("❌ Bug report failed to send. Please contact a developer.", ephemeral=True)
+			await interaction.response.send_message("❌ Bug report failed to send. Please contact a developer.", ephemeral=True)
 
-    	# SEND CONFIRMATION TO USER
-    	await interaction.response.send_message("Bug report submitted!", ephemeral=True)
+		# SEND CONFIRMATION TO USER
+		await interaction.response.send_message("Bug report submitted!", ephemeral=True)
 
 class PlayerReportModal(discord.ui.Modal):
 	def __init__(self):
-    	super().__init__(title="Player Report")
-    	self.add_item(discord.ui.TextInput(label="Player Name", required=True))
-    	self.add_item(discord.ui.TextInput(label="What did they do?", required=True, style=discord.TextStyle.paragraph))
+		super().__init__(title="Player Report")
+		self.add_item(discord.ui.TextInput(label="Player Name", required=True))
+		self.add_item(discord.ui.TextInput(label="What did they do?", required=True, style=discord.TextStyle.paragraph))
 
 	async def on_submit(self, interaction: discord.Interaction):
-    	await interaction.response.send_message("Player report submitted!", ephemeral=True)
+		await interaction.response.send_message("Player report submitted!", ephemeral=True)
 
 class DiscordHelpModal(discord.ui.Modal):
 	def __init__(self):
@@ -80,6 +80,6 @@ class DiscordHelpModal(discord.ui.Modal):
 
 class TicketView(discord.ui.View):
 	def __init__(self, bot: commands.Bot) -> None:
-    	super().__init__()
-    	self.add_item(TicketDropdown())
-    	self.bot = bot
+		super().__init__()
+		self.add_item(TicketDropdown())
+		self.bot = bot
