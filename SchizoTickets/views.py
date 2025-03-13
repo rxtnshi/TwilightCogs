@@ -7,52 +7,37 @@ from discord.ext import commands
 # MODALS
 #######
 class BugReportModal(discord.ui.Modal):
-	def __init__(self):
-		super().__init__(title="Bug Report")
-		self.bug_description = discord.ui.TextInput(label="Describe the bug in a few sentences", required=True, style=discord.TextStyle.short)
-		self.bug_reproduce = discord.ui.TextInput(label="Reproduction Steps", required=True, style=discord.TextStyle.paragraph)
-		self.add_item(self.bug_description)
-		self.add_item(self.bug_reproduce)
+    def __init__(self):
+        super().__init__(title="Bug Report")
+        self.bug_description = discord.ui.TextInput(label="Describe the bug in a few sentences", required=True, style=discord.TextStyle.short)
+        self.bug_reproduce = discord.ui.TextInput(label="Reproduction Steps", required=True, style=discord.TextStyle.paragraph)
+        self.add_item(self.bug_description)
+        self.add_item(self.bug_reproduce)
 
-	def set_bot(self, bot: commands.Bot) -> None:
-		self.bot = bot
+    async def on_submit(self, interaction: discord.Interaction):
+        bug_reportchannel_id = 1348781470264590499
+        bug_report_channel = interaction.guild.get_channel(bug_reportchannel_id)
 
-	async def on_submit(self, interaction: discord.Interaction):
-		bug_reportchannel_id = 1348781470264590499
-		bug_report_channel = interaction.guild.get_channel(bug_reportchannel_id)
+        if not bug_report_channel:
+            return await interaction.response.send_message("❌ Bug report failed to send. Please contact a developer.", ephemeral=True)
 
-		# SEND THE REPORT TO CHANNEL
-		embed = discord.Embed(
-			title = "⚠️ New Bug Report Submitted",
-			description = f"{interaction.user.mention} submitted a bug report, please check it out!",
-			color = 0xFF5733,
-			timestamp=datetime.now()
-		)
-		embed.add_field(name="Status", value="🔴 Untested", inline=False)
-		embed.add_field(name="Description of the bug:",
-			value = self.bug_description.value,
-			inline=False
-		)
-		embed.add_field(name="Reproduction Steps:",
-			value = self.bug_reproduce.value,
-			inline=False
-		)
-		embed.add_field(name="Status last changed by",
-			value = "NOBODY",
-			inline=False
-		)
+        embed = discord.Embed(
+            title="⚠️ New Bug Report Submitted",
+            description=f"{interaction.user.mention} submitted a bug report, please check it out!",
+            color=0xFF5733,
+            timestamp=datetime.now()
+        )
+        embed.add_field(name="Status", value="🔴 Untested", inline=False)
+        embed.add_field(name="Description of the bug:", value=self.bug_description.value, inline=False)
+        embed.add_field(name="Reproduction Steps:", value=self.bug_reproduce.value, inline=False)
+        embed.add_field(name="Status last changed by", value="NOBODY", inline=False)
 
-		await bug_report_channel.send(embed=embed, view=BugReportStatusView())
+        await bug_report_channel.send(embed=embed, view=BugReportStatusView())
+        await interaction.response.send_message("✅ Bug report submitted!", ephemeral=True)
 
-		# BUG REPORT CHANNEL CHECK
-		if not bug_report_channel:
-			await interaction.response.send_message("❌ Bug report failed to send. Please contact a developer.", ephemeral=True)
+        # ✅ Reopen a fresh modal after submission
+        await interaction.followup.send_modal(BugReportModal())  
 
-		# SEND CONFIRMATION TO USER
-		message = interaction.message
-		embed = message.embeds[0]
-		await message.edit(view=BugReportModal())
-		await interaction.response.send_message("Bug report submitted!", ephemeral=True)
 
 class DiscordHelpModal(discord.ui.Modal):
 	def __init__(self):
