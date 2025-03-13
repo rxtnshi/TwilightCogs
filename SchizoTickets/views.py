@@ -81,7 +81,7 @@ class PlayerReportModal(discord.ui.Modal):
 	try:
 		channel = await interaction.guild.create_text_channel(name=ticket_channel_name, category=ticket_category, overwrites=overwrites, reason=f"Player Report Ticket for {interaction.user}")
 	except:
-		return await interaction.response.send_message("Ticket failed to create. If this persists, please contact a staff member.", ephemeral=True)
+		await interaction.response.send_message("Ticket failed to create. If this persists, please contact a staff member.", ephemeral=True)
 
 
 
