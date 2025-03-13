@@ -9,16 +9,15 @@ from discord.ext import commands
 #######
 
 class BugReportModal(discord.ui.Modal):
-	def __init__(self):
+	def __init__(self, bot: commands.Bot):
 		super().__init__(title="Bug Report")
+		
+		self.bot = bot
 		self.bug_description = discord.ui.TextInput(label="Describe the bug in a few sentences", required=True, style=discord.TextStyle.short)
 		self.bug_reproduce = discord.ui.TextInput(label="Reproduction Steps", required=True, style=discord.TextStyle.paragraph)
 		self.add_item(self.bug_description)
 		self.add_item(self.bug_reproduce)
-
-	def set_bot(self, bot: commands.Bot) -> None:
-		self.bot = bot
-
+		
 	async def on_submit(self, interaction: discord.Interaction):
 		bug_reportchannel_id = 1348781470264590499
 		bug_report_channel = interaction.guild.get_channel(bug_reportchannel_id)
