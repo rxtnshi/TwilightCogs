@@ -36,7 +36,6 @@ class BugReportModal(discord.ui.Modal):
 		bug_reportchannel_id = 1348781470264590499
 		bug_report_channel = interaction.guild.get_channel(bug_reportchannel_id)
 
-
 		# SEND THE REPORT TO CHANNEL
 		embed = discord.Embed(
 			title = "⚠️ New Bug Report submitted",
@@ -45,10 +44,10 @@ class BugReportModal(discord.ui.Modal):
 			timestamp=datetime.now()
 		)
 		embed.add_field(name="Description of the bug:",
-			value = self.bug_description
+			value = self.bug_description.value
 		)
 		embed.add_field(name="Reproduction Steps:",
-			value = self.bug_reproduce
+			value = self.bug_reproduce.value
 		)
 
 		await bug_report_channel.send(embed=embed)
