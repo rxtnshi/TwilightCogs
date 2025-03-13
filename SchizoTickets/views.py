@@ -29,8 +29,8 @@ class BugReportModal(discord.ui.Modal):
 		self.bug_description = discord.ui.TextInput(label="Describe the bug in a few sentences", required=True, style=discord.TextStyle.short)
 		self.bug_reproduce = discord.ui.TextInput(label="Reproduction Steps", required=True, style=discord.TextStyle.paragraph)
 
-		self.add_item(bug_description)
-		self.add_item(bug_reproduce)
+		self.add_item(self.bug_description)
+		self.add_item(self.bug_reproduce)
 
 	async def on_submit(self, interaction: discord.Interaction):
 		bug_reportchannel_id = 1348781470264590499
