@@ -3,10 +3,6 @@ from datetime import datetime
 from discord import app_commands, utils
 from discord.ext import commands
 
-
-ticket_category_name = "Support & Reporting"
-ticket_category = discord.utils.get(guild.categories, name=ticket_category_name)
-
 #######
 # MODALS
 #######
@@ -80,7 +76,7 @@ class PlayerReportModal(discord.ui.Modal):
 		}
 
 		channel = await guild.create_text_channel(
-			name = f"{interaction.user.name.lower()}",
+			name = f"{interaction.user.name.lower()}-player-report",
 			category=category,
 			overwrites=overwrites
 		)
