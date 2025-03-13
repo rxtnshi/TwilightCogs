@@ -15,7 +15,6 @@ class BugReportModal(discord.ui.Modal):
 		self.bug_reproduce = discord.ui.TextInput(label="Reproduction Steps", required=True, style=discord.TextStyle.paragraph)
 		self.add_item(self.bug_description)
 		self.add_item(self.bug_reproduce)
-		self.modal_active = True;
 
 	def set_bot(self, bot: commands.Bot) -> None:
 		self.bot = bot
@@ -23,6 +22,8 @@ class BugReportModal(discord.ui.Modal):
 	async def on_submit(self, interaction: discord.Interaction):
 		bug_reportchannel_id = 1348781470264590499
 		bug_report_channel = interaction.guild.get_channel(bug_reportchannel_id)
+
+		modal_active = False;
 
 		# SEND THE REPORT TO CHANNEL
 		if modal_active == True:
