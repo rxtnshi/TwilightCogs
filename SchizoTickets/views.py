@@ -54,57 +54,51 @@ class DiscordHelpModal(discord.ui.Modal):
 		self.discord_request = discord.ui.TextInput(label="Describe the issue", required=True, style=discord.TextStyle.paragraph)
 		self.add_item(discord_report_name)
 		self.add_item(discord_request)
-	
-	modal_active = False
 
-	if modal_active == False:
-		async def bot_inactive(self, interaction: discord.Interaction):
-			await interaction.response.send_message("Sorry, this feature is not active. Please try again later.", ephemeral=True)
-	else:
-		async def on_submit(self, interaction: discord.Interaction):
-			guild = interaction.guild
-			user = interaction.user
+	async def on_submit(self, interaction: discord.Interaction):
+		guild = interaction.guild
+		user = interaction.user
 
-			ticket_category_name = "Support"
+		ticket_category_name = "Support"
 
-			category = discord.utils.get(guild.categories, name=ticket_category_name)
-			if category is None:
-				await interaction.response.send_message("Sorry, I had trouble opening a ticket inside an non-existent category")
+		category = discord.utils.get(guild.categories, name=ticket_category_name)
+		if category is None:
+			await interaction.response.send_message("Sorry, I had trouble opening a ticket inside an non-existent category")
 
-			existing_channel = discord.utils.get(guild.text_channels, name=f"{interaction.user}-discord-report")
-			if existing_channel:
-				await interaction.response.send_message("Sorry, you already have an open ticket.")
+		existing_channel = discord.utils.get(guild.text_channels, name=f"{interaction.user}-discord-report")
+		if existing_channel:
+			await interaction.response.send_message("Sorry, you already have an open ticket.")
 
-			overwrites = {
-				guild.default_role: discord.PermissionOverwrite(view_channel=False),
-				user: discord.PermissionOverwrite(view_channel=True, send_messages=True, attach_files=True, embed_links=True),  
-				discord.utils.get(guild.roles, name="guh"): discord.PermissionOverwrite(view_channel=True, send_messages=True, attach_files=True, embed_links=True)
-			}
+		overwrites = {
+			guild.default_role: discord.PermissionOverwrite(view_channel=False),
+			user: discord.PermissionOverwrite(view_channel=True, send_messages=True, attach_files=True, embed_links=True),  
+			discord.utils.get(guild.roles, name="guh"): discord.PermissionOverwrite(view_channel=True, send_messages=True, attach_files=True, embed_links=True)
+		}
 
-			channel = await guild.create_text_channel(
-				name = f"{interaction.user}-discord-report",
-				category=category,
-				overwrites=overwrites
-			)
+		channel = await guild.create_text_channel(
+			name = f"{interaction.user}-discord-report",
+			category=category,
+			overwrites=overwrites
+		)
 
-			await interaction.response.send_message("✅ Discord report submitted! You can access your ticket at {channel.mention}", ephemeral=True)
+		await interaction.response.send_message("✅ Discord report submitted! You can access your ticket at {channel.mention}", ephemeral=True)
 
-			embed = discord.Embed(
-				title = "⚠️ New Player Report submitted",
-				description = f"{interaction.user.mention} submitted a player report, please check it out!",
-				color = 0xFF5733,
-				timestamp=datetime.now()
-			)
-			embed.add_field(name="Description of the rule violation:",
-				value = self.report_reason.value,
-				inline=False
-			)
-			embed.add_field(name="Who broke it:",
-				value = self.player_name.value,
-				inline=False
-			)
+		embed = discord.Embed(
+			title = "⚠️ New Player Report submitted",
+			description = f"{interaction.user.mention} submitted a player report, please check it out!",
+			color = 0xFF5733,
+			timestamp=datetime.now()
+		)
+		embed.add_field(name="Description of the rule violation:",
+			value = self.report_reason.value,
+			inline=False
+		)
+		embed.add_field(name="Who broke it:",
+			value = self.player_name.value,
+			inline=False
+		)
 
-			await channel.send(embed=embed)
+		await channel.send(embed=embed)
 
 #######
 # DROPDOWNS
@@ -122,8 +116,8 @@ class TicketDropdown(discord.ui.Select):
 		"""Handles the dropdown selection."""
 		if self.values[0] == "🛠️ Bug Report":
 			modal = BugReportModal()
-		elif self.values[0] == "⚠️ Discord Help":
-			modal = DiscordHelpModal()
+		#elif self.values[0] == "⚠️ Discord Help":
+		#	modal = DiscordHelpModal()
 
 		await interaction.response.send_modal(modal)
 
