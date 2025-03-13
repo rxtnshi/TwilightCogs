@@ -65,7 +65,7 @@ class PlayerReportModal(discord.ui.Modal):
 		if category is None:
 			await interaction.response.send_message("Sorry, I had trouble opening a ticket inside an non-existent category")
 
-		existing_channel = discord.utils.get(guild.text_channels, name=f"{interaction.user.lower()}-player-report")
+		existing_channel = discord.utils.get(guild.text_channels, name=f"{interaction.user}-player-report")
 		if existing_channel:
 			await interaction.response.send_message("Sorry, you already have an open ticket.")
 
@@ -76,7 +76,7 @@ class PlayerReportModal(discord.ui.Modal):
 		}
 
 		channel = await guild.create_text_channel(
-			name = f"{interaction.user.name.lower()}-player-report",
+			name = f"{interaction.user}-player-report",
 			category=category,
 			overwrites=overwrites
 		)
