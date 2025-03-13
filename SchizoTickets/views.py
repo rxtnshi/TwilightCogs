@@ -21,7 +21,7 @@ class TicketDropdown(discord.ui.Select):
 		elif self.values[0] == "⚠️ Discord Help":
 			modal = DiscordHelpModal()
 
-        await interaction.response.send_modal(modal)
+		await interaction.response.send_modal(modal)
 
 class BugReportModal(discord.ui.Modal):
 	def __init__(self):
@@ -63,8 +63,8 @@ class BugReportModal(discord.ui.Modal):
 class PlayerReportModal(discord.ui.Modal):
 	def __init__(self):
     	super().__init__(title="Player Report")
-        self.add_item(discord.ui.TextInput(label="Player Name", required=True))
-        self.add_item(discord.ui.TextInput(label="What did they do?", required=True, style=discord.TextStyle.paragraph))
+    	self.add_item(discord.ui.TextInput(label="Player Name", required=True))
+    	self.add_item(discord.ui.TextInput(label="What did they do?", required=True, style=discord.TextStyle.paragraph))
 
 	async def on_submit(self, interaction: discord.Interaction):
     	await interaction.response.send_message("Player report submitted!", ephemeral=True)
