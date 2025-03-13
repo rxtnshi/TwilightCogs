@@ -51,7 +51,7 @@ class BugReportModal(discord.ui.Modal):
 			value = self.bug_reproduce.value
 		)
 
-		await bug_report_channel.send(embed=embed)
+		await bug_report_channel.send(embed=embed, view=BugReportStatusView())
 
 		# BUG REPORT CHANNEL CHECK
 		if not bug_report_channel:
@@ -83,7 +83,7 @@ class BugReportStatuses(discord.ui.Select):
 		embed = message.embeds[0]
 
 		new_status = self.values[0]
-		embed.set_field_at(0, name="📌 Status", value=new_status)
+		embed.set_field_at(0, name="⏳ Status", value=new_status)
 
 		await message.edit(embed=embed)
 
