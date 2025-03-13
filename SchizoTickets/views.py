@@ -46,6 +46,7 @@ class BugReportModal(discord.ui.Modal):
 
 		# SEND CONFIRMATION TO USER
 		await interaction.response.send_message("Bug report submitted!", ephemeral=True)
+		await interaction.followup.send_modal(BugReportModal())
 
 class DiscordHelpModal(discord.ui.Modal):
 	def __init__(self):
