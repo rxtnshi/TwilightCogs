@@ -70,7 +70,7 @@ class PlayerReportModal(discord.ui.Modal):
 	ticket = utils.get(ticket_category.text_channels, name=ticket_channel_name)
 
 	if ticket is not None:
-		return await interaction.response.send_message(f"You already have an open ticket at {ticket.mention}.", ephemeral=True)
+		await interaction.response.send_message(f"You already have an open ticket at {ticket.mention}.", ephemeral=True)
 
 	overwrite = {
 		interaction.guild.default_role: discord.PermissionOverwrite(view_channel=False),
