@@ -71,6 +71,7 @@ class PlayerReportModal(discord.ui.Modal):
 
 	if ticket is not None:
 		await interaction.response.send_message(f"You already have an open ticket at {ticket.mention}.", ephemeral=True)
+		return
 
 	overwrite = {
 		interaction.guild.default_role: discord.PermissionOverwrite(view_channel=False),
@@ -82,6 +83,7 @@ class PlayerReportModal(discord.ui.Modal):
 		channel = await interaction.guild.create_text_channel(name=ticket_channel_name, category=ticket_category, overwrites=overwrites, reason=f"Player Report Ticket for {interaction.user}")
 	except:
 		await interaction.response.send_message("Ticket failed to create. If this persists, please contact a staff member.", ephemeral=True)
+		return
 
 
 
