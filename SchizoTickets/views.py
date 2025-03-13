@@ -30,7 +30,7 @@ class BugReportModal(discord.ui.Modal):
 			color = 0xFF5733,
 			timestamp=datetime.now()
 		)
-		embed.add_field(name="⏳ Status", value="🔴 Untested", inline=False)
+		embed.add_field(name="Status", value="🔴 Untested", inline=False)
 		embed.add_field(name="Description of the bug:",
 			value = self.bug_description.value,
 			inline=False
