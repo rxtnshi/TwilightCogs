@@ -11,7 +11,7 @@ class SchizoTickets(commands.Cog):
 		self.bot = bot
 
 	@commands.hybrid_command(name="schizostart", description="Sets up the panel used for the ticket option selection")
-	@commands.has_role(1341958721793691669)
+	@commands.has_role("The Planner")
 	@commands.guild_only()
 	async def start_panel(self, ctx: commands.Context):
 		"""Sets up the panel used for the ticket option selection"""
