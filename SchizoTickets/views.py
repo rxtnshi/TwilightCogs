@@ -51,7 +51,7 @@ class BugReportModal(discord.ui.Modal):
 			value = self.bug_reproduce.value
 		)
 
-		await bug_report_channel.send(embed=embed, view=BugReportStatusView(self.bot))
+		await bug_report_channel.send(embed=embed, view=BugReportStatusView())
 
 		# BUG REPORT CHANNEL CHECK
 		if not bug_report_channel:
