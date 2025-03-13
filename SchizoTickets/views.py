@@ -1,4 +1,4 @@
-import discord, os, config
+import discord, os
 from datetime import datetime
 from discord import app_commands, utils
 from discord.ext import commands
