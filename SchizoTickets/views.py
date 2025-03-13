@@ -49,6 +49,9 @@ class BugReportModal(discord.ui.Modal):
 			await interaction.response.send_message("❌ Bug report failed to send. Please contact a developer.", ephemeral=True)
 
 		# SEND CONFIRMATION TO USER
+		message = interaction.message
+		embed = message.embeds[0]
+		await message.edit(view=BugReportModal())
 		await interaction.response.send_message("Bug report submitted!", ephemeral=True)
 
 class DiscordHelpModal(discord.ui.Modal):
@@ -154,7 +157,7 @@ class BugReportStatuses(discord.ui.Select):
 		await message.edit(embed=embed)
 
 		# SENDS CONFIRMATION OF CHANGE
-		await interaction.response.send_message(f"☑️ Succssfully changed the status to: {new_status}", ephemeral=True)
+		await interaction.response.send_message(f"Succssfully changed the status to: {new_status}", ephemeral=True)
 
 
 #######
