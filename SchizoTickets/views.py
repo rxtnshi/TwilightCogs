@@ -60,31 +60,49 @@ class PlayerReportModal(discord.ui.Modal):
 		self.add_item(self.report_reason)
 
 	async def on_submit(self, interaction: discord.Interaction):
-		await interaction.response.send_message("Player report submitted!", ephemeral=True)
+		guild = interaction.guild
+		user = interaction.super
 
-		## CREATES TICKET CHANNEL
-		global ticket_category
-		global ticket_category_name
+		ticket_category_name = "Support"
 
-		ticket_channel_name = f"{interaction.user.name.lower().replace(' ', '-')}-player-report"
-		ticket = utils.get(ticket_category.text_channels, name=ticket_channel_name)
+		category = discord.utils.get(guild.categories, name=ticket_category_name)
+		if category is None:
+			await interaction.response.send_message("Sorry, I had trouble opening a ticket inside an non-existent category")
 
-		if ticket is not None:
-			await interaction.response.send_message(f"You already have an open ticket at {ticket.mention}.", ephemeral=True)
-			return
+		existing_channel = discord.utils.get(guild.text_channels, name=f"{interaction.user.lower()}-player-report")
+		if existing_channel:
+			await interaction.response.send_message("Sorry, you already have an open ticket.")
 
-		overwrite = {
-			interaction.guild.default_role: discord.PermissionOverwrite(view_channel=False),
-			interaction.user: discord.PermissionOverwrite(view_channel=True, read_message_history=True, send_messages=True, attach_files=True, embed_links=True),
-			interaction.guild.me: discord.PermissionOverwrite(view_channel=True, send_messages=True, read_message_history=True),
+		overwrites = {
+			guild.default_role: discord.PermissionOverwrite(view_channel=False),
+			user: discord.PermissionOverwrite(view_channel=True, send_messages=True, attach_files=True, embed_links=True),  
+			discord.utils.get(guild.roles, name="Schizo Team"): discord.PermissionOverwrite(view_channel=True, send_messages=True, attach_files=True, embed_links=True)
 		}
 
-		try:
-			channel = await interaction.guild.create_text_channel(name=ticket_channel_name, category=ticket_category, overwrites=overwrites, reason=f"Player Report Ticket for {interaction.user}")
-		except:
-			await interaction.response.send_message("Ticket failed to create. If this persists, please contact a staff member.", ephemeral=True)
-			return
+		channel = await guild.create_text_channel(
+			name = f"{interaction.user.name.lower()}",
+			category=category,
+			overwrites=overwrites
+		)
 
+		await interaction.response.send_message("Player report submitted!", ephemeral=True)
+
+		embed = discord.Embed(
+			title = "⚠️ New Player Report submitted",
+			description = f"{interaction.user.mention} submitted a player report, please check it out!",
+			color = 0xFF5733,
+			timestamp=datetime.now()
+		)
+		embed.add_field(name="Description of the rule violation:",
+			value = self.report_reason.value,
+			inline=False
+		)
+		embed.add_field(name="Who broke it:",
+			value = self.player_name.value,
+			inline=False
+		)
+
+		await channel.send(embed=embed)
 
 class DiscordHelpModal(discord.ui.Modal):
 	def __init__(self):
