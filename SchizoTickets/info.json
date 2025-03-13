@@ -1,0 +1,8 @@
+{
+    "author": ["rxtnshi/Insurgent"],
+    "install_msg" : "SchizoTickets has been successfully installed! Please reach out to the bot owner if you need support.",
+    "name" : "SchizoTickets",
+    "short" : "The most schizo a ticket system can be!",
+    "description" : "yes",
+    "end_user_data_statement": "This cog persistently stores identifiable information such as an Account's User ID and/or message history of previous tickets."
+}
