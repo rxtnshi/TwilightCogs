@@ -39,7 +39,7 @@ class BugReportModal(discord.ui.Modal):
 		# SEND THE REPORT TO CHANNEL
 		embed = discord.Embed(
 			title = "⚠️ New Bug Report submitted",
-			description = "{interaction.user} submitted a bug report, please check it out!",
+			description = f"{interaction.user} submitted a bug report, please check it out!",
 			color = 0xFF5733,
 			timestamp=datetime.now()
 		)
