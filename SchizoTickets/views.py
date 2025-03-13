@@ -30,12 +30,14 @@ class BugReportModal(discord.ui.Modal):
 			color = 0xFF5733,
 			timestamp=datetime.now()
 		)
-		embed.add_field(name="⏳ Status", value="🔴 Untested")
+		embed.add_field(name="⏳ Status", value="🔴 Untested", inline=False)
 		embed.add_field(name="Description of the bug:",
-			value = self.bug_description.value
+			value = self.bug_description.value,
+			inline=False
 		)
 		embed.add_field(name="Reproduction Steps:",
-			value = self.bug_reproduce.value
+			value = self.bug_reproduce.value,
+			inline=False
 		)
 
 		await bug_report_channel.send(embed=embed, view=BugReportStatusView())
@@ -113,7 +115,7 @@ class BugReportStatuses(discord.ui.Select):
 		embed = message.embeds[0]
 
 		new_status = self.values[0]
-		embed.set_field_at(0, name="⏳ Status", value=new_status)
+		embed.set_field_at(0, name="Status", value=new_status, inline=True)
 
 		await message.edit(embed=embed)
 
