@@ -27,7 +27,7 @@ class BugReportModal(discord.ui.Modal):
 	def __init__(self):
 		super().__init__(title="Bug Report")
 		self.bot = bot
-		
+
 		self.bug_description = discord.ui.TextInput(label="Describe the bug in a few sentences", required=True, style=discord.TextStyle.short)
 		self.bug_reproduce = discord.ui.TextInput(label="Reproduction Steps", required=True, style=discord.TextStyle.paragraph)
 		self.add_item(self.bug_description)
@@ -120,3 +120,4 @@ class BugReportStatusView(discord.ui.View):
 	def __init__(self, bot: commands.Bot) -> None:
 		super().__init__()
 		self.add_item(BugReportStatuses())
+		self.bot = bot
