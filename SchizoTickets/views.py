@@ -61,7 +61,7 @@ class BugReportModal(discord.ui.Modal):
 		await interaction.response.send_message("Bug report submitted!", ephemeral=True)
 
 class BugReportStatuses(discord.ui.Select):
-	def __init__(self):
+	def __init__(self, bot):
 		options = [
 			discord.SelectOption(label="🔴 Untested"),
 			discord.SelectOption(label="🟠 Confirmed"),
