@@ -49,7 +49,8 @@ class BugReportModal(discord.ui.Modal):
 
 class DiscordHelpModal(discord.ui.Modal):
 	modal_active = False
-	if modal_active not True:
+
+	if modal_active == False:
 		await interaction.response.send_message("Sorry, this feature is not active. Please try again later.", ephemeral=True)
 	else:
 		def __init__(self):
