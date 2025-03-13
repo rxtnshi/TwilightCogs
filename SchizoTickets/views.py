@@ -57,7 +57,7 @@ class PlayerReportModal(discord.ui.Modal):
 
 	async def on_submit(self, interaction: discord.Interaction):
 		guild = interaction.guild
-		user = interaction.super
+		user = interaction.user
 
 		ticket_category_name = "Support"
 
