@@ -15,6 +15,7 @@ class BugReportModal(discord.ui.Modal):
 		self.bug_reproduce = discord.ui.TextInput(label="Reproduction Steps", required=True, style=discord.TextStyle.paragraph)
 		self.add_item(self.bug_description)
 		self.add_item(self.bug_reproduce)
+		self.modal_active = True;
 
 	def set_bot(self, bot: commands.Bot) -> None:
 		self.bot = bot
