@@ -26,10 +26,13 @@ class TicketDropdown(discord.ui.Select):
 class BugReportModal(discord.ui.Modal):
 	def __init__(self):
 		super().__init__(title="Bug Report")
+		self.bot = bot
+		
 		self.bug_description = discord.ui.TextInput(label="Describe the bug in a few sentences", required=True, style=discord.TextStyle.short)
 		self.bug_reproduce = discord.ui.TextInput(label="Reproduction Steps", required=True, style=discord.TextStyle.paragraph)
 		self.add_item(self.bug_description)
 		self.add_item(self.bug_reproduce)
+
 
 	async def on_submit(self, interaction: discord.Interaction):
 		bug_reportchannel_id = 1348781470264590499
@@ -50,7 +53,7 @@ class BugReportModal(discord.ui.Modal):
 			value = self.bug_reproduce.value
 		)
 
-		await bug_report_channel.send(embed=embed, view=BugReportStatusView())
+		await bug_report_channel.send(embed=embed, view=BugReportStatusView(self.bot))
 
 		# BUG REPORT CHANNEL CHECK
 		if not bug_report_channel:
