@@ -46,7 +46,6 @@ class BugReportModal(discord.ui.Modal):
 
 		# SEND CONFIRMATION TO USER
 		await interaction.response.send_message("Bug report submitted!", ephemeral=True)
-		await interaction.followup.send_modal(BugReportModal())
 
 class DiscordHelpModal(discord.ui.Modal):
 	def __init__(self):
@@ -121,6 +120,7 @@ class TicketDropdown(discord.ui.Select):
 		#	modal = DiscordHelpModal()
 
 		await interaction.response.send_modal(modal)
+		await interaction.followup.send_modal(modal)
 
 class BugReportStatuses(discord.ui.Select):
 	def __init__(self):
@@ -150,7 +150,7 @@ class BugReportStatuses(discord.ui.Select):
 		await message.edit(embed=embed)
 
 		# SENDS CONFIRMATION OF CHANGE
-		await interaction.response.send_message(f"☑️ The status has been successfully changed to: {new_status}", ephemeral=True)
+		await interaction.response.send_message(f"☑️ {interaction.user.mention} changed the to: {new_status}", ephemeral=False)
 
 
 #######
