@@ -28,7 +28,6 @@ class BugReportModal(discord.ui.Modal):
 		super().__init__(title="Bug Report")
 		self.bug_description = discord.ui.TextInput(label="Describe the bug in a few sentences", required=True, style=discord.TextStyle.short)
 		self.bug_reproduce = discord.ui.TextInput(label="Reproduction Steps", required=True, style=discord.TextStyle.paragraph)
-
 		self.add_item(self.bug_description)
 		self.add_item(self.bug_reproduce)
 
@@ -51,7 +50,7 @@ class BugReportModal(discord.ui.Modal):
 			value = self.bug_reproduce.value
 		)
 
-		await bug_report_channel.send(embed=embed, view=BugReportStatusView(self.bot))
+		await bug_report_channel.send(embed=embed, view=BugReportStatusView())
 
 		# BUG REPORT CHANNEL CHECK
 		if not bug_report_channel:
@@ -118,4 +117,3 @@ class BugReportStatusView(discord.ui.View):
 	def __init__(self, bot: commands.Bot) -> None:
 		super().__init__()
 		self.add_item(BugReportStatuses())
-		self.bot = bot
