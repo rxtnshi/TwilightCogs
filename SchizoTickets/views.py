@@ -18,8 +18,7 @@ class BugReportModal(discord.ui.Modal):
 		self.bot = bot
 
 	async def on_submit(self, interaction: discord.Interaction):
-		bug_reportchannel_id = 1348781470264590499
-		bug_report_channel = interaction.guild.get_channel(bug_reportchannel_id)
+		bug_report_channel = interaction.guild.get_channel("bug-reports")
 
 		# SEND THE REPORT TO CHANNEL
 		embed = discord.Embed(
