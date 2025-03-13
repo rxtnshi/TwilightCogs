@@ -4,10 +4,12 @@ from discord import app_commands, utils
 from discord.ext import commands
 
 
+ticket_category_name = "Support & Reporting"
+ticket_category = utils.get(interaction.guild.categories, name=ticket_category_name)
+
 #######
 # MODALS
 #######
-
 class BugReportModal(discord.ui.Modal):
 	def __init__(self):
 		super().__init__(title="Bug Report")
@@ -23,29 +25,24 @@ class BugReportModal(discord.ui.Modal):
 		bug_reportchannel_id = 1348781470264590499
 		bug_report_channel = interaction.guild.get_channel(bug_reportchannel_id)
 
-		modal_active = False;
-
 		# SEND THE REPORT TO CHANNEL
-		if modal_active == True:
-			embed = discord.Embed(
-				title = "⚠️ New Bug Report submitted",
-				description = f"{interaction.user.mention} submitted a bug report, please check it out!",
-				color = 0xFF5733,
-				timestamp=datetime.now()
-			)
-			embed.add_field(name="Status", value="🔴 Untested", inline=False)
-			embed.add_field(name="Description of the bug:",
-				value = self.bug_description.value,
-				inline=False
-			)
-			embed.add_field(name="Reproduction Steps:",
-				value = self.bug_reproduce.value,
-				inline=False
-			)
+		embed = discord.Embed(
+			title = "⚠️ New Bug Report submitted",
+			description = f"{interaction.user.mention} submitted a bug report, please check it out!",
+			color = 0xFF5733,
+			timestamp=datetime.now()
+		)
+		embed.add_field(name="Status", value="🔴 Untested", inline=False)
+		embed.add_field(name="Description of the bug:",
+			value = self.bug_description.value,
+			inline=False
+		)
+		embed.add_field(name="Reproduction Steps:",
+			value = self.bug_reproduce.value,
+			inline=False
+		)
 
-			await bug_report_channel.send(embed=embed, view=BugReportStatusView())
-		else:
-			await interaction.response.send_message("❌ This system is inactive. Please try again later.", ephemeral=True)
+		await bug_report_channel.send(embed=embed, view=BugReportStatusView())
 
 		# BUG REPORT CHANNEL CHECK
 		if not bug_report_channel:
@@ -57,11 +54,36 @@ class BugReportModal(discord.ui.Modal):
 class PlayerReportModal(discord.ui.Modal):
 	def __init__(self):
 		super().__init__(title="Player Report")
-		self.add_item(discord.ui.TextInput(label="Player Name", required=True))
-		self.add_item(discord.ui.TextInput(label="What did they do?", required=True, style=discord.TextStyle.paragraph))
+		self.player_name = discord.ui.TextInput(label="Player Name", required=True)
+		self.report_reason = discord.ui.TextInput(label="What did they do?", required=True, style=discord.TextStyle.paragraph)
+		self.add_item(self.player_name)
+		self.add_item(self.report_reason)
 
 	async def on_submit(self, interaction: discord.Interaction):
 		await interaction.response.send_message("Player report submitted!", ephemeral=True)
+
+	## CREATES TICKET CHANNEL
+	global ticket_category
+	global ticket_category_name
+
+	ticket_channel_name = f"{interaction.user.name.lower().replace(' ', '-')}-player-report"
+	ticket = utils.get(ticket_category.text_channels, name=ticket_channel_name)
+
+	if ticket is not None:
+		return await interaction.response.send_message(f"You already have an open ticket at {ticket.mention}.", ephemeral=True)
+
+	overwrite = {
+		interaction.guild.default_role: discord.PermissionOverwrite(view_channel=False),
+		interaction.user: discord.PermissionOverwrite(view_channel=True, read_message_history=True, send_messages=True, attach_files=True, embed_links=True),
+		interaction.guild.me: discord.PermissionOverwrite(view_channel=True, send_messages=True, read_message_history=True),
+	}
+
+	try:
+		channel = await interaction.guild.create_text_channel(name=ticket_channel_name, category=ticket_category, overwrites=overwrites, reason=f"Player Report Ticket for {interaction.user}")
+	except:
+		return await interaction.response.send_message("Ticket failed to create. If this persists, please contact a staff member.", ephemeral=True)
+
+
 
 class DiscordHelpModal(discord.ui.Modal):
 	def __init__(self):
