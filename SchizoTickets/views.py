@@ -56,9 +56,10 @@ class DiscordHelpModal(discord.ui.Modal):
 		self.add_item(discord_request)
 	
 	modal_active = False
-	
+
 	if modal_active == False:
-		await interaction.response.send_message("Sorry, this feature is not active. Please try again later.", ephemeral=True)
+		async def bot_inactive(self, interaction: discord.Interaction):
+			await interaction.response.send_message("Sorry, this feature is not active. Please try again later.", ephemeral=True)
 	else:
 		async def on_submit(self, interaction: discord.Interaction):
 			guild = interaction.guild
