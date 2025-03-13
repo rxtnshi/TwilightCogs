@@ -18,11 +18,12 @@ class BugReportModal(discord.ui.Modal):
 		self.bot = bot
 
 	async def on_submit(self, interaction: discord.Interaction):
-		bug_report_channel = interaction.guild.get_channel("bug-reports")
+		bug_reportchannel_id = 1348781470264590499
+		bug_report_channel = interaction.guild.get_channel(bug_reportchannel_id)
 
 		# SEND THE REPORT TO CHANNEL
 		embed = discord.Embed(
-			title = "⚠️ New Bug Report submitted",
+			title = "⚠️ New Bug Report Submitted",
 			description = f"{interaction.user.mention} submitted a bug report, please check it out!",
 			color = 0xFF5733,
 			timestamp=datetime.now()
