@@ -37,6 +37,10 @@ class BugReportModal(discord.ui.Modal):
 			value = self.bug_reproduce.value,
 			inline=False
 		)
+		embed.add_field(name="Status last changed by",
+			value = "NOBODY",
+			inline=False
+		)
 
 		await bug_report_channel.send(embed=embed, view=BugReportStatusView())
 
@@ -146,11 +150,11 @@ class BugReportStatuses(discord.ui.Select):
 
 		new_status = self.values[0]
 		embed.set_field_at(0, name="Status", value=new_status, inline=True)
-
+		embed.set_field_at(3, name="Status last changed by", value=f"{interaction.user.mention}", inline=True)
 		await message.edit(embed=embed)
 
 		# SENDS CONFIRMATION OF CHANGE
-		await interaction.response.send_message(f"☑️ {interaction.user.mention} changed the to: {new_status}", ephemeral=False)
+		await interaction.response.send_message(f"☑️ Succssfully changed the status to: {new_status}", ephemeral=True)
 
 
 #######
