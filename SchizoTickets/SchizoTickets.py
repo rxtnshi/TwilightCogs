@@ -1,6 +1,6 @@
 import discord
 
-from .SchizoTickets import views
+from SchizoTickets import views
 from redbot.core import commands, app_commands
 from datetime import datetime
 
