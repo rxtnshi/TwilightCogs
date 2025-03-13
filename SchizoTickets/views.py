@@ -52,4 +52,4 @@ class DiscordHelpModal(discord.ui.Modal):
 class TicketView(discord.ui.View):
     def __init__(self):
         super().__init__()
-        self.add_item(TicketDropdown())
+        self.add_item(TicketDropdown(self.bot))
