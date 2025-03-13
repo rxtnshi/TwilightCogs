@@ -48,18 +48,18 @@ class BugReportModal(discord.ui.Modal):
 		await interaction.response.send_message("Bug report submitted!", ephemeral=True)
 
 class DiscordHelpModal(discord.ui.Modal):
+	def __init__(self):
+		super().__init__(title="Discord Help Request")
+		self.discord_report_name = discord.ui.TextInput(label="Who are you reporting? If nobody, you can put 'NONE'.", required=True, style=discord.TextStyle.short)
+		self.discord_request = discord.ui.TextInput(label="Describe the issue", required=True, style=discord.TextStyle.paragraph)
+		self.add_item(discord_report_name)
+		self.add_item(discord_request)
+	
 	modal_active = False
-
+	
 	if modal_active == False:
 		await interaction.response.send_message("Sorry, this feature is not active. Please try again later.", ephemeral=True)
 	else:
-		def __init__(self):
-			super().__init__(title="Discord Help Request")
-			self.discord_report_name = discord.ui.TextInput(label="Who are you reporting? If nobody, you can put 'NONE'.", required=True, style=discord.TextStyle.short)
-			self.discord_request = discord.ui.TextInput(label="Describe the issue", required=True, style=discord.TextStyle.paragraph)
-			self.add_item(discord_report_name)
-			self.add_item(discord_request)
-	
 		async def on_submit(self, interaction: discord.Interaction):
 			guild = interaction.guild
 			user = interaction.user
