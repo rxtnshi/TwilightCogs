@@ -26,10 +26,35 @@ class TicketDropdown(discord.ui.Select):
 class BugReportModal(discord.ui.Modal):
     def __init__(self):
         super().__init__(title="Bug Report")
-        self.add_item(discord.ui.TextInput(label="Describe the bug in a few sentences", required=True, style=discord.TextStyle.short))
-        self.add_item(discord.ui.TextInput(label="Reproduction Steps", required=True, style=discord.TextStyle.paragraph))
+        self.bug_description = discord.ui.TextInput(label="Describe the bug in a few sentences", required=True, style=discord.TextStyle.short)
+        self.bug_reproduce = discord.ui.TextInput(label="Reproduction Steps", required=True, style=discord.TextStyle.paragraph)
+
+        self.add_item(bug_description)
+        self.add_item(bug_reproduce)
 
     async def on_submit(self, interaction: discord.Interaction):
+    	bug_reportchannel_id = 1348781470264590499
+    	bug_report_channel = interaction.guild.get_channel(bug_reportchannel_id)
+
+
+    	# SEND THE REPORT TO CHANNEL
+    	embed = discord.Embed(
+    		title = "⚠️ New Bug Report submitted",
+    		description = "{interaction.user} submitted a bug report, please check it out!",
+    		color = 0xFF5733,
+    		timestamp=datetime.now()
+    	)
+    	embed.add_field(name="Description of the bug:",
+    		value = self.bug_description
+    	)
+    	embed.add_field(name="Reproduction Steps:",
+    		value = self.bug_reproduce
+    	)
+    	await bug_report_channel.send(embed=embed)
+
+    	if not bug_report_channel:
+    		await interaction.response.send_message("❌ Bug report failed to send. Please contact a developer.", ephemeral=True)
+    	# SEND CONFIRMATION TO USER
         await interaction.response.send_message("Bug report submitted!", ephemeral=True)
 
 class PlayerReportModal(discord.ui.Modal):
@@ -44,6 +69,7 @@ class PlayerReportModal(discord.ui.Modal):
 class DiscordHelpModal(discord.ui.Modal):
     def __init__(self):
         super().__init__(title="Discord Help Request")
+        self.add_item(discord.ui.TextInput(label="Who are you reporting?", required=True, style=discord.TextStyle.short))
         self.add_item(discord.ui.TextInput(label="Describe the issue", required=True, style=discord.TextStyle.paragraph))
 
     async def on_submit(self, interaction: discord.Interaction):
