@@ -26,7 +26,8 @@ class TicketDropdown(discord.ui.Select):
 class BugReportModal(discord.ui.Modal):
     def __init__(self):
         super().__init__(title="Bug Report")
-        self.add_item(discord.ui.TextInput(label="Describe the bug", required=True, style=discord.TextStyle.paragraph))
+        self.add_item(discord.ui.TextInput(label="Describe the bug in a few sentences", required=True, style=discord.TextStyle.short))
+        self.add_item(discord.ui.TextInput(label="Reproduction Steps", required=True, style=discord.TextStyle.paragraph))
 
     async def on_submit(self, interaction: discord.Interaction):
         await interaction.response.send_message("Bug report submitted!", ephemeral=True)
@@ -34,8 +35,8 @@ class BugReportModal(discord.ui.Modal):
 class PlayerReportModal(discord.ui.Modal):
     def __init__(self):
         super().__init__(title="Player Report")
-        self.add_item(discord.ui.TextInput(label="Player Username & ID", required=True))
-        self.add_item(discord.ui.TextInput(label="Rule broken", required=True, style=discord.TextStyle.paragraph))
+        self.add_item(discord.ui.TextInput(label="Player Name", required=True))
+        self.add_item(discord.ui.TextInput(label="What did they do?", required=True, style=discord.TextStyle.paragraph))
 
     async def on_submit(self, interaction: discord.Interaction):
         await interaction.response.send_message("Player report submitted!", ephemeral=True)
