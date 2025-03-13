@@ -24,23 +24,26 @@ class BugReportModal(discord.ui.Modal):
 		bug_report_channel = interaction.guild.get_channel(bug_reportchannel_id)
 
 		# SEND THE REPORT TO CHANNEL
-		embed = discord.Embed(
-			title = "⚠️ New Bug Report submitted",
-			description = f"{interaction.user.mention} submitted a bug report, please check it out!",
-			color = 0xFF5733,
-			timestamp=datetime.now()
-		)
-		embed.add_field(name="Status", value="🔴 Untested", inline=False)
-		embed.add_field(name="Description of the bug:",
-			value = self.bug_description.value,
-			inline=False
-		)
-		embed.add_field(name="Reproduction Steps:",
-			value = self.bug_reproduce.value,
-			inline=False
-		)
+		if modal_active == True:
+			embed = discord.Embed(
+				title = "⚠️ New Bug Report submitted",
+				description = f"{interaction.user.mention} submitted a bug report, please check it out!",
+				color = 0xFF5733,
+				timestamp=datetime.now()
+			)
+			embed.add_field(name="Status", value="🔴 Untested", inline=False)
+			embed.add_field(name="Description of the bug:",
+				value = self.bug_description.value,
+				inline=False
+			)
+			embed.add_field(name="Reproduction Steps:",
+				value = self.bug_reproduce.value,
+				inline=False
+			)
 
-		await bug_report_channel.send(embed=embed, view=BugReportStatusView())
+			await bug_report_channel.send(embed=embed, view=BugReportStatusView())
+		else:
+			await interaction.response.send_message("❌ This system is inactive. Please try again later.", ephemeral=True)
 
 		# BUG REPORT CHANNEL CHECK
 		if not bug_report_channel:
