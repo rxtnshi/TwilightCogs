@@ -24,7 +24,7 @@ class TicketDropdown(discord.ui.Select):
 		await interaction.response.send_modal(modal)
 
 class BugReportModal(discord.ui.Modal):
-	def __init__(self):
+	def __init__(self, bot):
 		super().__init__(title="Bug Report")
 		self.bug_description = discord.ui.TextInput(label="Describe the bug in a few sentences", required=True, style=discord.TextStyle.short)
 		self.bug_reproduce = discord.ui.TextInput(label="Reproduction Steps", required=True, style=discord.TextStyle.paragraph)
@@ -61,7 +61,7 @@ class BugReportModal(discord.ui.Modal):
 		await interaction.response.send_message("Bug report submitted!", ephemeral=True)
 
 class BugReportStatuses(discord.ui.Select):
-	def __init__(self, bot):
+	def __init__(self):
 		options = [
 			discord.SelectOption(label="🔴 Untested"),
 			discord.SelectOption(label="🟠 Confirmed"),
