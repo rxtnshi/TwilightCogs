@@ -124,7 +124,6 @@ class TicketDropdown(discord.ui.Select):
 		#elif self.values[0] == "⚠️ Discord Help":
 		#	modal = DiscordHelpModal()
 
-		await interaction.response.send_message("IGNORE: SUCESSFULLY SELECTED!", ephemeral=True)
 		await interaction.response.send_modal(modal)
 
 class BugReportStatuses(discord.ui.Select):
