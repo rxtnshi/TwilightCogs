@@ -47,15 +47,19 @@ class BugReportModal(discord.ui.Modal):
 		# SEND CONFIRMATION TO USER
 		await interaction.response.send_message("Bug report submitted!", ephemeral=True)
 
-class PlayerReportModal(discord.ui.Modal):
-	def __init__(self):
-		super().__init__(title="Player Report")
-		self.player_name = discord.ui.TextInput(label="Player Name", required=True)
-		self.report_reason = discord.ui.TextInput(label="What did they do?", required=True, style=discord.TextStyle.paragraph)
-		self.add_item(self.player_name)
-		self.add_item(self.report_reason)
-
-	async def on_submit(self, interaction: discord.Interaction):
+class DiscordHelpModal(discord.ui.Modal):
+	modal_active = False
+	if modal_active not True:
+		await interaction.response.send_message("Sorry, this feature is not active. Please try again later.", ephemeral=True)
+	else:
+		def __init__(self):
+			super().__init__(title="Discord Help Request")
+			self.discord_report_name = discord.ui.TextInput(label="Who are you reporting? If nobody, you can put 'NONE'.", required=True, style=discord.TextStyle.short)
+			self.discord_request = discord.ui.TextInput(label="Describe the issue", required=True, style=discord.TextStyle.paragraph)
+			self.add_item(discord_report_name)
+			self.add_item(discord_request)
+	
+		async def on_submit(self, interaction: discord.Interaction):
 		guild = interaction.guild
 		user = interaction.user
 
@@ -65,7 +69,7 @@ class PlayerReportModal(discord.ui.Modal):
 		if category is None:
 			await interaction.response.send_message("Sorry, I had trouble opening a ticket inside an non-existent category")
 
-		existing_channel = discord.utils.get(guild.text_channels, name=f"{interaction.user}-player-report")
+		existing_channel = discord.utils.get(guild.text_channels, name=f"{interaction.user}-discord-report")
 		if existing_channel:
 			await interaction.response.send_message("Sorry, you already have an open ticket.")
 
@@ -76,12 +80,12 @@ class PlayerReportModal(discord.ui.Modal):
 		}
 
 		channel = await guild.create_text_channel(
-			name = f"{interaction.user}-player-report",
+			name = f"{interaction.user}-discord-report",
 			category=category,
 			overwrites=overwrites
 		)
 
-		await interaction.response.send_message("Player report submitted!", ephemeral=True)
+		await interaction.response.send_message("✅ Discord report submitted! You can access your ticket at {channel.mention}", ephemeral=True)
 
 		embed = discord.Embed(
 			title = "⚠️ New Player Report submitted",
@@ -100,15 +104,6 @@ class PlayerReportModal(discord.ui.Modal):
 
 		await channel.send(embed=embed)
 
-class DiscordHelpModal(discord.ui.Modal):
-	def __init__(self):
-		super().__init__(title="Discord Help Request")
-		self.add_item(discord.ui.TextInput(label="Who are you reporting?", required=True, style=discord.TextStyle.short))
-		self.add_item(discord.ui.TextInput(label="Describe the issue", required=True, style=discord.TextStyle.paragraph))
-	
-	async def on_submit(self, interaction: discord.Interaction):
-		await interaction.response.send_message("Help request submitted!", ephemeral=True)
-
 
 #######
 # DROPDOWNS
@@ -118,7 +113,6 @@ class TicketDropdown(discord.ui.Select):
 	def __init__(self):
 		options = [
 			discord.SelectOption(label="🛠️ Bug Report", description="Report a plugin bug."),
-			discord.SelectOption(label="‼️ Player Report", description="Report a player breaking the rules."),
 			discord.SelectOption(label="⚠️ Discord Help", description="Request help for Discord-related issues."),
 		]
 		super().__init__(placeholder="Select a category...", options=options)
@@ -127,8 +121,6 @@ class TicketDropdown(discord.ui.Select):
 		"""Handles the dropdown selection."""
 		if self.values[0] == "🛠️ Bug Report":
 			modal = BugReportModal()
-		elif self.values[0] == "‼️ Player Report":
-			modal = PlayerReportModal()
 		elif self.values[0] == "⚠️ Discord Help":
 			modal = DiscordHelpModal()
 
