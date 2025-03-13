@@ -9,15 +9,16 @@ from discord.ext import commands
 #######
 
 class BugReportModal(discord.ui.Modal):
-	def __init__(self, bot: commands.Bot):
+	def __init__(self):
 		super().__init__(title="Bug Report")
-		
-		self.bot = bot
 		self.bug_description = discord.ui.TextInput(label="Describe the bug in a few sentences", required=True, style=discord.TextStyle.short)
 		self.bug_reproduce = discord.ui.TextInput(label="Reproduction Steps", required=True, style=discord.TextStyle.paragraph)
 		self.add_item(self.bug_description)
 		self.add_item(self.bug_reproduce)
-		
+
+	def set_bot(self, bot: commands.Bot) -> None:
+		self.bot = bot
+
 	async def on_submit(self, interaction: discord.Interaction):
 		bug_reportchannel_id = 1348781470264590499
 		bug_report_channel = interaction.guild.get_channel(bug_reportchannel_id)
@@ -37,8 +38,7 @@ class BugReportModal(discord.ui.Modal):
 			value = self.bug_reproduce.value
 		)
 
-		view = BugReportStatusView(self.bot)
-		await bug_report_channel.send(embed=embed, view=view)
+		await bug_report_channel.send(embed=embed, view=BugReportStatusView())
 
 		# BUG REPORT CHANNEL CHECK
 		if not bug_report_channel:
@@ -132,6 +132,6 @@ class TicketView(discord.ui.View):
 		self.bot = bot
 
 class BugReportStatusView(discord.ui.View):
-	def __init__(self, bot: commands.Bot) -> None:
+	def __init__(self):
 		super().__init__()
 		self.add_item(BugReportStatuses())
