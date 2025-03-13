@@ -32,7 +32,7 @@ class BugReportModal(discord.ui.Modal):
         embed.add_field(name="Reproduction Steps:", value=self.bug_reproduce.value, inline=False)
         embed.add_field(name="Status last changed by:", value="NOBODY", inline=False)
 
-        await bug_report_channel.send(embed=embed, view=BugReportStatusView())
+        await bug_report_channel.send(embed=embed, view=BugReportStatusView(), timeout=None)
         await interaction.response.send_message("✅ Bug report submitted!", ephemeral=True)
 
 
@@ -109,7 +109,7 @@ class TicketDropdown(discord.ui.Select):
 		#elif self.values[0] == "⚠️ Discord Help":
 		#	modal = DiscordHelpModal()
 
-		await interaction.response.send_modal(modal)
+		await interaction.response.send_modal(modal, timeout=None)
 
 class BugReportStatuses(discord.ui.Select):
 	def __init__(self):
