@@ -5,7 +5,7 @@ from discord.ext import commands
 
 
 ticket_category_name = "Support & Reporting"
-ticket_category = utils.get(interaction.guild.categories, name=ticket_category_name)
+ticket_category = discord.utils.get(guild.categories, name=ticket_category_name)
 
 #######
 # MODALS
