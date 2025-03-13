@@ -108,7 +108,7 @@ class TicketDropdown(discord.ui.Select):
 	def __init__(self):
 		options = [
 			discord.SelectOption(label="🛠️ Bug Report", description="Report a plugin bug."),
-			discord.SelectOption(label="⚠️ Discord Help", description="Request help for Discord-related issues."),
+			#discord.SelectOption(label="⚠️ Discord Help", description="Request help for Discord-related issues."),
 		]
 		super().__init__(placeholder="Select a category...", options=options)
 
