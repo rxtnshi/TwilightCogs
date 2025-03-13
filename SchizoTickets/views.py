@@ -114,6 +114,7 @@ class TicketDropdown(discord.ui.Select):
 			discord.SelectOption(label="🛠️ Bug Report", description="Report a plugin bug."),
 			#discord.SelectOption(label="⚠️ Discord Help", description="Request help for Discord-related issues."),
 		]
+
 		super().__init__(placeholder="Select a category...", options=options)
 
 	async def callback(self, interaction: discord.Interaction):
@@ -124,7 +125,7 @@ class TicketDropdown(discord.ui.Select):
 		#	modal = DiscordHelpModal()
 
 		await interaction.response.send_modal(modal)
-		await interaction.followup.send_modal(modal)
+		await interaction.response.send_message("IGNORE: SUCESSFULLY SELECTED!", ephemeral=True)
 
 class BugReportStatuses(discord.ui.Select):
 	def __init__(self):
