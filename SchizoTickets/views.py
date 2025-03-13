@@ -30,13 +30,10 @@ class BugReportModal(discord.ui.Modal):
         embed.add_field(name="Status", value="🔴 Untested", inline=False)
         embed.add_field(name="Description of the bug:", value=self.bug_description.value, inline=False)
         embed.add_field(name="Reproduction Steps:", value=self.bug_reproduce.value, inline=False)
-        embed.add_field(name="Status last changed by", value="NOBODY", inline=False)
+        embed.add_field(name="Status last changed by:", value="NOBODY", inline=False)
 
         await bug_report_channel.send(embed=embed, view=BugReportStatusView())
         await interaction.response.send_message("✅ Bug report submitted!", ephemeral=True)
-
-        # ✅ Reopen a fresh modal after submission
-        await interaction.followup.send_modal(BugReportModal())  
 
 
 class DiscordHelpModal(discord.ui.Modal):
@@ -138,7 +135,7 @@ class BugReportStatuses(discord.ui.Select):
 
 		new_status = self.values[0]
 		embed.set_field_at(0, name="Status", value=new_status, inline=True)
-		embed.set_field_at(3, name="Status last changed by", value=f"{interaction.user.mention}", inline=True)
+		embed.set_field_at(3, name="Status last changed by:", value=f"{interaction.user.mention} at {datetime.now()}", inline=True)
 		await message.edit(embed=embed)
 
 		# SENDS CONFIRMATION OF CHANGE
