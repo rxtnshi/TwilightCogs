@@ -16,6 +16,8 @@ class BugReportModal(discord.ui.Modal):
 		self.add_item(self.bug_description)
 		self.add_item(self.bug_reproduce)
 
+	def set_bot(self, bot: commands.Bot) -> None:
+		self.bot = bot
 
 	async def on_submit(self, interaction: discord.Interaction):
 		bug_reportchannel_id = 1348781470264590499
@@ -36,7 +38,7 @@ class BugReportModal(discord.ui.Modal):
 			value = self.bug_reproduce.value
 		)
 
-		view = BugReportStatusView()
+		view = BugReportStatusView(self.bot)
 		await bug_report_channel.send(embed=embed, view=view)
 
 		# BUG REPORT CHANNEL CHECK
@@ -134,4 +136,3 @@ class BugReportStatusView(discord.ui.View):
 	def __init__(self, bot: commands.Bot) -> None:
 		super().__init__()
 		self.add_item(BugReportStatuses())
-
