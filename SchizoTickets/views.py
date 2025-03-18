@@ -93,7 +93,7 @@ class DiscordHelpModal(discord.ui.Modal):
 # DROPDOWNS
 #######
 
-class TicketDropdown(discord.ui.Select):
+class TicketDropdown(discord.ui.Select, timeout=None):
 	def __init__(self):
 		options = [
 			discord.SelectOption(label="🛠️ Bug Report", description="Report a plugin bug."),
@@ -109,9 +109,9 @@ class TicketDropdown(discord.ui.Select):
 		#elif self.values[0] == "⚠️ Discord Help":
 		#	modal = DiscordHelpModal()
 
-		await interaction.response.send_modal(modal, timeout=None)
+		await interaction.response.send_modal(modal)
 
-class BugReportStatuses(discord.ui.Select):
+class BugReportStatuses(discord.ui.Select, timeout=None):
 	def __init__(self):
 		options = [
 			discord.SelectOption(label="🔴 Untested"),
@@ -146,13 +146,13 @@ class BugReportStatuses(discord.ui.Select):
 # VIEWS
 #######
 
-class TicketView(discord.ui.View):
+class TicketView(discord.ui.View, timeout=None):
 	def __init__(self, bot: commands.Bot) -> None:
 		super().__init__()
 		self.add_item(TicketDropdown())
 		self.bot = bot
 
-class BugReportStatusView(discord.ui.View):
+class BugReportStatusView(discord.ui.View, timeout=None):
 	def __init__(self):
 		super().__init__()
 		self.add_item(BugReportStatuses())
