@@ -93,7 +93,7 @@ class DiscordHelpModal(discord.ui.Modal):
 # DROPDOWNS
 #######
 
-class TicketDropdown(discord.ui.Select, timeout=None):
+class TicketDropdown(discord.ui.Select):
 	def __init__(self):
 		options = [
 			discord.SelectOption(label="🛠️ Bug Report", description="Report a plugin bug."),
@@ -111,7 +111,7 @@ class TicketDropdown(discord.ui.Select, timeout=None):
 
 		await interaction.response.send_modal(modal)
 
-class BugReportStatuses(discord.ui.Select, timeout=None):
+class BugReportStatuses(discord.ui.Select):
 	def __init__(self):
 		options = [
 			discord.SelectOption(label="🔴 Untested"),
