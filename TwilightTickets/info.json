@@ -1,8 +1,8 @@
 {
     "author": ["rxtnshi/Insurgent"],
-    "install_msg" : "SchizoTickets has been successfully installed! Please reach out to the bot owner if you need support.",
-    "name" : "SchizoTickets",
-    "short" : "The most schizo a ticket system can be!",
+    "install_msg" : "TwilightTickets has been successfully installed! Please reach out to the bot owner if you need support.",
+    "name" : "TwilightTickets",
+    "short" : "Ticket system for the Twilight Zone. This will NOT work on other servers due to the nature of how this cog was made.",
     "description" : "yes",
     "end_user_data_statement": "This cog persistently stores identifiable information such as an Account's User ID and/or message history of previous tickets."
 }

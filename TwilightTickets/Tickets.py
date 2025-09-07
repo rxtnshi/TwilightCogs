@@ -119,15 +119,16 @@ class CloseTicket(discord.ui.Button):
         super().__init__(label="Close Ticket", style=discord.ButtonStyle.danger)
 
     async def callback(self, interaction: discord.Interaction):
-        logs_channel = interaction.channel
+        channel = interaction.channel
         closing_user = interaction.user
+        logs_channel = 1414397193934213140 #set whenever testing or active
 
         opening_user = None
         if channel.topic and "Ticket opener:" in channel.topic:
             opening_user = int(channel.topic.split("Ticket opener:")[1].strip())
         opener = channel.guild.get_member(opening_user) if opening_user else None
 
-        await create_transcript(channel, opener or closing_user, self.logs_channel, closed_by=closer)
+        await create_transcript(channel, opener or closing_user, logs_channel, closed_by=closing_user)
         await interaction.response.send_message("Closing ticket...", ephemeral=True)
         await interaction.channel.delete()
 
