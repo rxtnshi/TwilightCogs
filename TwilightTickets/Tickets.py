@@ -21,6 +21,7 @@ class TicketSelect(discord.ui.Select):
             modal = GameModal()
 
         await interaction.response.send_modal(modal)
+        await interaction.message.edit(view=TicketView())
 
 class TicketView(discord.ui.View):
     def __init__(self):
