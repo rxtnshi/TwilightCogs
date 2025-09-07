@@ -53,31 +53,33 @@ class DiscordModal(discord.ui.Modal):
             return
 
         overwrites = {
-			guild.default_role: discord.PermissionOverwrite(view_channel=False),
-			user: discord.PermissionOverwrite(view_channel=True, send_messages=True, attach_files=True, embed_links=True),  
-			discord.utils.get(guild.roles, id=1009509393609535548): discord.PermissionOverwrite(view_channel=True, send_messages=True, attach_files=True, embed_links=True)
-		}
+            guild.default_role: discord.PermissionOverwrite(view_channel=False),
+            user: discord.PermissionOverwrite(view_channel=True, send_messages=True, attach_files=True, embed_links=True),  
+            discord.utils.get(guild.roles, id=1009509393609535548): discord.PermissionOverwrite(view_channel=True, send_messages=True, attach_files=True, embed_links=True)
+        }
 
         channel = await guild.create_text_channel(
-			name = f"{interaction.user}-discord-report",
-			category=category,
-			overwrites=overwrites
-		)
+            name = f"{interaction.user}-discord-report",
+            category=category,
+            overwrites=overwrites
+        )
 
         embed = discord.Embed(
-			title = "⚠️ New Player Report submitted",
-			description = f"{interaction.user.mention} submitted a player report, please check it out!",
-			color = 0xFF5733,
-			timestamp=datetime.now()
-		)
-        embed.add_field(name="Description of the rule violation:",
-			value = self.report_reason.value,
-			inline=False
-		)
-        embed.add_field(name="Who broke it:",
-			value = self.player_name.value,
-			inline=False
-		)
+            title = "⚠️ New Player Report submitted",
+            description = f"{interaction.user.mention} submitted a player report, please check it out!",
+            color = 0xFF5733,
+            timestamp=datetime.now()
+        )
+        embed.add_field(
+            name="Description of the rule violation:",
+            value=self.discord_request.value,  # <-- fixed
+            inline=False
+        )
+        embed.add_field(
+            name="Who broke it:",
+            value=self.discord_report_name.value,  # <-- fixed
+            inline=False
+        )
         
         await channel.send(embed=embed)
-        await interaction.response.send_message(f"✅ Discord ticket sucessfully opened! You can access your ticket at {channel.mention}", ephemeral=True)
+        await interaction.response.send_message(f"✅ Discord ticket successfully opened! You can access your ticket at {channel.mention}", ephemeral=True)
