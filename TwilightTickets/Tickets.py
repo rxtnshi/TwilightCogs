@@ -44,11 +44,13 @@ class DiscordModal(discord.ui.Modal):
 
         if category is None:
             await interaction.response.send_message("I cannot open a ticket at the moment. Please contact Discord Bot staff.", ephemeral=True)
+            return
 
         existing_channel = discord.utils.get(guild.text_channels, name=f"{interaction.user}-discord-report")
 
         if existing_channel:
             await interaction.response.send_message("You already have an active ticket open.", ephemeral=True)
+            return
 
         overwrites = {
 			guild.default_role: discord.PermissionOverwrite(view_channel=False),
@@ -61,8 +63,6 @@ class DiscordModal(discord.ui.Modal):
 			category=category,
 			overwrites=overwrites
 		)
-
-        await interaction.response.send_message(f"✅ Discord ticket sucessfully opened! You can access your ticket at {channel.mention}", ephemeral=True)
 
         embed = discord.Embed(
 			title = "⚠️ New Player Report submitted",
@@ -80,3 +80,4 @@ class DiscordModal(discord.ui.Modal):
 		)
         
         await channel.send(embed=embed)
+        await interaction.response.send_message(f"✅ Discord ticket sucessfully opened! You can access your ticket at {channel.mention}", ephemeral=True)
