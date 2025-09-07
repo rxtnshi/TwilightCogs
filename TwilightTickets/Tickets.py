@@ -104,7 +104,7 @@ class TicketSelect(discord.ui.Select):
             modal = DiscordModal()
         elif self.values[0] == "🎮 Game Staff":
             # modal = GameModal()
-            await interaction.response.send_message("This option is currently disabled.")
+            await interaction.response.send_message("This option is currently disabled.", ephemeral=True)
 
         await interaction.response.send_modal(modal)
         await interaction.message.edit(view=TicketView())
@@ -145,7 +145,7 @@ class DiscordModal(discord.ui.Modal):
             ticket_type="Discord",
             report_name=self.discord_report_name.value,
             request_description=self.discord_request.value,
-            category_name="Support",
+            category_id=1349563765842247784, #set whenever testing or when active
             staff_role_id=1009509393609535548, #set whenever testing or when active
             embed_color=0xFF5733
         )
@@ -157,7 +157,7 @@ class GameModal(discord.ui.Modal):
             ticket_type="SCP:SL",
             report_name=self.game_report_name.value,
             request_description=self.game_request.value,
-            category_name="Game Support",
+            category_id=1414397144370122833, #set whenever testing or when active
             staff_role_id=1009509393609535548, #set whenever testing or when active
             embed_color=0x3498db
         )
