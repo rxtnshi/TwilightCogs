@@ -38,7 +38,7 @@ async def create_ticket(
     channel = await guild.create_text_channel(
         name=channel_name,
         category=category,
-        overwrites=overwrites
+        overwrites=overwrites,
         topic=f"Ticket opener: {user.id}"
     )
 
