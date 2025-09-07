@@ -33,5 +33,5 @@ class TwilightTickets(commands.Cog):
 		embed.set_footer(text="The Twilight Zone")
 		embed.timestamp = datetime.now()
 
-		view = Tickets.TicketView(self.bot)
+		view = Tickets.TicketView()
 		await ctx.send(embed=embed, view=view)
