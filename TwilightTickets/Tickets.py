@@ -15,15 +15,11 @@ class TicketView(discord.ui.View):
         super().__init__(placeholder="Select a category...", options=options, timeout=None)
 
     
-    async def select_options(self, type, interaction = discord.Interaction):
-        match type:
-            case "⚠️ Discord Staff":
-                modal = DiscordModal()
-
-            case "🎮 Game Staff":
-                modal = GameModal()
-            case _:
-                await interaction.response("Unable to process request. Please contact Discord Bot staff.")
+    async def callback(self, interaction = discord.Interaction):
+        if self.values[0] == "⚠️ Discord Staff":
+            modal = DiscordModal()
+        elif self.values[0] == "🎮 Game Staff":
+            modal = GameModal()
 
         await interaction.response.send_modal(modal)
 
