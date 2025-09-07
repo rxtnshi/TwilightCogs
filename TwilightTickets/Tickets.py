@@ -62,7 +62,7 @@ class DiscordModal(discord.ui.Modal):
 			overwrites=overwrites
 		)
 
-        await interaction.response.send_message("✅ Discord ticket sucessfully opened! You can access your ticket at {channel.mention}", ephemeral=True)
+        await interaction.response.send_message(f"✅ Discord ticket sucessfully opened! You can access your ticket at {channel.mention}", ephemeral=True)
 
         embed = discord.Embed(
 			title = "⚠️ New Player Report submitted",
