@@ -15,7 +15,7 @@ class TicketView(discord.ui.View):
         super().__init__(placeholder="Select a category...", options=options, timeout=None)
 
     
-    async def select_options(self, interaction = discord.Interaction):
+    async def select_options(self, type, interaction = discord.Interaction):
         match type:
             case "⚠️ Discord Staff":
                 modal = DiscordModal()
