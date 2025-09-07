@@ -119,7 +119,7 @@ class CloseTicket(discord.ui.Button):
         super().__init__(label="Close Ticket", style=discord.ButtonStyle.danger)
 
     async def callback(self, interaction: discord.Interaction):
-        channel = interaction.channel
+        logs_channel = interaction.channel
         closing_user = interaction.user
 
         opening_user = None
