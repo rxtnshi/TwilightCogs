@@ -6,7 +6,7 @@ from discord import app_commands
 from discord.ext import commands
 
 
-class SchizoTickets(commands.Cog):
+class TwilightTickets(commands.Cog):
 	"""very schizo attempt at making this please excuse my braincells"""
 
 	def __init__(self, bot):
