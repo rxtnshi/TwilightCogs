@@ -49,7 +49,7 @@ class DiscordModal(discord.ui.Modal):
         existing_channel = discord.utils.get(guild.text_channels, name=f"{interaction.user}-discord-report")
 
         if existing_channel:
-            await interaction.response.send_message("You already have an active ticket open.", ephemeral=True)
+            await interaction.response.send_message(f"You already have an active ticket open. {existing_channel.mention}", ephemeral=True)
             return
 
         overwrites = {
