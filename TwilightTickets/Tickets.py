@@ -105,6 +105,7 @@ class TicketSelect(discord.ui.Select):
         elif self.values[0] == "🎮 Game Staff":
             # modal = GameModal()
             await interaction.response.send_message("This option is currently disabled.", ephemeral=True)
+            await interaction.message.edit(view=TicketView())
 
         await interaction.response.send_modal(modal)
         await interaction.message.edit(view=TicketView())
