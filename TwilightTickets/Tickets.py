@@ -30,7 +30,7 @@ class TicketView(discord.ui.View):
 class DiscordModal(discord.ui.Modal):
     def __init__(self):
         super().__init__(title="Discord Help Request", timeout=None)
-        self.discord_report_name = discord.ui.TextInput(label="Who are you reporting? If nobody, you can put 'NONE'.", required=True, style=discord.TextStyle.short)
+        self.discord_report_name = discord.ui.TextInput(label="What is your issue?", required=True, style=discord.TextStyle.short)
         self.discord_request = discord.ui.TextInput(label="Describe the issue", required=True, style=discord.TextStyle.paragraph)
         self.add_item(self.discord_report_name)
         self.add_item(self.discord_request)
