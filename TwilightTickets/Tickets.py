@@ -5,16 +5,15 @@ from datetime import datetime
 from discord import app_commands, utils
 from discord.ext import commands
 
-class TicketView(discord.ui.View):
+class TicketSelect(discord.ui.Select):
     def __init__(self):
         options = [
             discord.SelectOption(label="⚠️ Discord Staff", description="Contact Discord staff"),
             discord.SelectOption(label="🎮 Game Staff", description="Contact SCP:SL staff")
         ]
 
-        super().__init__(placeholder="Select a category...", options=options, timeout=None)
+        super().__init__(placeholder="Select a category...", options=options)
 
-    
     async def callback(self, interaction = discord.Interaction):
         if self.values[0] == "⚠️ Discord Staff":
             modal = DiscordModal()
@@ -23,6 +22,10 @@ class TicketView(discord.ui.View):
 
         await interaction.response.send_modal(modal)
 
+class TicketView(discord.ui.View):
+    def __init__(self):
+        super().__init__(timeout=None)
+        self.add_item(TicketSelect())
 
 class DiscordModal(discord.ui.Modal):
     def __init__(self):
