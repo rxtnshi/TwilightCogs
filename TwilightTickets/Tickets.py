@@ -66,19 +66,19 @@ class DiscordModal(discord.ui.Modal):
         )
 
         embed = discord.Embed(
-            title = "⚠️ New Player Report submitted",
-            description = f"{interaction.user.mention} submitted a player report, please check it out!",
+            title = "📋 Discord Ticket Opened!",
+            description = f"{interaction.user.mention} has opened a Discord Ticket. Please check it out when available.",
             color = 0xFF5733,
             timestamp=datetime.now()
         )
         embed.add_field(
-            name="Description of the rule violation:",
-            value=self.discord_request.value,  # <-- fixed
+            name="Issue Description",
+            value=self.discord_request.value,
             inline=False
         )
         embed.add_field(
-            name="Who broke it:",
-            value=self.discord_report_name.value,  # <-- fixed
+            name="Issue",
+            value=self.discord_report_name.value, 
             inline=False
         )
         
