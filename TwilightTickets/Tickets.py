@@ -60,10 +60,21 @@ async def create_ticket(
     embed.add_field(name="Issue:", value=request_name, inline=False)
     embed.add_field(name="Description:", value=request_description, inline=False)
 
+    await channel.send(f"{discord.utils.get(guild.roles, id=staff_role_id).mention}")
     await channel.send(embed=embed, view=ViewsModals.CloseTicketView(cog))
     await interaction.response.send_message(f"✅ Ticket opened! Access it at {channel.mention}", ephemeral=True)
 
 async def create_transcript(channel: str, open_reason: str, opener, closer, logs_channel, cog: commands.Cog):
+    ticket_id = None
+    if channel.topic and "ID:" in channel.topic:
+        try:
+            ticket_id = channel.topic.split("ID:")[1].split("|")[0].strip()
+        except IndexError:
+            pass
+    
+    open_time = None
+    
+
     transcript = "-" * 40 + "\n"
     transcript += f"Transcript for ticket channel: {channel.name}\n"
     transcript += f"Opened by: {opener} ({opener.id})\n"
@@ -107,14 +118,6 @@ async def create_transcript(channel: str, open_reason: str, opener, closer, logs
         await opener.send(embed=user_embed, file=file_user)
     except discord.Forbidden:
         await logs_channel.send(f"Unable to send transcript for {channel.mention}. This may be due to their direct messages turned off or they left the server.", embed=logs_channel_embed, file=file_logs)
-
-    
-    ticket_id = None
-    if channel.topic and "ID:" in channel.topic:
-        try:
-            ticket_id = channel.topic.split("ID:")[1].split("|")[0].strip()
-        except IndexError:
-            pass
 
     if ticket_id:
         try:
