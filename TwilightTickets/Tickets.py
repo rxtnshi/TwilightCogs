@@ -4,7 +4,6 @@ import uuid
 import io
 import re
 
-from . import ViewsModals
 from datetime import datetime
 from discord import app_commands, utils
 from discord.ext import commands
@@ -18,6 +17,7 @@ async def create_ticket(
     staff_role_id: int,
     embed_color: int
 ):
+    from . import ViewsModals
     ticket_id = uuid.uuid1()
     guild = interaction.guild
     user = interaction.user
