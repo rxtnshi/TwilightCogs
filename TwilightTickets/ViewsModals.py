@@ -77,8 +77,10 @@ class TicketView(discord.ui.View):
         self.add_item(TicketSelect(cog))
 
 class CloseTicket(discord.ui.Button):
-    def __init__(self):
+    def __init__(self, cog: commands.Cog):
         super().__init__(label="Close Ticket", style=discord.ButtonStyle.danger)
+
+        self.cog = cog
 
     async def callback(self, interaction: discord.Interaction):
         staff_roles = [1341958721793691669, 1398449212219457577, 1009509393609535548]
@@ -113,13 +115,14 @@ class CloseTicket(discord.ui.Button):
             await interaction.response.send_message(f"Failed to delete channel: {e}", ephemeral=True)
 
 class CloseTicketView(discord.ui.View):
-    def __init__(self, timeout=None):
+    def __init__(self, cog: commands.Cog, timeout=None):
         super().__init__(timeout=None)
         self.add_item(CloseTicket(cog))
 
 class DiscordModal(discord.ui.Modal):
-    def __init__(self):
+    def __init__(self, cog: commands.Cog):
         super().__init__(title="Discord Help Request", timeout=None)
+        self.cog = cog
         self.discord_request_name = discord.ui.TextInput(label="What is your issue?", required=True, style=discord.TextStyle.short)
         self.discord_request = discord.ui.TextInput(label="Describe the issue", required=True, style=discord.TextStyle.paragraph)
         self.add_item(self.discord_request_name)
@@ -138,8 +141,9 @@ class DiscordModal(discord.ui.Modal):
         )
 
 class GameModal(discord.ui.Modal):
-    def __init__(self):
+    def __init__(self, cog: commands.Cog):
         super().__init__(title="Game Staff Help Request", timeout=None)
+        self.cog = cog
         self.game_request_name = discord.ui.TextInput(label="What is your issue?", required=True, style=discord.TextStyle.short)
         self.game_request = discord.ui.TextInput(label="Describe the issue", required=True, style=discord.TextStyle.paragraph)
         self.add_item(self.game_request_name)
