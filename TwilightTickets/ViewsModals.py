@@ -56,11 +56,17 @@ class CloseTicket(discord.ui.Button):
         super().__init__(label="Close Ticket", style=discord.ButtonStyle.danger)
 
     async def callback(self, interaction: discord.Interaction):
+        staff_roles = [1341958721793691669, 1398449212219457577, 1009509393609535548]
         channel = interaction.channel
         closing_user = interaction.user
         logs_channel_id = 1414397193934213140 #set whenever testing or active
         logs_channel = interaction.guild.get_channel(logs_channel_id)
         topic = interaction.channel.topic
+
+        has_permission = any(role.id in staff_roles for role in interaction.user.roles)
+        if not has_permission:
+            await interaction.response.send_message("Sorry, only modmail staff have access to close this ticket. Please ping a staff if you would like to close this ticket.")
+            return
 
         open_reason = None
         if topic and "Issue:" in topic:

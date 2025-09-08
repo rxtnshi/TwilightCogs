@@ -18,7 +18,7 @@ async def create_ticket(
     embed_color: int
 ):
     from . import ViewsModals
-    ticket_id = uuid.uuid1()
+
     guild = interaction.guild
     user = interaction.user
     
@@ -27,11 +27,12 @@ async def create_ticket(
         await interaction.response.send_message("Cannot open a ticket right now.", ephemeral=True)
         return
 
+    ticket_id = uuid.uuid1().hex[:6]
     channel_name = f"{ticket_type.lower()}-report-{ticket_id}"
-    existing_channel = discord.utils.get(guild.text_channels, name=channel_name)
-    if existing_channel:
-        await interaction.response.send_message(f"You already have an active ticket open. {existing_channel.mention}", ephemeral=True)
-        return
+
+    for channel in category.text_channels:
+        if channel.topic and f"({user.id})" in channel.topic:
+            await interaction.response.send_message(f"You already have a ticket open! You can access it here: {channel.mention}", ephermal=True)
 
     overwrites = {
         guild.default_role: discord.PermissionOverwrite(view_channel=False),
