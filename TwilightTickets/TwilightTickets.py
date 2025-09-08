@@ -222,4 +222,4 @@ class TwilightTickets(commands.Cog):
 		history_embed.description = history_text
 		history_embed.set_footer(text=f"Showing the last 10 tickets for {user.display_name}")
 
-		await interaction.response.send_message(embed=history_embed, ephemeral=True)
+		await interaction.response.send_message(embed=history_embed)
