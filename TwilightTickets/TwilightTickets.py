@@ -217,7 +217,7 @@ class TwilightTickets(commands.Cog):
 
 			history_text += (
 				f"{ticket_line}"
-				f"**Opened since: {open_ts}\n"
+				f"**Opened since:** {open_ts}\n"
 				f"{status_line}"
 				f"---\n"
 			)
