@@ -1,6 +1,6 @@
 import discord
 
-from . import Tickets
+from . import ViewsModals
 from datetime import datetime
 from discord import app_commands
 from discord.ext import commands
@@ -45,7 +45,7 @@ class TwilightTickets(commands.Cog):
 		embed.set_footer(text="The Twilight Zone")
 		embed.timestamp = datetime.now()
 
-		view = Tickets.TicketView()
+		view = ViewsModals.TicketView()
 		await interaction.send(embed=embed, view=view)
 
 	@staff.command(name="panic", description="Enables or disables creation of new tickets.")
