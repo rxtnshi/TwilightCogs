@@ -4,11 +4,13 @@ import datetime
 import io
 import re
 
-from .Tickets import create_transcript, create_ticket
+from .Tickets import create_transcript, create_ticket, close_ticket
 from datetime import datetime
 from discord import app_commands, utils
 from discord.ext import commands
 
+staff_roles = [1345963237316890776, 1345963295575769088, 1009509393609535548, 1009509393609535548]
+staff_roles_elevated = [1398449212219457577, 1009509393609535548]
 log_channel_id = 1414502972964212857 #1414397193934213140 test server
 
 class TicketSelect(discord.ui.Select):
@@ -86,40 +88,56 @@ class TicketView(discord.ui.View):
 class CloseTicket(discord.ui.Button):
     def __init__(self, cog: commands.Cog):
         super().__init__(label="Close Ticket", style=discord.ButtonStyle.danger)
-
         self.cog = cog
 
     async def callback(self, interaction: discord.Interaction):
-        staff_roles = [1345963237316890776, 1345963295575769088, 1009509393609535548, 1009509393609535548, 1341957856232210492]
-        channel = interaction.channel
-        closing_user = interaction.user
-        logs_channel_id = 1414502972964212857 #1414397193934213140 #set whenever testing or active
-        logs_channel = interaction.guild.get_channel(logs_channel_id)
-        topic = interaction.channel.topic
-
         has_permission = any(role.id in staff_roles for role in interaction.user.roles)
+        
         if not has_permission:
-            await interaction.response.send_message("Sorry, only modmail staff have access to close this ticket. Please ping a staff if you would like to close this ticket.", ephemeral=True)
+            await interaction.response.send_message("You do not have permission to close this ticket. Please contact a staff member if you would like to close this.", ephemeral=True)
             return
 
-        open_reason = None
-        if topic and "Issue:" in topic:
-            open_reason = topic.split("Issue:")[1].split("|")[0].strip()
-        
-        opening_user = None
-        if topic:
-            match = re.search(r"\((\d+)\)", topic)
-            if match:
-                opening_user = int(match.group(1))
-        opener = channel.guild.get_member(opening_user) if opening_user else None
-
-        await interaction.response.send_message("⌛ Creating transcript and closing ticket...")
-        await create_transcript(channel, open_reason, opener, closing_user, logs_channel, cog=self.cog)
+        await interaction.response.send_modal(CloseTicketModal(self.cog))
 
 class CloseTicketView(discord.ui.View):
     def __init__(self, cog: commands.Cog):
         super().__init__(timeout=None)
         self.add_item(CloseTicket(cog))
+
+class CloseTicketModal(discord.ui.Modal):
+    def __init__(self, cog: commands.Cog):
+        super().__init__(title="Ticket Closure", timeout=None)
+        self.cog = cog
+        self.close_reason = discord.ui.TextInput(label="Why are you closing the ticket?", required=True, style=discord.TextStyle.paragraph)
+        self.add_item(self.close_reason)
+
+    async def on_submit(self, interaction: discord.Interaction):
+        await interaction.response.send_message("⌛ Creating transcript and closing ticket...", ephemeral=True)
+
+        channel = interaction.channel
+        closer = interaction.user
+        logs_channel = interaction.guild.get_channel(log_channel_id)
+        topic = interaction.channel.topic
+
+        open_reason = "N/A"
+        opening_user_id = None
+        if topic:
+            match = re.search(r"\((\d+)\)", topic)
+            if match:
+                opening_user_id = int(match.group(1))
+            try:
+                open_reason = topic.split("Issue:")[1].split("|")[0].strip()
+            except IndexError:
+                pass
+        
+        opener = interaction.guild.get_member(opening_user_id) if opening_user_id else "User Not Found (Left/Unknown User)"
+        
+        close_reason_value = self.close_reason.value
+
+        log_message = await create_transcript(channel, open_reason, opener, closer, logs_channel, close_reason_value, self.cog)
+
+        await close_ticket(channel, closer, close_reason_value, log_message, self.cog)
+
 
 class DiscordModal(discord.ui.Modal):
     def __init__(self, cog: commands.Cog):

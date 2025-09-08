@@ -64,7 +64,30 @@ async def create_ticket(
     await channel.send(embed=embed, view=ViewsModals.CloseTicketView(cog))
     await interaction.response.send_message(f"✅ Ticket opened! Access it at {channel.mention}", ephemeral=True)
 
-async def create_transcript(channel: str, open_reason: str, opener, closer, logs_channel, cog: commands.Cog):
+async def close_ticket(channel: discord.TextChannel, closer: discord.Member, close_reason: str, log_message: discord.Message, cog: commands.Cog):
+    ticket_id = None
+    if channel.topic and "ID:" in channel.topic:
+        try:
+            ticket_id = channel.topic.split("ID:")[1].split("|")[0].strip()
+        except IndexError:
+            pass
+
+    if ticket_id:
+        try:
+            # Add close_reason to the UPDATE query
+            cog.cursor.execute("""
+                UPDATE tickets
+                SET closer_id = ?, close_time = ?, log_message_id = ?, close_reason = ?
+                WHERE ticket_id = ?
+            """, (closer.id, datetime.now().isoformat(), log_message.id, close_reason, ticket_id))
+            cog.conn.commit()
+        except Exception as e:
+            print(f"Failed to update ticket {ticket_id} in database: {e}")
+
+    await channel.delete()
+
+
+async def create_transcript(channel: discord.TextChannel, open_reason: str, opener, closer, logs_channel, close_reason: str, cog: commands.Cog):
     ticket_id = None
     if channel.topic and "ID:" in channel.topic:
         try:
@@ -72,14 +95,28 @@ async def create_transcript(channel: str, open_reason: str, opener, closer, logs
         except IndexError:
             pass
     
-    open_time = None
-    
+    open_time_dt = None
+    open_time_ts = "N/A"
+    cog.cursor.execute("SELECT open_time FROM tickets WHERE ticket_id = ?", (ticket_id,))
+    result = cog.cursor.fetchone()
+    if result:
+        open_time_dt = datetime.fromisoformat(result[0])
+        open_time_str = open_time_dt.strftime('%Y-%m-%d %H:%M:%S UTC')
+        open_time_ts = f"<t:{int(open_time_dt.timestamp())}:f>"
 
+    close_time_dt = datetime.now()
+    close_time_str = close_time_dt.strftime('%Y-%m-%d %H:%M:%S UTC')
+    close_time_ts = f"<t:{int(close_time_dt.timestamp())}:f>"
+
+    # header
     transcript = "-" * 40 + "\n"
     transcript += f"Transcript for ticket channel: {channel.name}\n"
     transcript += f"Opened by: {opener} ({opener.id})\n"
     transcript += f"Closed by: {closer} ({closer.id})\n"
+    transcript += f"Opened at: {open_time_str}\n"
+    transcript += f"Closed at: {close_time_str}\n"
     transcript += f"Ticket issue: {open_reason}\n"
+    transcript += f"Close Reason: {close_reason}\n"
     transcript += "-" * 40 + "\n"
 
     async for msg in channel.history(limit=None, oldest_first=True):
@@ -91,43 +128,38 @@ async def create_transcript(channel: str, open_reason: str, opener, closer, logs
         title=f"📋 Ticket Transcript",
         description="Thank you for opening a ticket with us. Your ticket transcript is attached below.",
         color=0x00FF00,
-        timestamp=datetime.now()
+        timestamp=close_time_dt
     )
     user_embed.add_field(name="Opened by:", value=f"{opener} ({opener.id})", inline=False)
-    user_embed.add_field(name="Closed by:", value=f"{closer} ({opener.id})", inline=False)
-    user_embed.add_field(name="Ticket issue:", value=f"{open_reason}", inline=False)
+    user_embed.add_field(name="Closed by:", value=f"{closer} ({closer.id})", inline=False)
+    user_embed.add_field(name="Opened at:", value=open_time_ts, inline=True)
+    user_embed.add_field(name="Closed at:", value=close_time_ts, inline=True)
+    user_embed.add_field(name="Ticket Issue:", value=f"{open_reason}", inline=False)
+    user_embed.add_field(name="Close Reason:", value=close_reason, inline=False)
 
     logs_channel_embed = discord.Embed(
         title=f"📋 Ticket Transcript",
         description=f"Ticket log for {channel.name}",
         color=0x00FF00,
-        timestamp=datetime.now()
+        timestamp=close_time_dt
     )
-    logs_channel_embed.add_field(name="Opened by:", value=f"{opener} ({closer.id})", inline=False)
+    logs_channel_embed.add_field(name="Opened by:", value=f"{opener} ({opener.id})", inline=False)
     logs_channel_embed.add_field(name="Closed by:", value=f"{closer} ({closer.id})", inline=False)
+    logs_channel_embed.add_field(name="Opened at:", value=open_time_ts, inline=True)
+    logs_channel_embed.add_field(name="Closed at:", value=close_time_ts, inline=True)
     logs_channel_embed.add_field(name="Ticket issue:", value=f"{open_reason}", inline=False)
+    logs_channel_embed.add_field(name="Close Reason:", value=close_reason, inline=False)
 
     file_data = io.StringIO(transcript)
-    file_user = discord.File(io.StringIO(transcript), filename=f"transcript.txt")
+    file_user = discord.File(file_data, filename=f"transcript.txt")
     file_data.seek(0)
-    file_logs = discord.File(io.StringIO(transcript), filename=f"transcript.txt")
+    file_logs = discord.File(file_data, filename=f"transcript.txt")
 
     log_message = await logs_channel.send(embed=logs_channel_embed, file=file_logs)
 
     try:
         await opener.send(embed=user_embed, file=file_user)
-    except discord.Forbidden:
-        await logs_channel.send(f"Unable to send transcript for {channel.mention}. This may be due to their direct messages turned off or they left the server.", embed=logs_channel_embed, file=file_logs)
+    except (discord.Forbidden, AttributeError):
+        await log_message.reply(f"Unable to send transcript to {opener.mention} (DMs may be closed or user not found).")
 
-    if ticket_id:
-        try:
-            cog.cursor.execute("""
-                UPDATE tickets
-                SET closer_id = ?, close_time = ?, log_message_id = ?
-                WHERE ticket_id = ?
-            """, (closer.id, datetime.now().isoformat(), log_message.id, ticket_id))
-            cog.conn.commit()
-        except Exception as e:
-            print(f"Failed to update ticket {ticket_id} in database: {e}")
-
-    await channel.delete()
+    return log_message

@@ -48,14 +48,10 @@ class TwilightTickets(commands.Cog):
 				closer_id INTEGER,
 				open_time TEXT NOT NULL,
 				close_time TEXT
+				log_message_id INTEGER NOT NULL,
+				close_reason TEXT
 			)
 		""")
-
-		try:
-			self.cursor.execute("ALTER TABLE tickets ADD COLUMN log_message_id INTEGER")
-			self.conn.commit()
-		except:
-			pass
 		
 		self.cursor.execute("""
 			CREATE TABLE IF NOT EXISTS blacklist (
