@@ -130,7 +130,6 @@ class CloseTicket(discord.ui.Button):
 
     async def callback(self, interaction: discord.Interaction):
         channel = interaction.channel
-        open_reason = 
         closing_user = interaction.user
         logs_channel = 1414397193934213140 #set whenever testing or active
         topic = interaction.channel.topic
