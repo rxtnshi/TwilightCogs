@@ -24,13 +24,6 @@ class TwilightTickets(commands.Cog):
 		
 	staff = app_commands.Group(name="staff", description="Staff commands", guild_only=True)
 
-	@staff.command(name="staff", description="Managing ticket system for Twilight Zone 24/7!")
-	async def staff(self, interaction, ctx):
-		"""Managing ticket system for Twilight Zone 24/7!"""
-
-		if interaction.invoked_subcommand is None:
-			await ctx.send("Use a subcommand!")
-
 	@staff.command(name="panel", description="Sets up the panel used for the ticket option selection")
 	async def start_panel(self, interaction: discord.Interaction):
 		"""Sets up the panel used for the ticket option selection"""
