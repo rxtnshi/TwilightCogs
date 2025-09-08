@@ -51,7 +51,7 @@ async def create_ticket(
     embed.add_field(name="Description:", value=request_description, inline=False)
     embed.add_field(name="Reported User:", value=report_name, inline=False)
 
-    await channel.send(embed=embed)
+    await channel.send(embed=embed, view=CloseTicketView())
     await interaction.response.send_message(f"✅ Ticket opened! Access it at {channel.mention}", ephemeral=True)
 
 async def create_transcript(channel, user, logs_channel):
@@ -132,6 +132,11 @@ class CloseTicket(discord.ui.Button):
         await create_transcript(channel, opener or closing_user, logs_channel, closed_by=closing_user)
         await interaction.response.send_message("Closing ticket...", ephemeral=True)
         await interaction.channel.delete()
+
+class CloseTicketView(discord.ui.View):
+    def __init__(self, timeout=None):
+        super().__init__(timeout=None)
+        self.add_item(CloseTicket())
 
 class DiscordModal(discord.ui.Modal):
     def __init__(self):
