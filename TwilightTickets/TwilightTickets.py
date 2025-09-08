@@ -202,19 +202,21 @@ class TwilightTickets(commands.Cog):
 			open_dt = datetime.fromisoformat(open_time_str)
 			open_ts = f"<t:{int(open_dt.timestamp())}:f>"
 
-			status_line = f"**Status:** Open since {open_ts}\n"
+			ticket_line = f"**Ticket ID:** `{ticket_id}`\n"
+			status_line = f"**Status:** Open\n"
+
 			if close_time_str:
 				close_dt = datetime.fromisoformat(close_time_str)
 				close_ts = f"<t:{int(close_dt.timestamp())}:f>"
-
 				closer = interaction.guild.get_member(closer_id)
-				status_line = f"**Status:** Closed at {close_ts}\n **Closer:** {closer}\n"
+				status_line = f"**Status:** Closed at {close_ts} by {closer}\n"
 
 				if log_message_id:
 					log_link = f"https://discord.com/channels/{interaction.guild.id}/{logs_channel_id}/{log_message_id}"
+					ticket_line = f"**Ticket ID:** [`{ticket_id}`]({log_link})\n"
 
 			history_text += (
-				f"**Ticket ID:** [`{ticket_id}`]({log_link}\n"
+				f"{ticket_line}"
 				f"**Opened since: {open_ts}\n"
 				f"{status_line}"
 				f"---\n"
