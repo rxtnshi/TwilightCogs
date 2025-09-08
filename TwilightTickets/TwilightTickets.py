@@ -30,7 +30,7 @@ class TwilightTickets(commands.Cog):
 		}
 		
 		self.conn = sqlite3.connect('tickets.db')
-		self.cursor = self.conn.cursor
+		self.cursor = self.conn.cursor()
 		self.setup_db()
 
 	def setup_db(self):
