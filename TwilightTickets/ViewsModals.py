@@ -44,7 +44,7 @@ class TicketSelect(discord.ui.Select):
             return
 
         await interaction.response.send_modal(modal)
-        await interaction.message.edit(view=TicketView(self))
+        await interaction.message.edit(view=TicketView(self.cog))
 
 class TicketView(discord.ui.View):
     def __init__(self, cog: commands.Cog):
