@@ -102,10 +102,9 @@ async def create_transcript(channel: str, open_reason: str, opener, closer, logs
     file_logs = discord.File(io.StringIO(transcript), filename=f"transcript.txt")
 
     log_message = await logs_channel.send(embed=logs_channel_embed, file=file_logs)
-    
+
     try:
         await opener.send(embed=user_embed, file=file_user)
-        await logs_channel.send(embed=logs_channel_embed, file=file_logs)
     except discord.Forbidden:
         await logs_channel.send(f"Unable to send transcript for {channel.mention}. This may be due to their direct messages turned off.", embed=logs_channel_embed, file=file_logs)
 
