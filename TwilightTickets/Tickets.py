@@ -60,7 +60,7 @@ async def create_ticket(
     embed.add_field(name="Issue:", value=request_name, inline=False)
     embed.add_field(name="Description:", value=request_description, inline=False)
 
-    await channel.send(f"{discord.utils.get(guild.roles, id=staff_role_id).mention}")
+    # await channel.send(f"{discord.utils.get(guild.roles, id=staff_role_id).mention}")
     await channel.send(embed=embed, view=ViewsModals.CloseTicketView(cog))
     await interaction.response.send_message(f"✅ Ticket opened! Access it at {channel.mention}", ephemeral=True)
 
@@ -130,12 +130,12 @@ async def create_transcript(channel: discord.TextChannel, open_reason: str, open
         color=0x00FF00,
         timestamp=close_time_dt
     )
-    user_embed.add_field(name="Opened by:", value=f"{opener} ({opener.id})", inline=False)
-    user_embed.add_field(name="Closed by:", value=f"{closer} ({closer.id})", inline=False)
+    user_embed.add_field(name="Opened by:", value=f"{opener.mention} ({opener.id})", inline=True)
+    user_embed.add_field(name="Closed by:", value=f"{closer.mention} ({closer.id})", inline=True)
     user_embed.add_field(name="Opened at:", value=open_time_ts, inline=True)
     user_embed.add_field(name="Closed at:", value=close_time_ts, inline=True)
-    user_embed.add_field(name="Ticket Issue:", value=f"{open_reason}", inline=False)
-    user_embed.add_field(name="Close Reason:", value=close_reason, inline=False)
+    user_embed.add_field(name="Ticket Issue:", value=f"{open_reason}", inline=True)
+    user_embed.add_field(name="Close Reason:", value=close_reason, inline=True)
 
     logs_channel_embed = discord.Embed(
         title=f"📋 Ticket Transcript",
@@ -151,6 +151,8 @@ async def create_transcript(channel: discord.TextChannel, open_reason: str, open
     logs_channel_embed.add_field(name="Close Reason:", value=close_reason, inline=False)
 
     file_data = io.StringIO(transcript)
+
+    file_data.seek(0)
     file_user = discord.File(file_data, filename=f"transcript.txt")
     file_data.seek(0)
     file_logs = discord.File(file_data, filename=f"transcript.txt")
