@@ -1,5 +1,6 @@
 import discord
 import sqlite3
+import os
 
 from . import ViewsModals
 from datetime import datetime
@@ -7,6 +8,7 @@ from discord import app_commands
 from discord.app_commands import Choice
 from discord.ext import commands
 from redbot.core import commands
+from redbot.core.data_manager import cog_data_path
 
 staff_roles = [1341958721793691669, 1398449212219457577, 1009509393609535548]
 staff_roles_elevated = [1009509393609535548]
@@ -28,8 +30,10 @@ class TwilightTickets(commands.Cog):
 			"discord": True,
 			"game": True
 		}
-		
-		self.conn = sqlite3.connect('tickets.db')
+		db_path = cog_data_path(self) / "tickets.db"
+		os.makedirs(os.path.dirname(db_path), exist_ok=True)
+
+		self.conn = sqlite3.connect(db_path)
 		self.cursor = self.conn.cursor()
 		self.setup_db()
 
