@@ -23,11 +23,12 @@ class TicketSelect(discord.ui.Select):
         log_channel_id = 1414397193934213140
         log_channel = interaction.guild.get_channel(log_channel_id)
 
-        # check for blacklisted users
-        self.cog.cursor.execute("SELECT reason FROM blacklist WHERE user_id = ?", (interaction.user.id))
+        # blacklist check
+        self.cog.cursor.execute("SELECT reason FROM blacklist WHERE user_id = ?", (interaction.user.id,))
         result = self.cog.cursor.fetchone()
         if result:
-            await interaction.response.send_message(f"Unable to create tickets at this time. You are blacklisted for {result[0]}.", ephemeral=True)
+            await interaction.response.send_message(f"You are blacklisted from creating tickets. Reason: {result[0]}", ephemeral=True)
+
         # check for panic mode
         if not self.cog.tickets_enabled:
             await interaction.response.send_message("Ticket creation is currently disabled. Please contact staff if you believe this is an error!", ephemeral=True)

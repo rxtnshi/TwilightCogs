@@ -133,6 +133,7 @@ class TwilightTickets(commands.Cog):
 				INSERT INTO blacklist(user_id, reason, staff_id, timestamp)
 				VALUES(?, ?, ?, ?)
 			""", (user.id, reason, interaction.user.id, datetime.now().isoformat()))
+			self.conn.commit()
 			await interaction.response.send_message(f"{user.mention} has been successfully blacklisted. Reason: {reason}")
 		except sqlite3.IntegrityError:
 			await interaction.response.send_message(f"{user.mention} has already been blacklisted.", ephemeral=True)
@@ -144,7 +145,7 @@ class TwilightTickets(commands.Cog):
 			await interaction.response.send_message("You don't have permission to use this command.", ephemeral=True)
 			return
 		
-		self.cursor.execute("DELETE FROM blacklist WHERE user_id =?", (user.id))
+		self.cursor.execute("DELETE FROM blacklist WHERE user_id =?", (user.id,))
 		if self.cursor.rowcount > 0:
 			self.conn.commit()
 			await interaction.response.send_message(f"{user.mention} has been successfully removed from the blacklist!", ephemeral=True)
