@@ -48,7 +48,7 @@ class TwilightTickets(commands.Cog):
 		
 		self.cursor.execute("""
 			CREATE TABLE IF NOT EXISTS blacklist (
-				user_id TEXT PRIMARY KEY,
+				user_id INTEGER PRIMARY KEY,
 				reason TEXT,
 				staff_id INTEGER NOT NULL,
 				timestamp TEXT NOT NULL
@@ -145,7 +145,7 @@ class TwilightTickets(commands.Cog):
 			await interaction.response.send_message("You don't have permission to use this command.", ephemeral=True)
 			return
 		
-		self.cursor.execute("DELETE FROM blacklist WHERE user_id =?", (user.id,))
+		self.cursor.execute("DELETE FROM blacklist WHERE user_id = ?", (user.id,))
 		if self.cursor.rowcount > 0:
 			self.conn.commit()
 			await interaction.response.send_message(f"{user.mention} has been successfully removed from the blacklist!", ephemeral=True)
