@@ -10,8 +10,8 @@ from discord.ext import commands
 from redbot.core import commands
 from redbot.core.data_manager import cog_data_path
 
-staff_roles = [1341958721793691669, 1398449212219457577, 1009509393609535548]
-staff_roles_elevated = [1009509393609535548]
+staff_roles = [1345963237316890776, 1345963295575769088, 1009509393609535548, 1009509393609535548]
+staff_roles_elevated = [1398449212219457577, 1009509393609535548]
 def role_check(member: discord.Member):
 	return any(role.id in staff_roles for role in member.roles)
 
@@ -144,9 +144,9 @@ class TwilightTickets(commands.Cog):
 				VALUES(?, ?, ?, ?)
 			""", (user.id, reason, interaction.user.id, datetime.now().isoformat()))
 			self.conn.commit()
-			await interaction.response.send_message(f"{user.mention} has been successfully blacklisted. Reason: {reason}")
+			await interaction.response.send_message(f"{user.mention} has been successfully blacklisted. **Reason:** {reason}")
 		except sqlite3.IntegrityError:
-			await interaction.response.send_message(f"{user.mention} has already been blacklisted.", ephemeral=True)
+			await interaction.response.send_message(f"{user.mention} has already been blacklisted.")
 			return
 	
 	@staff.command(name="unblacklist", description="Removes a user from the blacklist")
@@ -158,9 +158,9 @@ class TwilightTickets(commands.Cog):
 		self.cursor.execute("DELETE FROM blacklist WHERE user_id = ?", (user.id,))
 		if self.cursor.rowcount > 0:
 			self.conn.commit()
-			await interaction.response.send_message(f"{user.mention} has been successfully removed from the blacklist!", ephemeral=True)
+			await interaction.response.send_message(f"{user.mention} has been successfully removed from the blacklist!")
 		else:
-			await interaction.response.send_message(f"{user.mention} was not found in the blacklist.", ephemeral=True)
+			await interaction.response.send_message(f"{user.mention} was not found in the blacklist.")
 
 	@staff.command(name="history", description="Grabs the ticket history of a user")
 	async def ticket_history(self, interaction: discord.Interaction, user: discord.Member):

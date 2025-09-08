@@ -20,7 +20,7 @@ class TicketSelect(discord.ui.Select):
         self.cog = cog
 
     async def callback(self, interaction = discord.Interaction):
-        log_channel_id = 1414397193934213140
+        log_channel_id = 1414502972964212857 #1414397193934213140 test server
         log_channel = interaction.guild.get_channel(log_channel_id)
 
         # cog status check
@@ -48,7 +48,7 @@ class TicketSelect(discord.ui.Select):
             return
 
         if selected_type == "discord":
-            category_id = 1349563765842247784 # change when testing or active
+            category_id = 1414502599293407324 #1349563765842247784 # change when testing or active
             category = discord.utils.get(interaction.guild.categories, id=category_id)
 
             if category:
@@ -59,7 +59,7 @@ class TicketSelect(discord.ui.Select):
                         return
             modal = DiscordModal(self.cog)
         elif selected_type == "game":
-            category_id = 1414397144370122833 # change when testing or active
+            category_id = 1414502707309314088 #1414397144370122833 # change when testing or active
             category = discord.utils.get(interaction.guild.categories, id=category_id)
 
             if category:
@@ -89,10 +89,10 @@ class CloseTicket(discord.ui.Button):
         self.cog = cog
 
     async def callback(self, interaction: discord.Interaction):
-        staff_roles = [1341958721793691669, 1398449212219457577, 1009509393609535548]
+        staff_roles = [1345963237316890776, 1345963295575769088, 1009509393609535548, 1009509393609535548]
         channel = interaction.channel
         closing_user = interaction.user
-        logs_channel_id = 1414397193934213140 #set whenever testing or active
+        logs_channel_id = 1414502972964212857 #1414397193934213140 #set whenever testing or active
         logs_channel = interaction.guild.get_channel(logs_channel_id)
         topic = interaction.channel.topic
 
@@ -140,8 +140,8 @@ class DiscordModal(discord.ui.Modal):
             ticket_type="Discord",
             request_name=self.discord_request_name.value,
             request_description=self.discord_request.value,
-            category_id=1349563765842247784, #set whenever testing or when active
-            staff_role_id=1009509393609535548, #set whenever testing or when active
+            category_id=1414502599293407324, #1349563765842247784, #set whenever testing or when active
+            staff_role_id=1345963295575769088, #1009509393609535548, #set whenever testing or when active
             embed_color=0x5865f2,
             cog=self.cog
         )
@@ -161,8 +161,8 @@ class GameModal(discord.ui.Modal):
             ticket_type="SCP:SL",
             request_name=self.game_request_name.value,
             request_description=self.game_request.value,
-            category_id=1414397144370122833, #set whenever testing or when active
-            staff_role_id=1009509393609535548, #set whenever testing or when active
+            category_id=1414502707309314088, #1414397144370122833, #set whenever testing or when active
+            staff_role_id=1345963237316890776, #1009509393609535548, #set whenever testing or when active
             embed_color=0x3498db,
             cog=self.cog
         )
