@@ -61,3 +61,5 @@ class TwilightTickets(commands.Cog):
 
 		await interaction.response.send_message(f"Ticket creation is now {status}.")
 		
+	def cog_app_commands(self):
+		return [self.staff]
