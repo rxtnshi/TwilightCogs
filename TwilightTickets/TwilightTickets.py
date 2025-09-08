@@ -50,7 +50,7 @@ class TwilightTickets(commands.Cog):
 		embed.timestamp = datetime.now()
 
 		view = ViewsModals.TicketView()
-		await channel(embed=embed, view=view)
+		await channel.send(embed=embed, view=view)
 		await interaction.response.send_message(f"The panel has been sucessfully sent into {channel}")
 
 	@staff.command(name="panic", description="Enables or disables creation of new tickets.")
