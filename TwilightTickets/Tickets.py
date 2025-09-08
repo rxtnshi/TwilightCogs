@@ -4,6 +4,7 @@ import uuid
 import io
 import re
 
+from . import ViewsModals
 from datetime import datetime
 from discord import app_commands, utils
 from discord.ext import commands
@@ -54,7 +55,7 @@ async def create_ticket(
     embed.add_field(name="Description:", value=request_description, inline=False)
     embed.add_field(name="Reported User:", value=request_name, inline=False)
 
-    await channel.send(embed=embed, view=CloseTicketView())
+    await channel.send(embed=embed, view=ViewsModals.CloseTicketView())
     await interaction.response.send_message(f"✅ Ticket opened! Access it at {channel.mention}", ephemeral=True)
 
 async def create_transcript(channel: str, open_reason: str, opener, closer, logs_channel):
