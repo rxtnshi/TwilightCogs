@@ -169,15 +169,15 @@ class TwilightTickets(commands.Cog):
 			return
 		
 		self.cursor.execute(
-			"SELECT ticket_id, closer_id, open_time, close_time FROM tickets WHERE opener_id = ? ORDER BY open_time DESC",
-			(user.id)
-		)
+            "SELECT ticket_id, closer_id, open_time, close_time, log_message_id FROM tickets WHERE opener_id = ? ORDER BY open_time DESC",
+            (user.id,)
+        )
 		tickets = self.cursor.fetchall()
 
 		if not tickets:
 			no_history_embed = discord.Embed(
 				title=f"📋 Ticket History",
-				description=f"Ticket history for {user.mention}",
+				description=f"No ticket history for {user.mention}",
 				color=0x808080,
 				timestamp=datetime.now()
 			)
@@ -214,7 +214,7 @@ class TwilightTickets(commands.Cog):
 					log_link = f"https://discord.com/channels/{interaction.guild.id}/{logs_channel_id}/{log_message_id}"
 
 			history_text += (
-				f"**Ticket ID:** [{ticket_id}]({log_link}\n"
+				f"**Ticket ID:** [`{ticket_id}`]({log_link}\n"
 				f"**Opened since: {open_ts}\n"
 				f"{status_line}"
 				f"---\n"
