@@ -82,13 +82,13 @@ class TwilightTickets(commands.Cog):
 			Choice(name="Enable", value="enable"),
 			Choice(name="Disable", value="disable")
 		]
-	)
-	async def enable_disable_type(self, interaction: discord.Interaction, type: str, status: str):
+    )
+	async def enable_disable_type(self, interaction: discord.Interaction, ticket_type: str, status: str):
 		if not role_check_elevated(interaction.user):
 			await interaction.response.send_message("You don't have permission to use this command.", ephemeral=True)
 			return
 		
 		new_status = (status == "enable")
-		self.ticket_statuses[type] = new_status
+		self.ticket_statuses[ticket_type] = new_status
 
-		await interaction.response.send_message(f"{type} tickets have been {status}d successfully.", ephemeral=True)
+		await interaction.response.send_message(f"{ticket_type} tickets have been {status}d successfully.", ephemeral=True)
