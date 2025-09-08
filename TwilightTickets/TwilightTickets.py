@@ -12,6 +12,7 @@ from redbot.core.data_manager import cog_data_path
 
 staff_roles = [1345963237316890776, 1345963295575769088, 1009509393609535548, 1009509393609535548]
 staff_roles_elevated = [1398449212219457577, 1009509393609535548]
+log_channel_id = 1414502972964212857 # 1414397193934213140 test channel
 def role_check(member: discord.Member):
 	return any(role.id in staff_roles for role in member.roles)
 
@@ -103,7 +104,6 @@ class TwilightTickets(commands.Cog):
 		if not role_check_elevated(interaction.user):
 			await interaction.response.send_message("You don't have permission to use this command.", ephemeral=True)
 			return
-		log_channel_id = 1414397193934213140
 		log_channel = interaction.guild.get_channel(log_channel_id)
 
 		self.tickets_enabled = not self.tickets_enabled

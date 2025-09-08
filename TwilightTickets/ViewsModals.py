@@ -9,6 +9,8 @@ from datetime import datetime
 from discord import app_commands, utils
 from discord.ext import commands
 
+log_channel_id = 1414502972964212857 #1414397193934213140 test server
+
 class TicketSelect(discord.ui.Select):
     def __init__(self, cog: commands.Cog):
         options = [
@@ -20,7 +22,6 @@ class TicketSelect(discord.ui.Select):
         self.cog = cog
 
     async def callback(self, interaction = discord.Interaction):
-        log_channel_id = 1414502972964212857 #1414397193934213140 test server
         log_channel = interaction.guild.get_channel(log_channel_id)
 
         # cog status check
