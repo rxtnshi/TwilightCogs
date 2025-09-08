@@ -61,7 +61,7 @@ async def create_ticket(
 
 async def create_transcript(channel: str, open_reason: str, opener, closer, logs_channel):
     transcript = "-" * 40 + "\n"
-    transcript += f"Transcript for ticket channel: {channel.id}\n"
+    transcript += f"Transcript for ticket channel: {channel.name}\n"
     transcript += f"Opened by: {opener} ({opener.id})\n"
     transcript += f"Closed by: {closer} ({closer.id})\n"
     transcript += f"Ticket issue: {open_reason}\n"
@@ -84,19 +84,22 @@ async def create_transcript(channel: str, open_reason: str, opener, closer, logs
 
     logs_channel_embed = discord.Embed(
         title=f"📋 Ticket Transcript",
-        description=f"Ticket log for {channel.mention}",
+        description=f"Ticket log for {channel.name}",
         color=0x00FF00,
         timestamp=datetime.now()
     )
     logs_channel_embed.add_field(name="Opened by:", value=f"{opener} ({closer.id})", inline=False)
     logs_channel_embed.add_field(name="Closed by:", value=f"{closer} ({closer.id})", inline=False)
-    logs_channel_embed.add_field(name="Ticket issue:", value="", inline=False)
+    logs_channel_embed.add_field(name="Ticket issue:", value=f"{open_reason}", inline=False)
 
-    file = discord.File(io.StringIO(transcript), filename=f"transcript.txt")
+    file_data = io.StringIO(transcript)
+    file_user = discord.File(io.StringIO(transcript), filename=f"transcript.txt")
+    file_data.seek(0)
+    file_logs = discord.File(io.StringIO(transcript), filename=f"transcript.txt")
 
     try:
-        await opener.send(embed=user_embed, file=file)
-        await logs_channel.send(embed=logs_channel_embed, file=file)
+        await opener.send(embed=user_embed, file=file_user)
+        await logs_channel.send(embed=logs_channel_embed, file=file_logs)
     except discord.Forbidden:
         await logs_channel.send(f"Unable to send transcript for {channel.mention}. This may be due to their direct messages turned off.", embed=logs_channel_embed, file=file)
     
