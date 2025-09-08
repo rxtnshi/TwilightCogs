@@ -45,6 +45,12 @@ class TwilightTickets(commands.Cog):
 				close_time TEXT
 			)
 		""")
+
+		try:
+			self.cursor.execute("ALTER TABLE tickets ADD COLUMN log_message_id INTEGER")
+			self.conn.commit()
+		except:
+			pass
 		
 		self.cursor.execute("""
 			CREATE TABLE IF NOT EXISTS blacklist (
@@ -151,3 +157,66 @@ class TwilightTickets(commands.Cog):
 			await interaction.response.send_message(f"{user.mention} has been successfully removed from the blacklist!", ephemeral=True)
 		else:
 			await interaction.response.send_message(f"{user.mention} was not found in the blacklist.", ephemeral=True)
+
+	@staff.command(name="history", description="Grabs the ticket history of a user")
+	async def ticket_history(self, interaction: discord.Interaction, user: discord.Member):
+		if not role_check(interaction.user):
+			await interaction.response.send_message("You don't have permission to use this command.", ephemeral=True)
+			return
+		
+		self.cursor.execute(
+			"SELECT ticket_id, closer_id, open_time, close_time FROM tickets WHERE opener_id = ? ORDER BY open_time DESC",
+			(user.id)
+		)
+		tickets = self.cursor.fetchall()
+
+		if not tickets:
+			no_history_embed = discord.Embed(
+				title=f"📋 Ticket History",
+				description=f"Ticket history for {user.mention}",
+				color=0x808080,
+				timestamp=datetime.now()
+			)
+			no_history_embed.set_thumbnail(url=user.display_avatar.url)
+			await interaction.response.send_message(embed=no_history_embed)
+			return
+		
+		logs_channel_id = 1414397171289030726
+		
+		history_embed = discord.Embed(
+				title=f"📋 Ticket History",
+				description=f"Ticket history for {user.mention}",
+				color=0x808080,
+				timestamp=datetime.now()
+			)
+		history_embed.set_thumbnail(url=user.display_avatar.url)
+
+		history_text = ""
+		for ticket in tickets[:10]:
+			ticket_id, closer_id, open_time_str, close_time_str, log_message_id = ticket
+			
+			open_dt = datetime.fromisoformat(open_time_str)
+			open_ts = f"<t:{int(open_dt.timestamp())}:f>"
+
+			status_line = f"**Status:** Open since {open_ts}\n"
+			if close_time_str:
+				close_dt = datetime.fromisoformat(close_time_str)
+				close_ts = f"<t:{int(close_dt.timestamp())}:f>"
+
+				closer = interaction.guild.get_member(closer_id)
+				status_line = f"**Status:** Closed at {close_ts}\n **Closer:** {closer}\n"
+
+				if log_message_id:
+					log_link = f"https://discord.com/channels/{interaction.guild.id}/{logs_channel_id}/{log_message_id}"
+
+			history_text += (
+				f"**Ticket ID:** [{ticket_id}]({log_link}\n"
+				f"**Opened since: {open_ts}\n"
+				f"{status_line}"
+				f"---\n"
+			)
+
+			history_embed.description = history_text
+			history_embed.set_footer(text=f"Showing the last 10 tickets made by {user.mention}")
+
+			await interaction.response.send_message(embed=history_embed)
