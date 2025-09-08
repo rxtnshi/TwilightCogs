@@ -23,6 +23,12 @@ class TicketSelect(discord.ui.Select):
         log_channel_id = 1414397193934213140
         log_channel = interaction.guild.get_channel(log_channel_id)
 
+        # cog status check
+        cog = interaction.client.get_cog("TwilightTickets")
+        if not cog:
+            await interaction.response.send_message("The ticket system is currently offline. Please try again later.", ephemeral=True)
+            return
+        
         # blacklist check
         self.cog.cursor.execute("SELECT reason FROM blacklist WHERE user_id = ?", (interaction.user.id,))
         result = self.cog.cursor.fetchone()
