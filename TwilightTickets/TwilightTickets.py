@@ -46,7 +46,7 @@ class TwilightTickets(commands.Cog):
 		embed.timestamp = datetime.now()
 
 		view = ViewsModals.TicketView()
-		await interaction.send(embed=embed, view=view)
+		await interaction.response.send_message(embed=embed, view=view)
 
 	@staff.command(name="panic", description="Enables or disables creation of new tickets.")
 	async def panic(self, interaction: discord.Interaction):
