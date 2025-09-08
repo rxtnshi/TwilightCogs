@@ -3,11 +3,12 @@ import discord
 from . import ViewsModals
 from datetime import datetime
 from discord import app_commands
+from discord.app_commands import Choice
 from discord.ext import commands
 from redbot.core import commands
 
 staff_roles = [1341958721793691669, 1398449212219457577, 1009509393609535548]
-staff_roles_elevated = []
+staff_roles_elevated = [1009509393609535548]
 def role_check(member: discord.Member):
 	return any(role.id in staff_roles for role in member.roles)
 
@@ -54,12 +55,36 @@ class TwilightTickets(commands.Cog):
 		await channel.send(embed=embed, view=view)
 		await interaction.response.send_message(f"The panel has been sucessfully sent into {channel.mention}!", ephemeral=True)
 
-	@staff.command(name="panic", description="Enables or disables creation of new tickets.")
+	@staff.command(name="panic", description="Enables or disables panic mode")
 	async def panic(self, interaction: discord.Interaction):
 		if not role_check_elevated(interaction.user):
 			await interaction.response.send_message("You don't have permission to use this command.", ephemeral=True)
 			return
-		
+		log_channel_id = 1414397193934213140
+		log_channel = interaction.guild.get_channel(log_channel_id)
+
 		self.tickets_enabled = not self.tickets_enabled
 		status = "enabled" if self.tickets_enabled else "disabled"
+		await log_channel.send(f"{interaction.user} tried to open a ticket while panic mode was active.")
 		await interaction.response.send_message(f"Ticket creation is now {status}")
+
+	@staff.command(name="set", description="Enable/disable a specific ticket type")
+	@app_commands.choices(
+		ticket_type=[
+			Choice(name="Discord Tickets", value="discord"),
+			Choice(name="SCP:SL Tickets", value="game")
+		],
+		status=[
+			Choice(name="Enable", value="enable"),
+			Choice(name="Disable", value="disable")
+		]
+	)
+	async def enable_disable_type(self, interaction: discord.Interaction, type: str, status: str):
+		if not role_check_elevated(interaction.user):
+			await interaction.response.send_message("You don't have permission to use this command.", ephemeral=True)
+			return
+		
+		new_status = (status == "enable")
+		self.ticket.statuses[type] = new_status
+
+		await interaction.response.send_message(f"{type} tickets have been {status}d successfully.", ephemeral=True)

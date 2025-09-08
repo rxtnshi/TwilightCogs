@@ -23,12 +23,19 @@ class TicketSelect(discord.ui.Select):
             await interaction.response.send_message("Ticket creation is currently disabled. Please contact staff if you believe this is an error", ephemeral=True)
             return
         
+        selected_type = self.values[0]
+
+        if not self.cog.ticket_statuses.get(selected_type, False):
+            await interaction.response.send_message(f"This ticket type has been disabled! You cannot open tickets under this category as of now.", ephemeral=True)
+            return
+
         if self.values[0] == "⚠️ Discord Staff":
             modal = DiscordModal()
         elif self.values[0] == "🎮 Game Staff":
-            # modal = GameModal()
-            await interaction.response.send_message("This option is currently disabled.", ephemeral=True)
-            await interaction.message.edit(view=TicketView(self))
+            modal = GameModal()
+        else:
+            await interaction.response.send_message("An unexpected error occurred upon trying to show a modal.", ephemeral=True)
+            return
 
         await interaction.response.send_modal(modal)
         await interaction.message.edit(view=TicketView(self))
