@@ -25,10 +25,14 @@ class TwilightTickets(commands.Cog):
 	staff = app_commands.Group(name="staff", description="Staff commands", guild_only=True)
 
 	@staff.command(name="panel", description="Sets up the panel used for the ticket option selection")
-	async def start_panel(self, interaction: discord.Interaction):
+	async def start_panel(self, interaction: discord.Interaction, channel: discord.TextChannel):
 		"""Sets up the panel used for the ticket option selection"""
 		if not role_check(interaction.user):
 			await interaction.response.send_message("You don't have permission to use this command.", ephemeral=True)
+			return
+		
+		if channel is None:
+			await interaction.response.send_message("You must specify which channel the panel is going to be posted in.")
 			return
 		
 		embed = discord.Embed(title="Twilight Zone Support & Reporting",
@@ -46,7 +50,8 @@ class TwilightTickets(commands.Cog):
 		embed.timestamp = datetime.now()
 
 		view = ViewsModals.TicketView()
-		await interaction.response.send_message(embed=embed, view=view)
+		await channel(embed=embed, view=view)
+		await interaction.response.send_message(f"The panel has been sucessfully sent into {channel}")
 
 	@staff.command(name="panic", description="Enables or disables creation of new tickets.")
 	async def panic(self, interaction: discord.Interaction):
