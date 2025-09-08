@@ -3,7 +3,7 @@ import datetime
 import io
 import re
 
-from Tickets import create_transcript, create_ticket
+from .Tickets import create_transcript, create_ticket
 from datetime import datetime
 from discord import app_commands, utils
 from discord.ext import commands
