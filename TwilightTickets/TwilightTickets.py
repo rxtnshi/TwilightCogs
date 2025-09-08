@@ -176,22 +176,19 @@ class TwilightTickets(commands.Cog):
 
 		if not tickets:
 			no_history_embed = discord.Embed(
-				title=f"📋 Ticket History",
-				description=f"No ticket history for {user.mention}",
-				color=0x808080,
-				timestamp=datetime.now()
+				title=f"📋 Ticket History for {user.display_name}",
+				description=f"No ticket history found for {user.mention}.",
+				color=0x808080
 			)
 			no_history_embed.set_thumbnail(url=user.display_avatar.url)
-			await interaction.response.send_message(embed=no_history_embed)
+			await interaction.response.send_message(embed=no_history_embed, ephemeral=True)
 			return
 		
 		logs_channel_id = 1414397193934213140
 		
 		history_embed = discord.Embed(
-				title=f"📋 Ticket History",
-				description=f"Ticket history for {user.mention}",
-				color=0x808080,
-				timestamp=datetime.now()
+				title=f"📋 Ticket History for {user.mention}",
+				color=0x808080
 			)
 		history_embed.set_thumbnail(url=user.display_avatar.url)
 
@@ -208,7 +205,7 @@ class TwilightTickets(commands.Cog):
 			if close_time_str:
 				close_dt = datetime.fromisoformat(close_time_str)
 				close_ts = f"<t:{int(close_dt.timestamp())}:f>"
-				closer = interaction.guild.get_member(closer_id)
+				closer = interaction.guild.get_member(closer_id) or f"ID: {closer_id}"
 				status_line = f"**Status:** Closed at {close_ts} by {closer}\n"
 
 				if log_message_id:
@@ -217,12 +214,12 @@ class TwilightTickets(commands.Cog):
 
 			history_text += (
 				f"{ticket_line}"
-				f"**Opened since:** {open_ts}\n"
+				f"**Opened:** {open_ts}\n"
 				f"{status_line}"
 				f"---\n"
 			)
 		
 		history_embed.description = history_text
-		history_embed.set_footer(text=f"Showing the last 10 tickets made by {user}")
+		history_embed.set_footer(text=f"Showing the last 10 tickets for {user.display_name}")
 
-		await interaction.response.send_message(embed=history_embed)
+		await interaction.response.send_message(embed=history_embed, ephemeral=True)
