@@ -101,21 +101,29 @@ async def create_transcript(channel: str, open_reason: str, opener, closer, logs
     file_data.seek(0)
     file_logs = discord.File(io.StringIO(transcript), filename=f"transcript.txt")
 
+    log_message = await logs_channel.send(embed=logs_channel_embed, file=file_logs)
+    
     try:
         await opener.send(embed=user_embed, file=file_user)
         await logs_channel.send(embed=logs_channel_embed, file=file_logs)
     except discord.Forbidden:
         await logs_channel.send(f"Unable to send transcript for {channel.mention}. This may be due to their direct messages turned off.", embed=logs_channel_embed, file=file_logs)
 
-    topic = channel.topic
+    
     ticket_id = None
-    if topic and "ID:" in topic:
-        ticket_id = topic.split("ID:")[1].split*("|")[0].strip()
+    if channel.topic and "ID:" in channel.topic:
+        try:
+            ticket_id = channel.topic.split("ID:")[1].split("|")[0].strip()
+        except IndexError:
+            pass
 
     if ticket_id:
-        cog.cursor.execute("""
-            UPDATE tickets
-            SET closer_id = ?, close_time = ?
-            WHERE ticket_id = ?
-        """, (closer.id, datetime.now().isoformat(), ticket_id))
-        cog.conn.commit()
+        try:
+            cog.cursor.execute("""
+                UPDATE tickets
+                SET closer_id = ?, close_time = ?, log_message_id = ?
+                WHERE ticket_id = ?
+            """, (closer.id, datetime.now().isoformat(), log_message.id, ticket_id))
+            cog.conn.commit()
+        except Exception as e:
+            print(f"Failed to update ticket {ticket_id} in database: {e}")
