@@ -42,6 +42,7 @@ class TicketSelect(discord.ui.Select):
                 for channel in category.text_channels:
                     if channel.topic and f"({interaction.user.id})" in channel.topic:
                         await interaction.response.send_message(f"An existing ticket has been found in this category. You can access it here: {channel.mention}", ephemeral=True)
+                        await interaction.message.edit(view=TicketView(self.cog))
                         return
             modal = DiscordModal()
         elif selected_type == "game":
@@ -52,10 +53,12 @@ class TicketSelect(discord.ui.Select):
                 for channel in category.text_channels:
                     if channel.topic and f"({interaction.user.id})" in channel.topic:
                         await interaction.response.send_message(f"An existing ticket has been found in this category. You can access it here: {channel.mention}", ephemeral=True)
+                        await interaction.message.edit(view=TicketView(self.cog))
                         return
             modal = GameModal()
         else:
             await interaction.response.send_message("An unexpected error occurred upon trying to show a modal.", ephemeral=True)
+            await interaction.message.edit(view=TicketView(self.cog))
             return
 
         await interaction.response.send_modal(modal)
