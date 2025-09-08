@@ -30,10 +30,6 @@ async def create_ticket(
     ticket_id = uuid.uuid1().hex[:6]
     channel_name = f"{ticket_type.lower()}-report-{ticket_id}"
 
-    for channel in category.text_channels:
-        if channel.topic and f"({user.id})" in channel.topic:
-            await interaction.response.send_message(f"You already have a ticket open! You can access it here: {channel.mention}", ephermal=True)
-
     overwrites = {
         guild.default_role: discord.PermissionOverwrite(view_channel=False),
         user: discord.PermissionOverwrite(view_channel=True, send_messages=True, attach_files=True, embed_links=True),

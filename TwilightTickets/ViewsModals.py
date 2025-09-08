@@ -30,14 +30,29 @@ class TicketSelect(discord.ui.Select):
         
         # check for ticket type statuses
         selected_type = self.values[0]
-
         if not self.cog.ticket_statuses.get(selected_type, False):
             await interaction.response.send_message("This ticket category has been disabled! Please contact staff if you believe this is an error.", ephemeral=True)
             return
 
         if selected_type == "discord":
+            category_id = 1349563765842247784 # change when testing or active
+            category = discord.utils.get(interaction.guild.categories, id=category_id)
+
+            if category:
+                for channel in category.text_channels:
+                    if channel.topic and f"({interaction.user.id})" in channel.topic:
+                        await interaction.response.send_message(f"An existing ticket has been found in this category. You can access it here: {channel.mention}")
+                        return
             modal = DiscordModal()
         elif selected_type == "game":
+            category_id = 1414397144370122833 # change when testing or active
+            category = discord.utils.get(interaction.guild.categories, id=category_id)
+
+            if category:
+                for channel in category.text_channels:
+                    if channel.topic and f"({interaction.user.id})" in channel.topic:
+                        await interaction.response.send_message(f"An existing ticket has been found in this category. You can access it here: {channel.mention}")
+                        return
             modal = GameModal()
         else:
             await interaction.response.send_message("An unexpected error occurred upon trying to show a modal.", ephemeral=True)
