@@ -18,7 +18,7 @@ async def create_ticket(
     staff_role_id: int,
     embed_color: int
 ):
-    ticket_id = uuid.uuid4()
+    ticket_id = uuid.uuid1()
     guild = interaction.guild
     user = interaction.user
     
