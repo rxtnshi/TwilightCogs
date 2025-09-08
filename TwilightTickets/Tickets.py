@@ -80,7 +80,7 @@ async def create_transcript(channel: str, open_reason: str, opener, closer, logs
     )
     user_embed.add_field(name="Opened by:", value=f"{opener} ({opener.id})", inline=False)
     user_embed.add_field(name="Closed by:", value=f"{closer} ({opener.id})", inline=False)
-    user_embed.add_field(name="Ticket issue:", value="", inline=False)
+    user_embed.add_field(name="Ticket issue:", value=f"{open_reason}", inline=False)
 
     logs_channel_embed = discord.Embed(
         title=f"📋 Ticket Transcript",
@@ -132,7 +132,8 @@ class CloseTicket(discord.ui.Button):
     async def callback(self, interaction: discord.Interaction):
         channel = interaction.channel
         closing_user = interaction.user
-        logs_channel = 1414397193934213140 #set whenever testing or active
+        logs_channel_id = 1414397193934213140 #set whenever testing or active
+        logs_channel = interaction.guild.get_channel(logs_channel_id)
         topic = interaction.channel.topic
 
         open_reason = None
