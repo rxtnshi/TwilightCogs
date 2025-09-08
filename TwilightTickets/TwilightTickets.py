@@ -184,7 +184,7 @@ class TwilightTickets(commands.Cog):
 			await interaction.response.send_message(embed=no_history_embed)
 			return
 		
-		logs_channel_id = 1414397193934213140
+		logs_channel_id = 1414502972964212857 #1414397193934213140 # change whenever testing or active
 		
 		history_embed = discord.Embed(
 				title=f"📋 Ticket History for {user.display_name}",
