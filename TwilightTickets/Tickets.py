@@ -7,7 +7,7 @@ from datetime import datetime
 from discord import app_commands, utils
 from discord.ext import commands
 
-ticket_count = 0
+ticket_count = 1
 
 async def create_ticket(
     interaction,
@@ -45,7 +45,7 @@ async def create_ticket(
         overwrites=overwrites,
         topic=f"Issue: {request_description} | Opened by: {user.mention} ({user.id})"
     )
-    ticket_counter += 1
+    ticket_count += 1
     
     embed = discord.Embed(
         title=f"📋 {ticket_type} Ticket Submitted",
