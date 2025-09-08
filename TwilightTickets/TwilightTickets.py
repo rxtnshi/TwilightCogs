@@ -41,7 +41,7 @@ class TwilightTickets(commands.Cog):
 				channel_id INTEGER NOT NULL,
 				opener_id INTEGER NOT NULL,
 				closer_id INTEGER,
-				open_time TEXT NOT NULL
+				open_time TEXT NOT NULL,
 				close_time TEXT
 			)
 		""")
