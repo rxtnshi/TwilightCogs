@@ -69,7 +69,7 @@ class TwilightTickets(commands.Cog):
 
 		self.tickets_enabled = not self.tickets_enabled
 		status = "enabled" if self.tickets_enabled else "disabled"
-		await log_channel.send(f"{interaction.user} tried to open a ticket while panic mode was active.")
+
 		await interaction.response.send_message(f"Ticket creation is now {status}")
 
 	@staff.command(name="set", description="Enable/disable a specific ticket type")
@@ -91,4 +91,4 @@ class TwilightTickets(commands.Cog):
 		new_status = (status == "enable")
 		self.ticket_statuses[ticket_type] = new_status
 
-		await interaction.response.send_message(f"{ticket_type} tickets have been {status}d successfully.", ephemeral=True)
+		await interaction.response.send_message(f"{ticket_type.capitalize()} tickets have been {status}d successfully.", ephemeral=True)

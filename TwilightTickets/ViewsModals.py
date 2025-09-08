@@ -11,27 +11,33 @@ from discord.ext import commands
 class TicketSelect(discord.ui.Select):
     def __init__(self, cog: commands.Cog):
         options = [
-            discord.SelectOption(label="⚠️ Discord Staff", description="Contact Discord staff"),
-            discord.SelectOption(label="🎮 Game Staff", description="Contact SCP:SL staff")
+            discord.SelectOption(label="⚠️ Discord Staff", description="Contact Discord staff", value="discord"),
+            discord.SelectOption(label="🎮 Game Staff", description="Contact SCP:SL staff", value="game")
         ]
 
         super().__init__(placeholder="Select a category...", options=options)
         self.cog = cog
 
     async def callback(self, interaction = discord.Interaction):
+        log_channel_id = 1414397193934213140
+        log_channel = interaction.guild.get_channel(log_channel_id)
+
+        # check for panic mode
         if not self.cog.tickets_enabled:
-            await interaction.response.send_message("Ticket creation is currently disabled. Please contact staff if you believe this is an error", ephemeral=True)
+            await interaction.response.send_message("Ticket creation is currently disabled. Please contact staff if you believe this is an error!", ephemeral=True)
+            await log_channel.send(f"{interaction.user.mention} tried to open a ticket while panic mode was active.")
             return
         
+        # check for ticket type statuses
         selected_type = self.values[0]
 
         if not self.cog.ticket_statuses.get(selected_type, False):
-            await interaction.response.send_message(f"This ticket type has been disabled! You cannot open tickets under this category as of now.", ephemeral=True)
+            await interaction.response.send_message("This ticket category has been disabled! Please contact staff if you believe this is an error.", ephemeral=True)
             return
 
-        if self.values[0] == "⚠️ Discord Staff":
+        if selected_type == "discord":
             modal = DiscordModal()
-        elif self.values[0] == "🎮 Game Staff":
+        elif selected_type == "game":
             modal = GameModal()
         else:
             await interaction.response.send_message("An unexpected error occurred upon trying to show a modal.", ephemeral=True)
