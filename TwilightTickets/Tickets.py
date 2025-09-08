@@ -29,7 +29,7 @@ async def create_ticket(
         await interaction.response.send_message("Cannot open a ticket right now.", ephemeral=True)
         return
 
-    ticket_id = uuid.uuid1().hex[:6]
+    ticket_id = uuid.uuid4().hex[:6]
     channel_name = f"{ticket_type.lower()}-report-{ticket_id}"
 
     overwrites = {
@@ -42,7 +42,7 @@ async def create_ticket(
         name=channel_name,
         category=category,
         overwrites=overwrites,
-        topic=f"Issue: {request_description} | Opened by: {user.mention} ({user.id})"
+        topic=f"ID: {ticket_id} | Issue: {request_description} | Opened by: {user.mention} ({user.id})"
     )
     
     cog.cursor.execute("""
@@ -57,8 +57,8 @@ async def create_ticket(
         color=embed_color,
         timestamp=datetime.now()
     )
+    embed.add_field(name="Issue:", value=request_name, inline=False)
     embed.add_field(name="Description:", value=request_description, inline=False)
-    embed.add_field(name="Reported User:", value=request_name, inline=False)
 
     await channel.send(embed=embed, view=ViewsModals.CloseTicketView(cog))
     await interaction.response.send_message(f"✅ Ticket opened! Access it at {channel.mention}", ephemeral=True)
