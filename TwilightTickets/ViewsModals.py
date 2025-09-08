@@ -41,7 +41,7 @@ class TicketSelect(discord.ui.Select):
             if category:
                 for channel in category.text_channels:
                     if channel.topic and f"({interaction.user.id})" in channel.topic:
-                        await interaction.response.send_message(f"An existing ticket has been found in this category. You can access it here: {channel.mention}")
+                        await interaction.response.send_message(f"An existing ticket has been found in this category. You can access it here: {channel.mention}", ephemeral=True)
                         return
             modal = DiscordModal()
         elif selected_type == "game":
@@ -51,7 +51,7 @@ class TicketSelect(discord.ui.Select):
             if category:
                 for channel in category.text_channels:
                     if channel.topic and f"({interaction.user.id})" in channel.topic:
-                        await interaction.response.send_message(f"An existing ticket has been found in this category. You can access it here: {channel.mention}")
+                        await interaction.response.send_message(f"An existing ticket has been found in this category. You can access it here: {channel.mention}", ephemeral=True)
                         return
             modal = GameModal()
         else:
@@ -123,7 +123,7 @@ class DiscordModal(discord.ui.Modal):
             request_description=self.discord_request.value,
             category_id=1349563765842247784, #set whenever testing or when active
             staff_role_id=1009509393609535548, #set whenever testing or when active
-            embed_color=0xFF5733
+            embed_color=0x5865f2
         )
 
 class GameModal(discord.ui.Modal):
