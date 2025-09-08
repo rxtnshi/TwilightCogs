@@ -23,6 +23,10 @@ class TwilightTickets(commands.Cog):
 	def __init__(self, bot):
 		self.bot = bot
 		self.tickets_enabled = True
+		self.ticket_statuses = {
+			"discord": True,
+			"game": True
+		}
 		
 	staff = app_commands.Group(name="staff", description="Staff commands", guild_only=True)
 
@@ -85,6 +89,6 @@ class TwilightTickets(commands.Cog):
 			return
 		
 		new_status = (status == "enable")
-		self.ticket.statuses[type] = new_status
+		self.ticket_statuses[type] = new_status
 
 		await interaction.response.send_message(f"{type} tickets have been {status}d successfully.", ephemeral=True)
