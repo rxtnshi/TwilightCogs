@@ -1,15 +1,18 @@
 import discord
 import datetime
 import io
+import re
 
 from datetime import datetime
 from discord import app_commands, utils
 from discord.ext import commands
 
+count = 0
+
 async def create_ticket(
     interaction,
     ticket_type: str,
-    report_name: str,
+    request_name: str,
     request_description: str,
     category_id: int,
     staff_role_id: int,
@@ -23,7 +26,7 @@ async def create_ticket(
         await interaction.response.send_message("Cannot open a ticket right now.", ephemeral=True)
         return
 
-    channel_name = f"{user}-{ticket_type.lower()}-report"
+    channel_name = f"{ticket_type.lower()}-report-{count}"
     existing_channel = discord.utils.get(guild.text_channels, name=channel_name)
     if existing_channel:
         await interaction.response.send_message(f"You already have an active ticket open. {existing_channel.mention}", ephemeral=True)
@@ -39,9 +42,10 @@ async def create_ticket(
         name=channel_name,
         category=category,
         overwrites=overwrites,
-        topic=f"Ticket opener: {user.id}"
+        topic=f"Issue: {request_description} | Opened by: {user.mention} ({user.id})"
     )
-
+    count += 1
+    
     embed = discord.Embed(
         title=f"📋 {ticket_type} Ticket Submitted",
         description=f"{user.mention} submitted a ticket.",
@@ -49,7 +53,7 @@ async def create_ticket(
         timestamp=datetime.now()
     )
     embed.add_field(name="Description:", value=request_description, inline=False)
-    embed.add_field(name="Reported User:", value=report_name, inline=False)
+    embed.add_field(name="Reported User:", value=request_name, inline=False)
 
     await channel.send(embed=embed, view=CloseTicketView())
     await interaction.response.send_message(f"✅ Ticket opened! Access it at {channel.mention}", ephemeral=True)
@@ -126,19 +130,29 @@ class CloseTicket(discord.ui.Button):
 
     async def callback(self, interaction: discord.Interaction):
         channel = interaction.channel
-        open_reason = ""
-        close_reason = ""
+        open_reason = 
         closing_user = interaction.user
         logs_channel = 1414397193934213140 #set whenever testing or active
+        topic = interaction.channel.topic
 
+        open_reason = None
+        if topic and "Issue:" in topic:
+            open_reason = topic.split("Issue:")[1].split("|")[0].strip()
+        
         opening_user = None
-        if channel.topic and "Ticket opener:" in channel.topic:
-            opening_user = int(channel.topic.split("Ticket opener:")[1].strip())
+        if topic:
+            match = re.search(r"\((\d+)\)", topic)
+            if match:
+                opening_user = int(match.group(1))
         opener = channel.guild.get_member(opening_user) if opening_user else None
 
         await create_transcript(channel, open_reason, opener, closing_user, logs_channel)
         await interaction.response.send_message("Closing ticket...", ephemeral=True)
-        await interaction.channel.delete()
+
+        try:
+            await interaction.channel.delete()
+        except Exception as e:
+            await interaction.response.send_message(f"Failed to delete channel: {e}", ephemeral=True)
 
 class CloseTicketView(discord.ui.View):
     def __init__(self, timeout=None):
@@ -148,16 +162,16 @@ class CloseTicketView(discord.ui.View):
 class DiscordModal(discord.ui.Modal):
     def __init__(self):
         super().__init__(title="Discord Help Request", timeout=None)
-        self.discord_report_name = discord.ui.TextInput(label="What is your issue?", required=True, style=discord.TextStyle.short)
+        self.discord_request_name = discord.ui.TextInput(label="What is your issue?", required=True, style=discord.TextStyle.short)
         self.discord_request = discord.ui.TextInput(label="Describe the issue", required=True, style=discord.TextStyle.paragraph)
-        self.add_item(self.discord_report_name)
+        self.add_item(self.discord_request_name)
         self.add_item(self.discord_request)
 
     async def on_submit(self, interaction: discord.Interaction):
         await create_ticket(
             interaction,
             ticket_type="Discord",
-            report_name=self.discord_report_name.value,
+            request_name=self.discord_request_name.value,
             request_description=self.discord_request.value,
             category_id=1349563765842247784, #set whenever testing or when active
             staff_role_id=1009509393609535548, #set whenever testing or when active
@@ -169,7 +183,7 @@ class GameModal(discord.ui.Modal):
         await create_ticket(
             interaction,
             ticket_type="SCP:SL",
-            report_name=self.game_report_name.value,
+            request_name=self.game_request_name.value,
             request_description=self.game_request.value,
             category_id=1414397144370122833, #set whenever testing or when active
             staff_role_id=1009509393609535548, #set whenever testing or when active
