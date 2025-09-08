@@ -187,7 +187,7 @@ class TwilightTickets(commands.Cog):
 		logs_channel_id = 1414397193934213140
 		
 		history_embed = discord.Embed(
-				title=f"📋 Ticket History for {user.mention}",
+				title=f"📋 Ticket History for {user.display_name}",
 				color=0x808080
 			)
 		history_embed.set_thumbnail(url=user.display_avatar.url)
@@ -206,7 +206,7 @@ class TwilightTickets(commands.Cog):
 				close_dt = datetime.fromisoformat(close_time_str)
 				close_ts = f"<t:{int(close_dt.timestamp())}:f>"
 				closer = interaction.guild.get_member(closer_id) or f"ID: {closer_id}"
-				status_line = f"**Status:** Closed at {close_ts} by {closer}\n"
+				status_line = f"**Status:** Closed\n**Closed at:** {close_ts} by {closer.mention}\n"
 
 				if log_message_id:
 					log_link = f"https://discord.com/channels/{interaction.guild.id}/{logs_channel_id}/{log_message_id}"

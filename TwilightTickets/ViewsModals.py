@@ -89,7 +89,7 @@ class CloseTicket(discord.ui.Button):
         self.cog = cog
 
     async def callback(self, interaction: discord.Interaction):
-        staff_roles = [1345963237316890776, 1345963295575769088, 1009509393609535548, 1009509393609535548]
+        staff_roles = [1345963237316890776, 1345963295575769088, 1009509393609535548, 1009509393609535548, 1341957856232210492]
         channel = interaction.channel
         closing_user = interaction.user
         logs_channel_id = 1414502972964212857 #1414397193934213140 #set whenever testing or active
@@ -98,7 +98,7 @@ class CloseTicket(discord.ui.Button):
 
         has_permission = any(role.id in staff_roles for role in interaction.user.roles)
         if not has_permission:
-            await interaction.response.send_message("Sorry, only modmail staff have access to close this ticket. Please ping a staff if you would like to close this ticket.")
+            await interaction.response.send_message("Sorry, only modmail staff have access to close this ticket. Please ping a staff if you would like to close this ticket.", ephemeral=True)
             return
 
         open_reason = None
@@ -112,13 +112,8 @@ class CloseTicket(discord.ui.Button):
                 opening_user = int(match.group(1))
         opener = channel.guild.get_member(opening_user) if opening_user else None
 
+        await interaction.response.send_message("⌛ Creating transcript and closing ticket...")
         await create_transcript(channel, open_reason, opener, closing_user, logs_channel, cog=self.cog)
-        await interaction.response.send_message("Closing ticket...", ephemeral=True)
-
-        try:
-            await interaction.channel.delete()
-        except Exception as e:
-            await interaction.response.send_message(f"Failed to delete channel: {e}", ephemeral=True)
 
 class CloseTicketView(discord.ui.View):
     def __init__(self, cog: commands.Cog):

@@ -106,7 +106,7 @@ async def create_transcript(channel: str, open_reason: str, opener, closer, logs
     try:
         await opener.send(embed=user_embed, file=file_user)
     except discord.Forbidden:
-        await logs_channel.send(f"Unable to send transcript for {channel.mention}. This may be due to their direct messages turned off.", embed=logs_channel_embed, file=file_logs)
+        await logs_channel.send(f"Unable to send transcript for {channel.mention}. This may be due to their direct messages turned off or they left the server.", embed=logs_channel_embed, file=file_logs)
 
     
     ticket_id = None
@@ -126,3 +126,5 @@ async def create_transcript(channel: str, open_reason: str, opener, closer, logs
             cog.conn.commit()
         except Exception as e:
             print(f"Failed to update ticket {ticket_id} in database: {e}")
+
+    await channel.delete()
