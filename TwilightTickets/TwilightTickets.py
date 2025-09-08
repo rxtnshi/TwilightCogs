@@ -181,7 +181,7 @@ class TwilightTickets(commands.Cog):
 				color=0x808080
 			)
 			no_history_embed.set_thumbnail(url=user.display_avatar.url)
-			await interaction.response.send_message(embed=no_history_embed, ephemeral=True)
+			await interaction.response.send_message(embed=no_history_embed)
 			return
 		
 		logs_channel_id = 1414397193934213140
