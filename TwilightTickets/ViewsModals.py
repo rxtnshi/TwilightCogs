@@ -9,16 +9,16 @@ from discord import app_commands, utils
 from discord.ext import commands
 
 class TicketSelect(discord.ui.Select):
-    def __init__(self):
+    def __init__(self, cog: commands.Cog):
         options = [
             discord.SelectOption(label="⚠️ Discord Staff", description="Contact Discord staff"),
             discord.SelectOption(label="🎮 Game Staff", description="Contact SCP:SL staff")
         ]
 
         super().__init__(placeholder="Select a category...", options=options)
+        self.cog = cog
 
     async def callback(self, interaction = discord.Interaction):
-
         if not self.cog.tickets_enabled:
             await interaction.response.send_message("Ticket creation is currently disabled. Please contact staff if you believe this is an error", ephemeral=True)
             return

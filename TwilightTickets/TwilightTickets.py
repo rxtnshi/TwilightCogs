@@ -21,6 +21,7 @@ class TwilightTickets(commands.Cog):
 
 	def __init__(self, bot):
 		self.bot = bot
+		self.tickets_enabled = True
 		
 	staff = app_commands.Group(name="staff", description="Staff commands", guild_only=True)
 
@@ -59,9 +60,6 @@ class TwilightTickets(commands.Cog):
 			await interaction.response.send_message("You don't have permission to use this command.", ephemeral=True)
 			return
 		
-		global tickets_enabled
-
-		tickets_enabled = not tickets_enabled
-		status = "enabled" if tickets_enabled else "disabled"
-
-		await interaction.response.send_message(f"Ticket creation is now {status}.")
+		self.tickets_enabled = not self.tickets_enabled
+		status = "enabled" if self.tickets_enabled else "disabled"
+		await interaction.response.send_message(f"Ticket creation is now {status}")
