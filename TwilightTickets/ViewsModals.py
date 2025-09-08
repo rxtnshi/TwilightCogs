@@ -114,10 +114,10 @@ class DiscordModal(discord.ui.Modal):
 class GameModal(discord.ui.Modal):
     def __init__(self):
         super().__init__(title="Game Staff Help Request", timeout=None)
-        self.discord_request_name = discord.ui.TextInput(label="What is your issue?", required=True, style=discord.TextStyle.short)
-        self.discord_request = discord.ui.TextInput(label="Describe the issue", required=True, style=discord.TextStyle.paragraph)
-        self.add_item(self.discord_request_name)
-        self.add_item(self.discord_request)
+        self.game_request_name = discord.ui.TextInput(label="What is your issue?", required=True, style=discord.TextStyle.short)
+        self.game_request = discord.ui.TextInput(label="Describe the issue", required=True, style=discord.TextStyle.paragraph)
+        self.add_item(self.game_request_name)
+        self.add_item(self.game_request)
     
     async def on_submit(self, interaction: discord.Interaction):
         await create_ticket(
