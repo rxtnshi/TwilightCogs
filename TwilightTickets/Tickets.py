@@ -117,5 +117,5 @@ async def create_transcript(channel: str, open_reason: str, opener, closer, logs
             UPDATE tickets
             SET closer_id = ?, close_time = ?
             WHERE ticket_id = ?
-        """, (closer.id, datetime.now().isoformat()m ticket_id))
+        """, (closer.id, datetime.now().isoformat(), ticket_id))
         cog.conn.commit()
