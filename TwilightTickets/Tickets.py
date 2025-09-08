@@ -27,7 +27,7 @@ async def create_ticket(
         await interaction.response.send_message("Cannot open a ticket right now.", ephemeral=True)
         return
 
-    channel_name = f"{ticket_type.lower()}-report-{count}"
+    channel_name = f"{ticket_type.lower()}-report-{ticket_count}"
     existing_channel = discord.utils.get(guild.text_channels, name=channel_name)
     if existing_channel:
         await interaction.response.send_message(f"You already have an active ticket open. {existing_channel.mention}", ephemeral=True)
