@@ -1,4 +1,5 @@
 import discord
+import sqlite3
 
 from . import ViewsModals
 from datetime import datetime
@@ -28,6 +29,34 @@ class TwilightTickets(commands.Cog):
 			"game": True
 		}
 		
+		self.conn = sqlite3.connect('tickets.db')
+		self.cursor = self.conn.cursor
+		self.setup_db()
+
+	def setup_db(self):
+		"""Creates DB for stats, history, whatnot"""
+		self.cursor.execute("""
+			CREATE TABLE IF NOT EXISTS tickets (
+				ticket_id TEXT PRIMARY KEY,
+				channel_id INTEGER NOT NULL,
+				opener_id INTEGER NOT NULL,
+				closer_id INTEGER,
+				open_time TEXT NOT NULL
+				close_time TEXT
+			)
+		""")
+		
+		self.cursor.execute("""
+			CREATE TABLE IF NOT EXISTS blacklist (
+				user_id TEXT PRIMARY KEY,
+				reason TEXT,
+				staff_id INTEGER NOT NULL,
+				timestamp TEXT NOT NULL
+			)
+		""")
+	def cog_unload(self):
+		self.conn.close()
+
 	staff = app_commands.Group(name="staff", description="Staff commands", guild_only=True)
 
 	@staff.command(name="panel", description="Sets up the panel used for the ticket option selection")
@@ -92,3 +121,32 @@ class TwilightTickets(commands.Cog):
 		self.ticket_statuses[ticket_type] = new_status
 
 		await interaction.response.send_message(f"{ticket_type.capitalize()} tickets have been {status}d successfully.", ephemeral=True)
+
+	@staff.command(name="blacklist", description="Blacklists a user")
+	async def blacklist_user(self, interaction: discord.Interaction, user: discord.Member, reason: str):
+		if not role_check_elevated(interaction.user):
+			await interaction.response.send_message("You don't have permission to use this command.", ephemeral=True)
+			return
+		
+		try:
+			self.cursor.execute("""
+				INSERT INTO blacklist(user_id, reason, staff_id, timestamp)
+				VALUES(?, ?, ?, ?)
+			""", (user.id, reason, interaction.user.id, datetime.now().isoformat()))
+			await interaction.response.send_message(f"{user.mention} has been successfully blacklisted. Reason: {reason}")
+		except sqlite3.IntegrityError:
+			await interaction.response.send_message(f"{user.mention} has already been blacklisted.", ephemeral=True)
+			return
+	
+	@staff.command(name="unblacklist", description="Removes a user from the blacklist")
+	async def unblacklist_user(self, interaction: discord.Interaction, user: discord.Member):
+		if not role_check_elevated(interaction.user):
+			await interaction.response.send_message("You don't have permission to use this command.", ephemeral=True)
+			return
+		
+		self.cursor.execute("DELETE FROM blacklist WHERE user_id =?", (user.id))
+		if self.cursor.rowcount > 0:
+			self.conn.commit()
+			await interaction.response.send_message(f"{user.mention} has been successfully removed from the blacklist!", ephemeral=True)
+		else:
+			await interaction.response.send_message(f"{user.mention} was not found in the blacklist.", ephemeral=True)
