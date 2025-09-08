@@ -34,9 +34,9 @@ class TicketSelect(discord.ui.Select):
         await interaction.message.edit(view=TicketView())
 
 class TicketView(discord.ui.View):
-    def __init__(self):
+    def __init__(self, cog: commands.Cog):
         super().__init__(timeout=None)
-        self.add_item(TicketSelect())
+        self.add_item(TicketSelect(cog))
 
 class CloseTicket(discord.ui.Button):
     def __init__(self):
