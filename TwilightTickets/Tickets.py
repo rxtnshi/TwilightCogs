@@ -54,7 +54,7 @@ async def create_ticket(
     await channel.send(embed=embed, view=CloseTicketView())
     await interaction.response.send_message(f"✅ Ticket opened! Access it at {channel.mention}", ephemeral=True)
 
-async def create_transcript(channel, opener: str, closer: str, logs_channel):
+async def create_transcript(channel, opener, closer, logs_channel):
     transcript = f"Transcript for ticket channel: {channel.mention}"
     transcript += f"Opened by: {opener}"
     transcript += f"Closed by: {closer}\n"
@@ -130,7 +130,7 @@ class CloseTicket(discord.ui.Button):
             opening_user = int(channel.topic.split("Ticket opener:")[1].strip())
         opener = channel.guild.get_member(opening_user) if opening_user else None
 
-        await create_transcript(channel, opener, closing_user, logs_channel, closed_by=closing_user)
+        await create_transcript(channel, opener, closing_user, logs_channel)
         await interaction.response.send_message("Closing ticket...", ephemeral=True)
         await interaction.channel.delete()
 
