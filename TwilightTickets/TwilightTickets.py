@@ -32,7 +32,7 @@ class TwilightTickets(commands.Cog):
 			return
 		
 		if channel is None:
-			await interaction.response.send_message("You must specify which channel the panel is going to be posted in.")
+			await interaction.response.send_message("You must specify which channel the panel is going to be posted in.", ephemeral=True)
 			return
 		
 		embed = discord.Embed(title="Twilight Zone Support & Reporting",
@@ -51,7 +51,7 @@ class TwilightTickets(commands.Cog):
 
 		view = ViewsModals.TicketView()
 		await channel.send(embed=embed, view=view)
-		await interaction.response.send_message(f"The panel has been sucessfully sent into {channel}")
+		await interaction.response.send_message(f"The panel has been sucessfully sent into {channel.mention}!", ephemeral=True)
 
 	@staff.command(name="panic", description="Enables or disables creation of new tickets.")
 	async def panic(self, interaction: discord.Interaction):
