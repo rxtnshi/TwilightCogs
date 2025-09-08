@@ -54,9 +54,10 @@ async def create_ticket(
     await channel.send(embed=embed, view=CloseTicketView())
     await interaction.response.send_message(f"✅ Ticket opened! Access it at {channel.mention}", ephemeral=True)
 
-async def create_transcript(channel, user, logs_channel):
+async def create_transcript(channel, opener: str, closer: str, logs_channel):
     transcript = f"Transcript for ticket channel: {channel.mention}"
-    transcript += f"Closed by: {user}\n"
+    transcript += f"Opened by: {opener}"
+    transcript += f"Closed by: {closer}\n"
     transcript += "-" * 40 + "\n"
 
     async for msg in channel.history(limit=None, oldest_first=True):
@@ -80,13 +81,13 @@ async def create_transcript(channel, user, logs_channel):
         color=0x00FF00,
         timestamp=datetime.now()
     )
-    logs_channel_embed.add_field(name="Opened by:", value="", inline=False)
-    logs_channel_embed.add_field(name="Closed by:", value="", inline=False)
+    logs_channel_embed.add_field(name="Opened by:", value=opener, inline=False)
+    logs_channel_embed.add_field(name="Closed by:", value=closer, inline=False)
 
     file = discord.File(io.StringIO(transcript), filename=f"transcript.txt")
 
     try:
-        await user.send(embed=user_embed, file=file)
+        await opener.send(embed=user_embed, file=file)
     except discord.Forbidden:
         await logs_channel.send(f"Unable to send transcript for {channel.mention}. This may be due to their direct messages turned off.", embed=logs_channel_embed, file=file)
     
@@ -129,7 +130,7 @@ class CloseTicket(discord.ui.Button):
             opening_user = int(channel.topic.split("Ticket opener:")[1].strip())
         opener = channel.guild.get_member(opening_user) if opening_user else None
 
-        await create_transcript(channel, opener or closing_user, logs_channel, closed_by=closing_user)
+        await create_transcript(channel, opener, closing_user, logs_channel, closed_by=closing_user)
         await interaction.response.send_message("Closing ticket...", ephemeral=True)
         await interaction.channel.delete()
 
