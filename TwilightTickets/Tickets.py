@@ -57,8 +57,8 @@ async def create_ticket(
 async def create_transcript(channel: str, open_reason: str, opener, closer, logs_channel):
     transcript = "-" * 40 + "\n"
     transcript += f"Transcript for ticket channel: {channel.id}\n"
-    transcript += f"Opened by: {opener}\n"
-    transcript += f"Closed by: {closer}\n"
+    transcript += f"Opened by: {opener} ({opener.id})\n"
+    transcript += f"Closed by: {closer} ({closer.id})\n"
     transcript += f"Ticket issue: {open_reason}\n"
     transcript += "-" * 40 + "\n"
 
@@ -73,8 +73,8 @@ async def create_transcript(channel: str, open_reason: str, opener, closer, logs
         color=0x00FF00,
         timestamp=datetime.now()
     )
-    user_embed.add_field(name="Opened by:", value="", inline=False)
-    user_embed.add_field(name="Closed by:", value="", inline=False)
+    user_embed.add_field(name="Opened by:", value=f"{opener} ({opener.id})", inline=False)
+    user_embed.add_field(name="Closed by:", value=f"{closer} ({opener.id})", inline=False)
     user_embed.add_field(name="Ticket issue:", value="", inline=False)
 
     logs_channel_embed = discord.Embed(
@@ -83,8 +83,8 @@ async def create_transcript(channel: str, open_reason: str, opener, closer, logs
         color=0x00FF00,
         timestamp=datetime.now()
     )
-    logs_channel_embed.add_field(name="Opened by:", value=opener, inline=False)
-    logs_channel_embed.add_field(name="Closed by:", value=closer, inline=False)
+    logs_channel_embed.add_field(name="Opened by:", value=f"{opener} ({closer.id})", inline=False)
+    logs_channel_embed.add_field(name="Closed by:", value=f"{closer} ({closer.id})", inline=False)
     logs_channel_embed.add_field(name="Ticket issue:", value="", inline=False)
 
     file = discord.File(io.StringIO(transcript), filename=f"transcript.txt")
