@@ -9,10 +9,10 @@ from redbot.core import commands
 staff_roles = [1341958721793691669, 1398449212219457577, 1009509393609535548]
 staff_roles_elevated = []
 def role_check(member: discord.Member):
-	return any(role.id in staff_roles for role in member.role)
+	return any(role.id in staff_roles for role in member.roles)
 
 def role_check_elevated(member: discord.Member):
-	return any(role.id in staff_roles_elevated for role in member.role)
+	return any(role.id in staff_roles_elevated for role in member.roles)
 
 tickets_enabled = True
 
@@ -60,6 +60,3 @@ class TwilightTickets(commands.Cog):
 		status = "enabled" if tickets_enabled else "disabled"
 
 		await interaction.response.send_message(f"Ticket creation is now {status}.")
-		
-	def cog_app_commands(self):
-		return [self.staff]
