@@ -1,5 +1,6 @@
 import discord
 import datetime
+import sqlite3
 import uuid
 import io
 import re
@@ -15,7 +16,8 @@ async def create_ticket(
     request_description: str,
     category_id: int,
     staff_role_id: int,
-    embed_color: int
+    embed_color: int,
+    cog: commands.Cog
 ):
     from . import ViewsModals
 
@@ -43,6 +45,12 @@ async def create_ticket(
         topic=f"Issue: {request_description} | Opened by: {user.mention} ({user.id})"
     )
     
+    cog.cursor.execute("""
+        INSERT INTO tickets (ticket_id, channel_id, opener_id, open_time)
+        VALUES (?, ?, ?, ?)
+        """, (ticket_id, channel.id, user.id, datetime.now().isoformat()))
+    cog.conn.commit()
+
     embed = discord.Embed(
         title=f"📋 {ticket_type} Ticket Submitted",
         description=f"{user.mention} submitted a ticket.",
@@ -52,10 +60,10 @@ async def create_ticket(
     embed.add_field(name="Description:", value=request_description, inline=False)
     embed.add_field(name="Reported User:", value=request_name, inline=False)
 
-    await channel.send(embed=embed, view=ViewsModals.CloseTicketView())
+    await channel.send(embed=embed, view=ViewsModals.CloseTicketView(cog))
     await interaction.response.send_message(f"✅ Ticket opened! Access it at {channel.mention}", ephemeral=True)
 
-async def create_transcript(channel: str, open_reason: str, opener, closer, logs_channel):
+async def create_transcript(channel: str, open_reason: str, opener, closer, logs_channel, cog: commands.Cog):
     transcript = "-" * 40 + "\n"
     transcript += f"Transcript for ticket channel: {channel.name}\n"
     transcript += f"Opened by: {opener} ({opener.id})\n"
@@ -97,4 +105,17 @@ async def create_transcript(channel: str, open_reason: str, opener, closer, logs
         await opener.send(embed=user_embed, file=file_user)
         await logs_channel.send(embed=logs_channel_embed, file=file_logs)
     except discord.Forbidden:
-        await logs_channel.send(f"Unable to send transcript for {channel.mention}. This may be due to their direct messages turned off.", embed=logs_channel_embed, file=file)
+        await logs_channel.send(f"Unable to send transcript for {channel.mention}. This may be due to their direct messages turned off.", embed=logs_channel_embed, file=file_logs)
+
+    topic = channel.topic
+    ticket_id = None
+    if topic and "ID:" in topic:
+        ticket_id = topic.split("ID:")[1].split*("|")[0].strip()
+
+    if ticket_id:
+        cog.cursor.execute("""
+            UPDATE tickets
+            SET closer_id = ?, close_time = ?
+            WHERE ticket_id = ?
+        """, (closer.id, datetime.now().isoformat()m ticket_id))
+        cog.conn.commit()

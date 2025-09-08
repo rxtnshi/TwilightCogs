@@ -1,4 +1,5 @@
 import discord
+import sqlite3
 import datetime
 import io
 import re
@@ -22,6 +23,11 @@ class TicketSelect(discord.ui.Select):
         log_channel_id = 1414397193934213140
         log_channel = interaction.guild.get_channel(log_channel_id)
 
+        # check for blacklisted users
+        self.cog.cursor.execute("SELECT reason FROM blacklist WHERE user_id = ?", (interaction.user.id))
+        result = self.cog.cursor.fetchone()
+        if result:
+            await interaction.response.send_message(f"Unable to create tickets at this time. You are blacklisted for {result[0]}.", ephemeral=True)
         # check for panic mode
         if not self.cog.tickets_enabled:
             await interaction.response.send_message("Ticket creation is currently disabled. Please contact staff if you believe this is an error!", ephemeral=True)
@@ -44,7 +50,7 @@ class TicketSelect(discord.ui.Select):
                         await interaction.response.send_message(f"An existing ticket has been found in this category. You can access it here: {channel.mention}", ephemeral=True)
                         await interaction.message.edit(view=TicketView(self.cog))
                         return
-            modal = DiscordModal()
+            modal = DiscordModal(self.cog)
         elif selected_type == "game":
             category_id = 1414397144370122833 # change when testing or active
             category = discord.utils.get(interaction.guild.categories, id=category_id)
@@ -55,7 +61,7 @@ class TicketSelect(discord.ui.Select):
                         await interaction.response.send_message(f"An existing ticket has been found in this category. You can access it here: {channel.mention}", ephemeral=True)
                         await interaction.message.edit(view=TicketView(self.cog))
                         return
-            modal = GameModal()
+            modal = GameModal(self.cog)
         else:
             await interaction.response.send_message("An unexpected error occurred upon trying to show a modal.", ephemeral=True)
             await interaction.message.edit(view=TicketView(self.cog))
@@ -97,7 +103,7 @@ class CloseTicket(discord.ui.Button):
                 opening_user = int(match.group(1))
         opener = channel.guild.get_member(opening_user) if opening_user else None
 
-        await create_transcript(channel, open_reason, opener, closing_user, logs_channel)
+        await create_transcript(channel, open_reason, opener, closing_user, logs_channel, cog=self.cog)
         await interaction.response.send_message("Closing ticket...", ephemeral=True)
 
         try:
@@ -108,7 +114,7 @@ class CloseTicket(discord.ui.Button):
 class CloseTicketView(discord.ui.View):
     def __init__(self, timeout=None):
         super().__init__(timeout=None)
-        self.add_item(CloseTicket())
+        self.add_item(CloseTicket(cog))
 
 class DiscordModal(discord.ui.Modal):
     def __init__(self):
@@ -126,7 +132,8 @@ class DiscordModal(discord.ui.Modal):
             request_description=self.discord_request.value,
             category_id=1349563765842247784, #set whenever testing or when active
             staff_role_id=1009509393609535548, #set whenever testing or when active
-            embed_color=0x5865f2
+            embed_color=0x5865f2,
+            cog=self.cog
         )
 
 class GameModal(discord.ui.Modal):
@@ -145,5 +152,6 @@ class GameModal(discord.ui.Modal):
             request_description=self.game_request.value,
             category_id=1414397144370122833, #set whenever testing or when active
             staff_role_id=1009509393609535548, #set whenever testing or when active
-            embed_color=0x3498db
+            embed_color=0x3498db,
+            cog=self.cog
         )
