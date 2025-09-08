@@ -121,7 +121,7 @@ class CloseTicket(discord.ui.Button):
             await interaction.response.send_message(f"Failed to delete channel: {e}", ephemeral=True)
 
 class CloseTicketView(discord.ui.View):
-    def __init__(self, cog: commands.Cog, timeout=None):
+    def __init__(self, cog: commands.Cog):
         super().__init__(timeout=None)
         self.add_item(CloseTicket(cog))
 
