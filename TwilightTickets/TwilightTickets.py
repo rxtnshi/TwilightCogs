@@ -104,13 +104,12 @@ class TwilightTickets(commands.Cog):
 		await interaction.response.send_message(f"The panel has been sucessfully sent into {channel.mention}!", ephemeral=True)
 		
 	@staff.command(name="panic", description="Enables or disables panic mode")
-	async def panic(self, interaction: discord.Interaction, status: bool):
+	async def panic(self, interaction: discord.Interaction):
 		if not role_check_elevated(interaction.user):
 			await interaction.response.send_message("You do not have permission to use this command.", ephemeral=True)
 			return
-
-		if status:
-			self.tickets_enabled = not self.tickets_enabled 
+		
+		self.tickets_enabled = not self.tickets_enabled
 		status = "enabled" if self.tickets_enabled else "disabled"
 
 		await interaction.response.send_message(f"✅ Ticket creation is now {status}.")
