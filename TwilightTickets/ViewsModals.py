@@ -84,6 +84,7 @@ class TicketSelect(discord.ui.Select):
             if result:
                 existing_appeal_id = result[0]
                 await interaction.response.send_message(f"You already have a pending appeal (ID: `{existing_appeal_id}`). Please wait for staff to review it before submitting a new one.", ephemeral=True)
+                await interaction.message.edit(view=TicketView(self.cog))
                 return
             modal = AppealModal(self.cog)
         else:
@@ -276,12 +277,14 @@ class FinishAppealModal(discord.ui.Modal):
         try:
             user_id_part = footer_text.split("User ID: ")[1]
             opener_id = int(user_id_part.split(" | ")[0])
+            appeal_id = footer_text.split("Appeal ID: ")[1]
         except (IndexError, ValueError):
-            await interaction.followup.send("Error: Could not parse the original User ID from the embed.", ephemeral=True)
+            await interaction.followup.send("Error: Could not parse the original User ID or Appeal ID from the embed.", ephemeral=True)
             return
         
         await finalize_appeal(
             opener_id=opener_id,
+            appeal_id=appeal_id,
             decision=self.decision,
             reason=reason,
             staff_member=staff_member,
