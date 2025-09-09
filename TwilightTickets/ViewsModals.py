@@ -294,7 +294,8 @@ class FinishAppealModal(discord.ui.Modal):
         else:
             new_embed.title = "🚫 Appeal Rejected"
             new_embed.color = discord.Color.red()
-        new_embed.add_field(name=f"Decision by: {staff_member.mention}", value=reason, inline=False)
+        new_embed.add_field(name=f"Decision by:", value=f"{staff_member.mention}", inline=False)
+        new_embed.add_field(name=f"Reason:", value=reason, inline=False)
 
         # CRITICAL FIX: Use View.from_message() to reconstruct the view from the message's components.
         # The .view attribute on a message can sometimes be missing.
