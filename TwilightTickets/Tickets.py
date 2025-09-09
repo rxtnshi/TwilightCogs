@@ -203,7 +203,7 @@ async def create_ban_appeal(interaction, banned_user: str, appeal_request: str, 
 
     await appeals_channel.send(embed=embed, view=ViewsModals.AppealView(cog))
     
-    await interaction.response.send_message("✅ Your appeal has been submitted for review.", ephemeral=True)
+    await interaction.response.send_message(f"✅ Your appeal has been submitted for review. Appeal ID: `{appeal_id}`", ephemeral=True)
 
 
 async def finalize_appeal(opener_id: int, decision: str, reason: str, staff_member: discord.Member, cog: commands.Cog):
