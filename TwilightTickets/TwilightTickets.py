@@ -48,8 +48,8 @@ class TwilightTickets(commands.Cog):
 				opener_id INTEGER NOT NULL,
 				closer_id INTEGER,
 				open_time TEXT NOT NULL,
-				close_time TEXT
-				log_message_id INTEGER NOT NULL,
+				close_time TEXT,
+				log_message_id INTEGER,
 				close_reason TEXT
 			)
 		""")
