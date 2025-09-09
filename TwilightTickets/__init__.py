@@ -1,4 +1,4 @@
-from . import TwilightTickets
+from .TwilightTickets import TwilightTickets
 from . import ViewsModals
 
 async def setup(bot):
