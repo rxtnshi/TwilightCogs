@@ -120,7 +120,8 @@ class TwilightTickets(commands.Cog):
 	@app_commands.choices(
 		ticket_type=[
 			Choice(name="Discord Tickets", value="discord"),
-			Choice(name="SCP:SL Tickets", value="game")
+			Choice(name="SCP:SL Tickets", value="game"),
+			Choice(name="Ban Appeals", value="appeals")
 		],
 		status=[
 			Choice(name="Enable", value="enable"),
