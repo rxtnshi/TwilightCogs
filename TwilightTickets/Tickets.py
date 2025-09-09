@@ -193,12 +193,13 @@ async def create_ban_appeal(interaction, banned_user: str, appeal_request: str, 
         await interaction.response.send_message("The appeal system is misconfigured. Please contact an administrator.", ephemeral=True)
         return
     
-    embed = discord.Embed(title="Ban Appeal Received", description=f"Submitted by {user.mention}", color=0xffa500)
+    embed = discord.Embed(title="📥 Ban Appeal Received", description=f"Submitted by {user.mention}", color=0xffa500)
     embed.add_field(name="Banned Account ID", value=banned_user, inline=False)
     embed.add_field(name="User's Appeal", value=appeal_request, inline=False)
     embed.set_footer(text=f"User ID: {user.id} | Appeal ID: {appeal_id}")
 
     await appeals_channel.send(embed=embed, view=ViewsModals.AppealView())
+    await user.send(embed=embed)
     
     await interaction.response.send_message(f"✅ Your appeal has been submitted for review. Appeal ID: `{appeal_id}`", ephemeral=True)
 

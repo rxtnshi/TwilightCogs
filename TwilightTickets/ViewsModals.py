@@ -71,9 +71,10 @@ class TicketSelect(discord.ui.Select):
                         return
             modal = GameModal()
         elif selected_type == "appeals":
+
             cog.cursor.execute("SELECT appeal_id FROM appeals WHERE user_id = ? AND appeal_status = 'pending' ORDER BY timestamp DESC", (interaction.user.id,))
             if result := cog.cursor.fetchone():
-                await interaction.response.send_message(f"You already have a pending appeal (ID: `{result[0]}`). Please wait for staff to review it.", ephemeral=True)
+                await interaction.response.send_message(f"You already have a pending appeal. Please wait for staff to review it.", ephemeral=True)
                 await interaction.message.edit(view=TicketView())
                 return
             modal = AppealModal()
