@@ -98,12 +98,12 @@ class DecisionSelect(discord.ui.Select):
     async def callback(self, interaction: discord.Interaction):
         if not any(role.id in staff_roles_elevated for role in interaction.user.roles):
             await interaction.response.send_message("You do not have permission to make appeal decisions", ephemeral=True)
-            await interaction.response.edit_message(view=self.view)
+            await interaction.message.edit(view=AppealView())
             return
         
         decision = self.values[0]
         await interaction.response.send_modal(FinishAppealModal(decision))
-        await interaction.response.edit_message(view=self.view)
+        await interaction.message.edit(view=AppealView())
         
 class CloseTicket(discord.ui.Button):
     def __init__(self):
@@ -114,7 +114,7 @@ class CloseTicket(discord.ui.Button):
             await interaction.response.send_message("You do not have permission to close this ticket.", ephemeral=True)
             return
         await interaction.response.send_modal(CloseTicketModal())
-        await interaction.response.edit_message(view=self.view)
+        await interaction.response.edit_message(view=CloseTicketView())
 
 #
 # Views
