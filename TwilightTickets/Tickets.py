@@ -224,7 +224,7 @@ async def finalize_appeal(opener_id: int, decision: str, reason: str, staff_memb
 
     dm_embed = discord.Embed(title=title, color=embed_color)
     dm_embed.add_field(name="Reason from Staff", value=reason, inline=False)
-    dm_embed.set_footer(text=f"TWZ Management", icon_url=discord.guild.icon.url)
+    dm_embed.set_footer(text=f"TWZ Management")
 
     try:
         await user.send(embed=dm_embed)
