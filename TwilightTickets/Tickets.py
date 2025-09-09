@@ -162,9 +162,6 @@ async def create_transcript(channel: discord.TextChannel, open_reason: str, open
     return log_message
 
 async def create_ban_appeal(interaction, banned_user: str, appeal_request: str, cog: commands.Cog):
-    """
-    Sends a new ban appeal to a single, designated channel for staff to review.
-    """
     from . import ViewsModals
 
     user = interaction.user
@@ -201,7 +198,7 @@ async def create_ban_appeal(interaction, banned_user: str, appeal_request: str, 
     embed.add_field(name="User's Appeal", value=appeal_request, inline=False)
     embed.set_footer(text=f"User ID: {user.id} | Appeal ID: {appeal_id}")
 
-    await appeals_channel.send(embed=embed, view=ViewsModals.AppealView(cog))
+    await appeals_channel.send(embed=embed, view=ViewsModals.AppealView())
     
     await interaction.response.send_message(f"✅ Your appeal has been submitted for review. Appeal ID: `{appeal_id}`", ephemeral=True)
 
