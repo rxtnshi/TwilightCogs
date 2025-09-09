@@ -18,7 +18,6 @@ log_channel_id = 1414502972964212857 #1414397193934213140 test server
 # 
 
 class TicketSelect(discord.ui.Select):
-    # FIX: Do not store the cog instance.
     def __init__(self):
         options = [
             discord.SelectOption(label="⚠️ Discord Staff", description="Contact Discord staff", value="discord"),
@@ -28,10 +27,10 @@ class TicketSelect(discord.ui.Select):
         super().__init__(placeholder="Select a category...", options=options)
 
     async def callback(self, interaction: discord.Interaction):
-        # FIX: Get the current cog instance dynamically.
         cog = interaction.client.get_cog("TwilightTickets")
         if not cog:
             await interaction.response.send_message("The ticket system is currently offline.", ephemeral=True)
+            await interaction.message.edit(view=TicketView())
             return
         
         log_channel = interaction.guild.get_channel(log_channel_id)
@@ -39,15 +38,18 @@ class TicketSelect(discord.ui.Select):
         cog.cursor.execute("SELECT reason FROM blacklist WHERE user_id = ?", (interaction.user.id,))
         if result := cog.cursor.fetchone():
             await interaction.response.send_message(f"You are blacklisted from creating tickets. Reason: {result[0]}", ephemeral=True)
+            await interaction.message.edit(view=TicketView())
             return
 
         if not cog.tickets_enabled:
             await interaction.response.send_message("Ticket creation is currently disabled.", ephemeral=True)
+            await interaction.message.edit(view=TicketView())
             return
         
         selected_type = self.values[0]
         if not cog.ticket_statuses.get(selected_type, False):
             await interaction.response.send_message("This ticket category has been disabled.", ephemeral=True)
+            await interaction.message.edit(view=TicketView())
             return
 
         if selected_type == "discord":
@@ -56,6 +58,7 @@ class TicketSelect(discord.ui.Select):
                 for channel in category.text_channels:
                     if channel.topic and f"({interaction.user.id})" in channel.topic:
                         await interaction.response.send_message(f"An existing ticket has been found: {channel.mention}", ephemeral=True)
+                        await interaction.message.edit(view=TicketView())
                         return
             modal = DiscordModal()
         elif selected_type == "game":
@@ -64,6 +67,7 @@ class TicketSelect(discord.ui.Select):
                 for channel in category.text_channels:
                     if channel.topic and f"({interaction.user.id})" in channel.topic:
                         await interaction.response.send_message(f"An existing ticket has been found: {channel.mention}", ephemeral=True)
+                        await interaction.message.edit(view=TicketView())
                         return
             modal = GameModal()
         elif selected_type == "appeals":
@@ -71,17 +75,18 @@ class TicketSelect(discord.ui.Select):
             cog.cursor.execute("SELECT appeal_id FROM appeals WHERE user_id = ? AND appeal_status = 'pending' ORDER BY timestamp DESC", (interaction.user.id,))
             if result := cog.cursor.fetchone():
                 await interaction.response.send_message(f"You already have a pending appeal (ID: `{result[0]}`). Please wait for staff to review it.", ephemeral=True)
+                await interaction.message.edit(view=TicketView())
                 return
             modal = AppealModal()
         else:
             await interaction.response.send_message("An unexpected error occurred.", ephemeral=True)
+            await interaction.message.edit(view=TicketView())
             return
 
         await interaction.response.send_modal(modal)
-        # FIX: Removed interaction.message.edit() to prevent crash.
+        await interaction.message.edit(view=TicketView())
 
 class DecisionSelect(discord.ui.Select):
-    # FIX: Do not store the cog instance.
     def __init__(self):
         options = [
             discord.SelectOption(label="✅ Accept Appeal", value="accept"),
@@ -92,10 +97,9 @@ class DecisionSelect(discord.ui.Select):
     async def callback(self, interaction: discord.Interaction):
         decision = self.values[0]
         await interaction.response.send_modal(FinishAppealModal(decision))
-        # FIX: Removed interaction.message.edit() to prevent crash.
+        await interaction.message.edit(view=AppealView())
         
 class CloseTicket(discord.ui.Button):
-    # FIX: Do not store the cog instance.
     def __init__(self):
         super().__init__(label="Close Ticket", style=discord.ButtonStyle.danger)
 
@@ -110,19 +114,16 @@ class CloseTicket(discord.ui.Button):
 # 
 
 class TicketView(discord.ui.View):
-    # FIX: Do not store the cog instance.
     def __init__(self):
         super().__init__(timeout=None)
         self.add_item(TicketSelect())
 
 class CloseTicketView(discord.ui.View):
-    # FIX: Do not store the cog instance.
     def __init__(self):
         super().__init__(timeout=None)
         self.add_item(CloseTicket())
 
 class AppealView(discord.ui.View):
-    # FIX: Do not store the cog instance.
     def __init__(self):
         super().__init__(timeout=None)
         self.add_item(DecisionSelect())
@@ -132,19 +133,17 @@ class AppealView(discord.ui.View):
 # 
 
 class CloseTicketModal(discord.ui.Modal):
-    # FIX: Do not store the cog instance.
     def __init__(self):
         super().__init__(title="Ticket Closure", timeout=None)
         self.close_reason = discord.ui.TextInput(label="Why are you closing the ticket?", required=True, style=discord.TextStyle.paragraph)
         self.add_item(self.close_reason)
 
     async def on_submit(self, interaction: discord.Interaction):
-        # FIX: Get the current cog instance dynamically.
         cog = interaction.client.get_cog("TwilightTickets")
         if not cog: return
         
         await interaction.response.send_message("⌛ Creating transcript and closing ticket...", ephemeral=True)
-        # ... (rest of logic)
+
         channel = interaction.channel
         closer = interaction.user
         logs_channel = interaction.guild.get_channel(log_channel_id)
@@ -162,7 +161,6 @@ class CloseTicketModal(discord.ui.Modal):
         await close_ticket(channel, closer, self.close_reason.value, log_message, cog)
 
 class DiscordModal(discord.ui.Modal):
-    # FIX: Do not store the cog instance.
     def __init__(self):
         super().__init__(title="Discord Help Request", timeout=None)
         self.discord_request_name = discord.ui.TextInput(label="What is your issue?", required=True, style=discord.TextStyle.short)
@@ -171,7 +169,6 @@ class DiscordModal(discord.ui.Modal):
         self.add_item(self.discord_request)
 
     async def on_submit(self, interaction: discord.Interaction):
-        # FIX: Get the current cog instance dynamically.
         cog = interaction.client.get_cog("TwilightTickets")
         if not cog: return
 
@@ -181,7 +178,6 @@ class DiscordModal(discord.ui.Modal):
         )
 
 class GameModal(discord.ui.Modal):
-    # FIX: Do not store the cog instance.
     def __init__(self):
         super().__init__(title="Game Staff Help Request", timeout=None)
         self.game_request_name = discord.ui.TextInput(label="What is your issue?", required=True, style=discord.TextStyle.short)
@@ -190,7 +186,6 @@ class GameModal(discord.ui.Modal):
         self.add_item(self.game_request)
     
     async def on_submit(self, interaction: discord.Interaction):
-        # FIX: Get the current cog instance dynamically.
         cog = interaction.client.get_cog("TwilightTickets")
         if not cog: return
 
@@ -200,7 +195,6 @@ class GameModal(discord.ui.Modal):
         )
 
 class AppealModal(discord.ui.Modal):
-    # FIX: Do not store the cog instance.
     def __init__(self):
         super().__init__(title="Ban Appeal", timeout=None)
         self.appeal_user = discord.ui.TextInput(label="SteamID64 or Discord Username/ID", placeholder="Format: [Platform]: [ID]", required=True, style=discord.TextStyle.short)
@@ -209,14 +203,12 @@ class AppealModal(discord.ui.Modal):
         self.add_item(self.appeal_info)
 
     async def on_submit(self, interaction: discord.Interaction): 
-        # FIX: Get the current cog instance dynamically.
         cog = interaction.client.get_cog("TwilightTickets")
         if not cog: return
 
         await create_ban_appeal(interaction, self.appeal_user.value, self.appeal_info.value, cog)
 
 class FinishAppealModal(discord.ui.Modal):
-    # FIX: Do not store the cog instance.
     def __init__(self, decision: str):
         super().__init__(title="Finalize Appeal Decision", timeout=None)
         self.decision = decision
@@ -224,12 +216,11 @@ class FinishAppealModal(discord.ui.Modal):
         self.add_item(self.finish_appeal)
 
     async def on_submit(self, interaction: discord.Interaction):
-        # FIX: Get the current cog instance dynamically.
         cog = interaction.client.get_cog("TwilightTickets")
         if not cog: return
 
         await interaction.response.send_message("⌛ Finalizing appeal and notifying user...", ephemeral=True)
-        # ... (rest of logic)
+
         original_message = interaction.message
         original_embed = original_message.embeds[0]
         reason = self.finish_appeal.value
