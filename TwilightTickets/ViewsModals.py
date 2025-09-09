@@ -85,6 +85,7 @@ class TicketSelect(discord.ui.Select):
             return
 
         await interaction.response.send_modal(modal)
+        await interaction.response.edit_message(view=self.view)
 
 class DecisionSelect(discord.ui.Select):
     def __init__(self):
