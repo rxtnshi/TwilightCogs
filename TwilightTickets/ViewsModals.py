@@ -28,7 +28,7 @@ class TicketSelect(discord.ui.Select):
         super().__init__(placeholder="Select a category...", options=options)
         self.cog = cog
 
-    async def callback(self, interaction = discord.Interaction):
+    async def callback(self, interaction: discord.Interaction):
         log_channel = interaction.guild.get_channel(log_channel_id)
 
         # cog status check
@@ -79,10 +79,11 @@ class TicketSelect(discord.ui.Select):
                         return
             modal = GameModal(self.cog)
         elif selected_type == "appeals":
-            # Correct way to check for an existing appeal: query the database.
-            self.cog.cursor.execute("SELECT 1 FROM appeals WHERE user_id = ? AND appeal_status = 'pending'", (interaction.user.id,))
-            if self.cog.cursor.fetchone():
-                await interaction.response.send_message("You already have a pending appeal. Please wait for staff to review it before submitting a new one.", ephemeral=True)
+            self.cog.cursor.execute("SELECT appeal_id FROM appeals WHERE user_id = ? AND appeal_status = 'pending'", (interaction.user.id,))
+            result = self.cog.cursor.fetchone()
+            if result:
+                existing_appeal_id = result[0]
+                await interaction.response.send_message(f"You already have a pending appeal (ID: `{existing_appeal_id}`). Please wait for staff to review it before submitting a new one.", ephemeral=True)
                 return
             modal = AppealModal(self.cog)
         else:
@@ -107,7 +108,7 @@ class DecisionSelect(discord.ui.Select):
         decision = self.values[0]
 
         await interaction.response.send_modal(FinishAppealModal(self.cog, decision))
-        await interaction.message.edit(view=FinishAppealModal(self.cog))
+        await interaction.message.edit(view=AppealView(self.cog))
         
 class CloseTicket(discord.ui.Button):
     def __init__(self, cog: commands.Cog):
@@ -234,7 +235,7 @@ class AppealModal(discord.ui.Modal):
             style=discord.TextStyle.short
         )
         self.appeal_info = discord.ui.TextInput(
-            label="Relevent Information/Evidence", 
+            label="Relevant Information/Evidence", 
             placeholder="Please provide evidence that supports your appeal to help us investigate it further.",
             required=True, 
             style=discord.TextStyle.paragraph
@@ -297,8 +298,6 @@ class FinishAppealModal(discord.ui.Modal):
         new_embed.add_field(name=f"Decision by:", value=f"{staff_member.mention}", inline=False)
         new_embed.add_field(name=f"Reason:", value=reason, inline=False)
 
-        # CRITICAL FIX: Use View.from_message() to reconstruct the view from the message's components.
-        # The .view attribute on a message can sometimes be missing.
         view = discord.ui.View.from_message(original_message)
         if view:
             for item in view.children:
@@ -307,7 +306,6 @@ class FinishAppealModal(discord.ui.Modal):
         
             await original_message.edit(embed=new_embed, view=view)
         else:
-            # Fallback in case the view is somehow gone
             await original_message.edit(embed=new_embed)
 
-        await interaction.followup.send(f"✅ The user has been successfully notified of the decision.")
+        await interaction.followup.send(f"✅ <@{opener_id}> has been successfully notified of the decision.")
