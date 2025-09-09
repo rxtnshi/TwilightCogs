@@ -107,6 +107,7 @@ class DecisionSelect(discord.ui.Select):
         decision = self.values[0]
 
         await interaction.response.send_modal(FinishAppealModal(self.cog, decision))
+        await interaction.message.edit(view=FinishAppealModal(self.cog))
         
 class CloseTicket(discord.ui.Button):
     def __init__(self, cog: commands.Cog):
@@ -307,3 +308,5 @@ class FinishAppealModal(discord.ui.Modal):
         else:
             # Fallback in case the view is somehow gone
             await original_message.edit(embed=new_embed)
+
+        await interaction.followup.send(f"✅ The user has been successfully notified of the decision.")
