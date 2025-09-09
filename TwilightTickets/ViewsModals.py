@@ -95,8 +95,8 @@ class TicketSelect(discord.ui.Select):
 class DecisionSelect(discord.ui.Select):
     def __init__(self, cog: commands.Cog):
         options = [
-            discord.SelectOption(label="✅ Accept Appeal", description="Bans related to this Discord", value="accept"),
-            discord.SelectOption(label="⛔ Deny Appeal", description="Bans related to SCP:SL or other games", value="reject"),
+            discord.SelectOption(label="✅ Accept Appeal", description="Accept this appeal", value="accept"),
+            discord.SelectOption(label="⛔ Deny Appeal", description="Reject this appeal", value="reject"),
         ]
         self.cog = cog
 

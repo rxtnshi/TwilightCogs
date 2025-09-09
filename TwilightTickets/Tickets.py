@@ -198,37 +198,35 @@ async def create_ban_appeal(interaction, banned_user: str, appeal_request: str, 
     )
     embed.add_field(name="Platform & Account Banned", value=banned_user, inline=False)
     embed.add_field(name="Appeal Description:", value=appeal_request, inline=False)
-    embed.set_footer(text=f"Discord User ID: {user.id}") # Store the user ID here to retrieve later
+    embed.set_footer(text=f"User ID: {user.id}") # Store the user ID here to retrieve later
 
     await appeals_channel.send(embed=embed, view=ViewsModals.AppealView(cog))
     
     await interaction.response.send_message("✅ Your appeal has been submitted for review.", ephemeral=True)
 
 
-async def finalize_appeal(interaction: discord.Interaction, opener_id: int, decision: str, reason: str, cog: commands.Cog):
+async def finalize_appeal(opener_id: int, decision: str, reason: str, staff_member: discord.Member, cog: commands.Cog):
     status = "accepted" if decision == "accept" else "denied"
     cog.cursor.execute("UPDATE appeals SET appeal_status = ? WHERE user_id = ?", (status, opener_id))
     cog.conn.commit()
 
     user = await cog.bot.fetch_user(opener_id)
     if not user:
+        print(f"Could not find user {opener_id} to DM appeal result.")
         return
 
     if status == "accepted":
         embed_color = discord.Color.green()
         title = "✅ Your Ban Appeal has been Accepted"
-        description = "Your ban appeal has been accepted. Apologies for the inconvenience."
     else:
         embed_color = discord.Color.red()
-        title = "⛔ Your Ban Appeal has been Denied"
-        description = "Unfortunately your appeal has been denied. Please check below for details."
+        title = "🚫 Your Ban Appeal has been Denied"
 
     dm_embed = discord.Embed(title=title, color=embed_color)
-    dm_embed.add_field(name="Reason from Staff:", value=reason, inline=False)
-    dm_embed.set_footer(text=f"Ghostz's Twilight Zone", icon_url=discord.guild.icon.url)
+    dm_embed.add_field(name="Reason from Staff", value=reason, inline=False)
+    dm_embed.set_footer(text=f"TWZ Management", icon_url=discord.guild.icon.url)
 
     try:
         await user.send(embed=dm_embed)
     except discord.Forbidden:
-        print(f"Could not DM appeal result to user {opener_id}")
-        await interaction.response.send_message("Unable to send the user the decision. This may be due their DM settings or they left the server.")
+        print(f"Could not DM appeal result to user {opener_id} (DMs closed).")
