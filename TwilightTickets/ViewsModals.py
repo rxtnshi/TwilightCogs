@@ -270,9 +270,10 @@ class FinishAppealModal(discord.ui.Modal):
         reason = self.finish_appeal.value
         staff_member = interaction.user
 
-        footer_user_id = original_embed.footer.text
+        footer_text = original_embed.footer.text
         try:
-            opener_id = int(footer_user_id.split("User ID: ")[1])
+            user_id_part = footer_text.split("User ID: ")[1]
+            opener_id = int(user_id_part.split(" | ")[0])
         except (IndexError, ValueError):
             await interaction.followup.send("Error: Could not parse the original User ID from the embed.", ephemeral=True)
             return
