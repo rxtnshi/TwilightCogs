@@ -206,9 +206,11 @@ async def create_ban_appeal(interaction, banned_user: str, appeal_request: str, 
     await interaction.response.send_message(f"✅ Your appeal has been submitted for review. Appeal ID: `{appeal_id}`", ephemeral=True)
 
 
-async def finalize_appeal(opener_id: int, decision: str, reason: str, staff_member: discord.Member, cog: commands.Cog):
+async def finalize_appeal(opener_id: int, appeal_id: str, decision: str, reason: str, staff_member: discord.Member, cog: commands.Cog):
     status = "accepted" if decision == "accept" else "denied"
-    cog.cursor.execute("UPDATE appeals SET appeal_status = ? WHERE user_id = ?", (status, opener_id))
+    
+    # Use the specific appeal_id to update the correct record.
+    cog.cursor.execute("UPDATE appeals SET appeal_status = ? WHERE appeal_id = ?", (status, appeal_id))
     cog.conn.commit()
 
     user = await cog.bot.fetch_user(opener_id)

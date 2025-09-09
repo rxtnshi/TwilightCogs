@@ -258,7 +258,7 @@ class FinishAppealModal(discord.ui.Modal):
         self.cog = cog
         self.decision = decision
         self.finish_appeal = discord.ui.TextInput(
-            label=f"Reason for {decision.lower()}ing appeal?",
+            label=f"Reason for {decision.lower()}ing appeal",
             placeholder="Provide a detailed response to the user.",
             required=True, 
             style=discord.TextStyle.paragraph
