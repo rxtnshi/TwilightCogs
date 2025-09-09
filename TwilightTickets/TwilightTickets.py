@@ -29,7 +29,8 @@ class TwilightTickets(commands.Cog):
 		self.tickets_enabled = True
 		self.ticket_statuses = {
 			"discord": True,
-			"game": True
+			"game": True,
+			"appeals": True
 		}
 		db_path = cog_data_path(self) / "tickets.db"
 		os.makedirs(os.path.dirname(db_path), exist_ok=True)

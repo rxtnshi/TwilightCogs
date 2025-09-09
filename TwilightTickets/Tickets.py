@@ -124,8 +124,8 @@ async def create_transcript(channel: discord.TextChannel, open_reason: str, open
         transcript += f"[{time}] {msg.author}: {content}\n"
     
     user_embed = discord.Embed(
-        title=f"📋 Ticket Transcript",
-        description="Thank you for opening a ticket with us. Your ticket transcript is attached below.",
+        title=f"📫 Ticket Transcript",
+        description="Thank you for opening a ticket with us. Your ticket transcript is attached.",
         color=0x00FF00,
         timestamp=close_time_dt
     )
@@ -149,12 +149,9 @@ async def create_transcript(channel: discord.TextChannel, open_reason: str, open
     logs_channel_embed.add_field(name="Ticket issue:", value=f"{open_reason}", inline=False)
     logs_channel_embed.add_field(name="Close Reason:", value=close_reason, inline=False)
 
-    file_data = io.StringIO(transcript)
-
-    file_data.seek(0)
-    file_user = discord.File(file_data, filename=f"transcript.txt")
-    file_data.seek(0)
-    file_logs = discord.File(file_data, filename=f"transcript.txt")
+    transcript_text = transcript
+    file_user = discord.File(io.StringIO(transcript_text), filename=f"transcript.txt")
+    file_logs = discord.File(io.StringIO(transcript_text), filename=f"transcript.txt")
 
     log_message = await logs_channel.send(embed=logs_channel_embed, file=file_logs)
 
