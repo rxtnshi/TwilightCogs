@@ -295,7 +295,9 @@ class FinishAppealModal(discord.ui.Modal):
             new_embed.color = discord.Color.red()
         new_embed.add_field(name=f"Decision by: {staff_member.mention}", value=reason, inline=False)
 
-        view = original_message.view
+        # CRITICAL FIX: Use View.from_message() to reconstruct the view from the message's components.
+        # The .view attribute on a message can sometimes be missing.
+        view = discord.ui.View.from_message(original_message)
         if view:
             for item in view.children:
                 if isinstance(item, discord.ui.Select):
@@ -303,4 +305,5 @@ class FinishAppealModal(discord.ui.Modal):
         
             await original_message.edit(embed=new_embed, view=view)
         else:
+            # Fallback in case the view is somehow gone
             await original_message.edit(embed=new_embed)
