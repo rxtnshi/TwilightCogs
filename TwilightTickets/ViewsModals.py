@@ -243,7 +243,8 @@ class FinishAppealModal(discord.ui.Modal):
         else:
             new_embed.title = "🚫 Appeal Rejected"
             new_embed.color = discord.Color.red()
-        new_embed.add_field(name=f"Decision by: {staff_member.mention}", value=reason, inline=False)
+        new_embed.add_field(name=f"Decision by:", value=f"{staff_member.mention}", inline=False)
+        new_embed.add_field(name="Reason:", value=reason, inline=False)
 
         view = discord.ui.View.from_message(original_message)
         if view:
