@@ -217,12 +217,14 @@ async def finalize_appeal(interaction: discord.Interaction, opener_id: int, deci
     if status == "accepted":
         embed_color = discord.Color.green()
         title = "✅ Your Ban Appeal has been Accepted"
+        description = "Your ban appeal has been accepted. Apologies for the inconvenience."
     else:
         embed_color = discord.Color.red()
         title = "⛔ Your Ban Appeal has been Denied"
+        description = "Unfortunately your appeal has been denied. Please check below for details."
 
     dm_embed = discord.Embed(title=title, color=embed_color)
-    dm_embed.add_field(name="Reason from Staff", value=reason, inline=False)
+    dm_embed.add_field(name="Reason from Staff:", value=reason, inline=False)
     dm_embed.set_footer(text=f"Ghostz's Twilight Zone", icon_url=discord.guild.icon.url)
 
     try:

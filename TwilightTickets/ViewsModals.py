@@ -78,13 +78,11 @@ class TicketSelect(discord.ui.Select):
                         return
             modal = GameModal(self.cog)
         elif selected_type == "appeals":
-            category_id = 1414757537764606012 #1414397144370122833 # change when testing or active
-            if category:
-                for channel in category.text_channels:
-                    if channel.topic and f"({interaction.user.id})" in channel.topic:
-                        await interaction.response.send_message(f"You already have an existing appeal. You will be sent the result of the appeal in your DMs.", ephemeral=True)
-                        await interaction.message.edit(view=TicketView(self.cog))
-                        return
+            # Correct way to check for an existing appeal: query the database.
+            self.cog.cursor.execute("SELECT 1 FROM appeals WHERE user_id = ? AND appeal_status = 'pending'", (interaction.user.id,))
+            if self.cog.cursor.fetchone():
+                await interaction.response.send_message("You already have a pending appeal. Please wait for staff to review it before submitting a new one.", ephemeral=True)
+                return
             modal = AppealModal(self.cog)
         else:
             await interaction.response.send_message("An unexpected error occurred upon trying to show a modal.", ephemeral=True)
@@ -194,7 +192,7 @@ class DiscordModal(discord.ui.Modal):
         await create_ticket(
             interaction,
             ticket_type="Discord",
-            request_name=self.discord_request_name.value,
+            request_name=self.discord_request_name,
             request_description=self.discord_request.value,
             category_id=1414502599293407324, #1349563765842247784, #set whenever testing or when active
             staff_role_id=1345963295575769088, #1009509393609535548, #set whenever testing or when active
@@ -269,19 +267,21 @@ class FinishAppealModal(discord.ui.Modal):
         original_message = interaction.message
         original_embed = original_message.embeds[0]
         reason = self.finish_appeal.value
+        staff_member = interaction.user
 
         footer_user_id = original_embed.footer.text
         try:
-            opener_id = int(footer_user_id.split("Discord User ID: ")[1])
+            opener_id = int(footer_user_id.split("User ID: ")[1])
         except (IndexError, ValueError):
             await interaction.followup.send("Error: Could not parse the original User ID from the embed.", ephemeral=True)
             return
         
         await finalize_appeal(
-            interaction=interaction,
             opener_id=opener_id,
             decision=self.decision,
             reason=reason,
+            staff_member=staff_member,
+            cog=self.cog
         )
 
         new_embed = original_embed.copy()
@@ -291,8 +291,7 @@ class FinishAppealModal(discord.ui.Modal):
         else:
             new_embed.title = "🚫 Appeal Rejected"
             new_embed.color = discord.Color.red()
-
-        new_embed.add_field(name=f"Decision by: {interaction.user}")
+        new_embed.add_field(name=f"Decision by: {staff_member.mention}", value=reason, inline=False)
 
         view = self.view
         for item in view.children:
