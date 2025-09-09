@@ -60,7 +60,7 @@ async def create_ticket(
     embed.add_field(name="Description:", value=request_description, inline=False)
 
     # await channel.send(f"{discord.utils.get(guild.roles, id=staff_role_id).mention}")
-    await channel.send(embed=embed, view=ViewsModals.CloseTicketView(cog))
+    await channel.send(embed=embed, view=ViewsModals.CloseTicketView())
     await interaction.response.send_message(f"✅ Ticket opened! Access it at {channel.mention}", ephemeral=True)
 
 async def close_ticket(channel: discord.TextChannel, closer: discord.Member, close_reason: str, log_message: discord.Message, cog: commands.Cog):
