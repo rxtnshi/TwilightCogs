@@ -96,6 +96,10 @@ class DecisionSelect(discord.ui.Select):
         super().__init__(placeholder="Accept or Reject this Appeal", options=options)
 
     async def callback(self, interaction: discord.Interaction):
+        if not any(role.id in staff_roles_elevated for role in interaction.user.roles):
+            await interaction.response.send_message("You do not have permission to make appeal decisions", ephemeral=True)
+            return
+        
         decision = self.values[0]
         await interaction.response.send_modal(FinishAppealModal(decision))
         await interaction.message.edit(view=AppealView())
