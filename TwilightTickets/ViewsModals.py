@@ -28,71 +28,72 @@ class TicketSelect(discord.ui.Select):
         super().__init__(placeholder="Select a category...", options=options)
         self.cog = cog
 
-    async def callback(self, interaction = discord.Interaction):
-        log_channel = interaction.guild.get_channel(log_channel_id)
-
-        # cog status check
+    async def callback(self, interaction: discord.Interaction):
         cog = interaction.client.get_cog("TwilightTickets")
         if not cog:
             await interaction.response.send_message("The ticket system is currently offline. Please try again later.", ephemeral=True)
             return
-        
-        # blacklist check
-        self.cog.cursor.execute("SELECT reason FROM blacklist WHERE user_id = ?", (interaction.user.id,))
-        result = self.cog.cursor.fetchone()
-        if result:
-            await interaction.response.send_message(f"You are blacklisted from creating tickets. Reason: {result[0]}", ephemeral=True)
 
-        # check for panic mode
-        if not self.cog.tickets_enabled:
-            await interaction.response.send_message("Ticket creation is currently disabled. Please contact staff if you believe this is an error!", ephemeral=True)
-            await log_channel.send(f"{interaction.user.mention} tried to open a ticket while panic mode was active.")
-            return
-        
-        # check for ticket type statuses
-        selected_type = self.values[0]
-        if not self.cog.ticket_statuses.get(selected_type, False):
-            await interaction.response.send_message("This ticket category has been disabled! Please contact staff if you believe this is an error.", ephemeral=True)
+        user = interaction.user
+
+        # Blacklist check
+        cog.cursor.execute("SELECT reason FROM blacklist WHERE user_id = ?", (user.id,))
+        if (row := cog.cursor.fetchone()):
+            await interaction.response.send_message(f"You are blacklisted from creating tickets.", ephemeral=True)
             return
 
-        if selected_type == "discord":
-            category_id = 1414502599293407324 #1349563765842247784 # change when testing or active
-            category = discord.utils.get(interaction.guild.categories, id=category_id)
+        if not cog.tickets_enabled:
+            await interaction.response.send_message("Ticket creation is currently disabled.", ephemeral=True)
+            return
 
-            if category:
-                for channel in category.text_channels:
-                    if channel.topic and f"({interaction.user.id})" in channel.topic:
-                        await interaction.response.send_message(f"An existing ticket has been found in this category. You can access it here: {channel.mention}", ephemeral=True)
-                        await interaction.message.edit(view=TicketView(self.cog))
-                        return
-            modal = DiscordModal(self.cog)
-        elif selected_type == "game":
-            category_id = 1414502707309314088 #1414397144370122833 # change when testing or active
-            category = discord.utils.get(interaction.guild.categories, id=category_id)
+        selected_type = self.values[0]  # e.g. 'discord', 'game', maybe 'ban_appeal'
 
-            if category:
-                for channel in category.text_channels:
-                    if channel.topic and f"({interaction.user.id})" in channel.topic:
-                        await interaction.response.send_message(f"An existing ticket has been found in this category. You can access it here: {channel.mention}", ephemeral=True)
-                        await interaction.message.edit(view=TicketView(self.cog))
-                        return
-            modal = GameModal(self.cog)
-        elif selected_type == "appeals":
-            category_id = 1414757537764606012 #1414397144370122833 # change when testing or active
-            if category:
-                for channel in category.text_channels:
-                    if channel.topic and f"({interaction.user.id})" in channel.topic:
-                        await interaction.response.send_message(f"You already have an existing appeal. You will be sent the result of the appeal in your DMs.", ephemeral=True)
-                        await interaction.message.edit(view=TicketView(self.cog))
-                        return
-            modal = AppealModal(self.cog)
+        # Map selection to category & staff role
+        TYPE_MAP = {
+            "discord": {
+                "category_id": 1349563765842247784,
+                "staff_role_id": 1341958721793691669,
+                "modal": DiscordModal
+            },
+            "game": {
+                "category_id": 1414397144370122833,
+                "staff_role_id": 1009509393609535548,
+                "modal": GameModal
+            },
+            "ban_appeal": {
+                "category_id": 1414770277782392993,
+                "staff_role_id": 1398449212219457577,
+                "modal": AppealModal
+            }
+        }
+
+        if selected_type not in TYPE_MAP:
+            await interaction.response.send_message("Invalid selection.", ephemeral=True)
+            return
+
+        cfg = TYPE_MAP[selected_type]
+        category = discord.utils.get(interaction.guild.categories, id=cfg["category_id"])
+
+        if category:
+            # Prevent duplicate open ticket of same type
+            for ch in category.text_channels:
+                if ch.topic and f"({user.id})" in ch.topic:
+                    await interaction.response.send_message(
+                        f"You already have an open ticket here: {ch.mention}",
+                        ephemeral=True
+                    )
+                    return
         else:
-            await interaction.response.send_message("An unexpected error occurred upon trying to show a modal.", ephemeral=True)
-            await interaction.message.edit(view=TicketView(self.cog))
+            await interaction.response.send_message("Configuration error: category not found.", ephemeral=True)
             return
 
-        await interaction.response.send_modal(modal)
-        await interaction.message.edit(view=TicketView(self.cog))
+        # Show the proper modal
+        await interaction.response.send_modal(cfg["modal"](cog))
+        # (Optional) refresh panel view
+        try:
+            await interaction.message.edit(view=TicketView(cog))
+        except Exception:
+            pass
 
 class DecisionSelect(discord.ui.Select):
     def __init__(self, cog: commands.Cog):
