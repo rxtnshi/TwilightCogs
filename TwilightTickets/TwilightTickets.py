@@ -91,7 +91,7 @@ class TwilightTickets(commands.Cog):
 		embed = discord.Embed(title="Twilight Zone Support & Reporting",
                       description="So ya need help with something, right? Well you've come to the right place!\n\nHere's what I can help you with:",
                       color=0x7a2db9)
-		embed.add_field(name="⚠️ Discord Help Request", value="Contact Discord staff!", inline=False)
+		embed.add_field(name="⚙️ Discord Staff", value="Contact Discord staff!", inline=False)
 		embed.add_field(name="🎮 Game Staff", value="Contact SCP:SL server staff!", inline=False)
 		embed.add_field(name="🔨 Ban Appeals", value="Request a ban appeal!", inline=False)
 
