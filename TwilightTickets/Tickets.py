@@ -3,7 +3,6 @@ import datetime
 import sqlite3
 import uuid
 import io
-import re
 
 from datetime import datetime
 from discord import app_commands, utils
