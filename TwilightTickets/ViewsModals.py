@@ -244,6 +244,7 @@ class AppealModal(discord.ui.Modal):
         await create_ban_appeal(
             interaction=interaction,
             banned_user=self.appeal_user.value,
+            appeal_status='pending',
             appeal_request=self.appeal_info.value,
             cog=self.cog
         )

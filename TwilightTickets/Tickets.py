@@ -161,7 +161,7 @@ async def create_transcript(channel: discord.TextChannel, open_reason: str, open
 
     return log_message
 
-async def create_ban_appeal(interaction, banned_user: str, appeal_request: str, cog: commands.Cog):
+async def create_ban_appeal(interaction, banned_user: str, appeal_request: str, appeal_status:str, cog: commands.Cog):
     from . import ViewsModals
 
     user = interaction.user
@@ -180,7 +180,7 @@ async def create_ban_appeal(interaction, banned_user: str, appeal_request: str, 
     except sqlite3.IntegrityError:
         cog.cursor.execute("""
             UPDATE appeals SET ban_appeal_reason = ?, appeal_status = 'pending', timestamp = ? WHERE user_id = ?
-        """, (appeal_request, datetime.now().isoformat(), user.id))
+        """, (appeal_request, appeal_status, datetime.now().isoformat(), user.id))
     cog.conn.commit()
 
     appeals_channel_id = 1414770277782392993 # APPEAL CHANNEL ID
