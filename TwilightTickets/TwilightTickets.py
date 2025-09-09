@@ -96,14 +96,15 @@ class TwilightTickets(commands.Cog):
 		embed.add_field(name="🔨 Ban Appeals", value="Request a ban appeal!", inline=False)
 
 		embed.set_thumbnail(url="https://cdn.discordapp.com/icons/1341956884059521025/28cd7d2325f3b9b2704b99b7903877d2.png?size=1024")
-		embed.set_footer(text="The Twilight Zone")
+		embed.set_footer(text="Ghostz's Twilight Zone")
 		embed.timestamp = datetime.now()
 
-		view = ViewsModals.TicketView(self)
+		# CRITICAL FIX: TicketView.__init__() now takes no arguments.
+		view = ViewsModals.TicketView()
 		await channel.send(embed=embed, view=view)
 		await interaction.response.send_message(f"The panel has been sucessfully sent into {channel.mention}!", ephemeral=True)
 
-	@staff.command(name="panic", description="Enables or disables panic mode")
+    @staff.command(name="panic", description="Enables or disables panic mode")
 	async def panic(self, interaction: discord.Interaction):
 		if not role_check_elevated(interaction.user):
 			await interaction.response.send_message("You don't have permission to use this command.", ephemeral=True)

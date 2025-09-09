@@ -318,4 +318,5 @@ class FinishAppealModal(discord.ui.Modal):
         else:
             await original_message.edit(embed=new_embed)
 
-        await interaction.response.send_message("User successfully notified of decision!", ephemeral=True)
+        # FIX: Use followup.send() because a response has already been sent.
+        await interaction.followup.send("User successfully notified of decision!", ephemeral=True)
