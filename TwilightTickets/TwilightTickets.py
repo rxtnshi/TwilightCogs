@@ -99,15 +99,14 @@ class TwilightTickets(commands.Cog):
 		embed.set_footer(text="Ghostz's Twilight Zone")
 		embed.timestamp = datetime.now()
 
-		# CRITICAL FIX: TicketView.__init__() now takes no arguments.
-		view = ViewsModals.TicketView()
+		view = ViewsModals.TicketView(self)
 		await channel.send(embed=embed, view=view)
 		await interaction.response.send_message(f"The panel has been sucessfully sent into {channel.mention}!", ephemeral=True)
-
-    @staff.command(name="panic", description="Enables or disables panic mode")
-	async def panic(self, interaction: discord.Interaction):
+		
+	@staff.command(name="panic", description="Enables or disables panic mode")
+	async def panic(self, interaction: discord.Interaction, status: bool):
 		if not role_check_elevated(interaction.user):
-			await interaction.response.send_message("You don't have permission to use this command.", ephemeral=True)
+			await interaction.response.send_message("You do not have permission to use this command.", ephemeral=True)
 			return
 		log_channel = interaction.guild.get_channel(log_channel_id)
 
@@ -115,6 +114,7 @@ class TwilightTickets(commands.Cog):
 		status = "enabled" if self.tickets_enabled else "disabled"
 
 		await interaction.response.send_message(f"Ticket creation is now {status}")
+		await log_channel.send(f"{interaction.user} tried to open a ticket in panic mode.")
 
 	@staff.command(name="set", description="Enable/disable a specific ticket type")
 	@app_commands.choices(
