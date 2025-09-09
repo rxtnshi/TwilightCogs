@@ -18,7 +18,7 @@ log_channel_id = 1414502972964212857 #1414397193934213140 test server
 # 
 
 class TicketSelect(discord.ui.Select):
-    def __init__(self, cog: commands.Cog):
+    def __init__(self):
         options = [
             discord.SelectOption(label="⚠️ Discord Staff", description="Contact Discord staff", value="discord"),
             discord.SelectOption(label="🎮 Game Staff", description="Contact SCP:SL staff", value="game"),
@@ -26,33 +26,31 @@ class TicketSelect(discord.ui.Select):
         ]
 
         super().__init__(placeholder="Select a category...", options=options)
-        self.cog = cog
 
-    async def callback(self, interaction = discord.Interaction):
-        log_channel = interaction.guild.get_channel(log_channel_id)
-
-        # cog status check
+    async def callback(self, interaction: discord.Interaction):
         cog = interaction.client.get_cog("TwilightTickets")
         if not cog:
             await interaction.response.send_message("The ticket system is currently offline. Please try again later.", ephemeral=True)
             return
+
+        log_channel = interaction.guild.get_channel(log_channel_id)
         
         # blacklist check
-        self.cog.cursor.execute("SELECT reason FROM blacklist WHERE user_id = ?", (interaction.user.id,))
-        result = self.cog.cursor.fetchone()
+        cog.cursor.execute("SELECT reason FROM blacklist WHERE user_id = ?", (interaction.user.id,))
+        result = cog.cursor.fetchone()
         if result:
             await interaction.response.send_message(f"You are blacklisted from creating tickets. Reason: {result[0]}", ephemeral=True)
             return
 
         # check for panic mode
-        if not self.cog.tickets_enabled:
+        if not cog.tickets_enabled:
             await interaction.response.send_message("Ticket creation is currently disabled. Please contact staff if you believe this is an error!", ephemeral=True)
             await log_channel.send(f"{interaction.user.mention} tried to open a ticket while panic mode was active.")
             return
         
         # check for ticket type statuses
         selected_type = self.values[0]
-        if not self.cog.ticket_statuses.get(selected_type, False):
+        if not cog.ticket_statuses.get(selected_type, False):
             await interaction.response.send_message("This ticket category has been disabled! Please contact staff if you believe this is an error.", ephemeral=True)
             return
 
@@ -64,9 +62,8 @@ class TicketSelect(discord.ui.Select):
                 for channel in category.text_channels:
                     if channel.topic and f"({interaction.user.id})" in channel.topic:
                         await interaction.response.send_message(f"An existing ticket has been found in this category. You can access it here: {channel.mention}", ephemeral=True)
-                        await interaction.message.edit(view=TicketView(self.cog))
                         return
-            modal = DiscordModal(self.cog)
+            modal = DiscordModal()
         elif selected_type == "game":
             category_id = 1414502707309314088 #1414397144370122833 # change when testing or active
             category = discord.utils.get(interaction.guild.categories, id=category_id)
@@ -75,43 +72,38 @@ class TicketSelect(discord.ui.Select):
                 for channel in category.text_channels:
                     if channel.topic and f"({interaction.user.id})" in channel.topic:
                         await interaction.response.send_message(f"An existing ticket has been found in this category. You can access it here: {channel.mention}", ephemeral=True)
-                        await interaction.message.edit(view=TicketView(self.cog))
                         return
-            modal = GameModal(self.cog)
+            modal = GameModal()
         elif selected_type == "appeals":
             # Correct way to check for an existing appeal: query the database.
-            self.cog.cursor.execute("SELECT 1 FROM appeals WHERE user_id = ? AND appeal_status = 'pending'", (interaction.user.id,))
-            if self.cog.cursor.fetchone():
+            cog.cursor.execute("SELECT 1 FROM appeals WHERE user_id = ? AND appeal_status = 'pending'", (interaction.user.id,))
+            if cog.cursor.fetchone():
                 await interaction.response.send_message("You already have a pending appeal. Please wait for staff to review it before submitting a new one.", ephemeral=True)
                 return
-            modal = AppealModal(self.cog)
+            modal = AppealModal()
         else:
             await interaction.response.send_message("An unexpected error occurred upon trying to show a modal.", ephemeral=True)
-            await interaction.message.edit(view=TicketView(self.cog))
             return
 
         await interaction.response.send_modal(modal)
-        await interaction.message.edit(view=TicketView(self.cog))
+        await interaction.message.edit(view=TicketView())
 
 class DecisionSelect(discord.ui.Select):
-    def __init__(self, cog: commands.Cog):
+    def __init__(self):
         options = [
             discord.SelectOption(label="✅ Accept Appeal", description="Accept this appeal", value="accept"),
             discord.SelectOption(label="⛔ Deny Appeal", description="Reject this appeal", value="reject"),
         ]
-        self.cog = cog
 
         super().__init__(placeholder="Accept or Reject this Appeal", options=options)
 
     async def callback(self, interaction: discord.Interaction):
         decision = self.values[0]
-
-        await interaction.response.send_modal(FinishAppealModal(self.cog, decision))
+        await interaction.response.send_modal(FinishAppealModal(decision))
         
 class CloseTicket(discord.ui.Button):
-    def __init__(self, cog: commands.Cog):
+    def __init__(self):
         super().__init__(label="Close Ticket", style=discord.ButtonStyle.danger)
-        self.cog = cog
 
     async def callback(self, interaction: discord.Interaction):
         has_permission = any(role.id in staff_roles for role in interaction.user.roles)
@@ -120,40 +112,44 @@ class CloseTicket(discord.ui.Button):
             await interaction.response.send_message("You do not have permission to close this ticket. Please contact a staff member if you would like to close this.", ephemeral=True)
             return
 
-        await interaction.response.send_modal(CloseTicketModal(self.cog))
+        await interaction.response.send_modal(CloseTicketModal())
 
 #
 # Views
 # 
 
 class TicketView(discord.ui.View):
-    def __init__(self, cog: commands.Cog):
+    def __init__(self):
         super().__init__(timeout=None)
-        self.add_item(TicketSelect(cog))
+        self.add_item(TicketSelect())
 
 
 class CloseTicketView(discord.ui.View):
-    def __init__(self, cog: commands.Cog):
+    def __init__(self):
         super().__init__(timeout=None)
-        self.add_item(CloseTicket(cog))
+        self.add_item(CloseTicket())
 
 class AppealView(discord.ui.View):
-    def __init__(self, cog: commands.Cog):
+    def __init__(self):
         super().__init__(timeout=None)
-        self.add_item(DecisionSelect(cog))
+        self.add_item(DecisionSelect())
 
 #
 # Modals
 # 
 
 class CloseTicketModal(discord.ui.Modal):
-    def __init__(self, cog: commands.Cog):
+    def __init__(self):
         super().__init__(title="Ticket Closure", timeout=None)
-        self.cog = cog
         self.close_reason = discord.ui.TextInput(label="Why are you closing the ticket?", required=True, style=discord.TextStyle.paragraph)
         self.add_item(self.close_reason)
 
     async def on_submit(self, interaction: discord.Interaction):
+        cog = interaction.client.get_cog("TwilightTickets")
+        if not cog:
+            await interaction.response.send_message("The ticket system is currently offline.", ephemeral=True)
+            return
+
         await interaction.response.send_message("⌛ Creating transcript and closing ticket...", ephemeral=True)
 
         channel = interaction.channel
@@ -176,20 +172,24 @@ class CloseTicketModal(discord.ui.Modal):
         
         close_reason_value = self.close_reason.value
 
-        log_message = await create_transcript(channel, open_reason, opener, closer, logs_channel, close_reason_value, self.cog)
+        log_message = await create_transcript(channel, open_reason, opener, closer, logs_channel, close_reason_value, cog)
 
-        await close_ticket(channel, closer, close_reason_value, log_message, self.cog)
+        await close_ticket(channel, closer, close_reason_value, log_message, cog)
 
 class DiscordModal(discord.ui.Modal):
-    def __init__(self, cog: commands.Cog):
+    def __init__(self):
         super().__init__(title="Discord Help Request", timeout=None)
-        self.cog = cog
         self.discord_request_name = discord.ui.TextInput(label="What is your issue?", required=True, style=discord.TextStyle.short)
         self.discord_request = discord.ui.TextInput(label="Describe the issue", required=True, style=discord.TextStyle.paragraph)
         self.add_item(self.discord_request_name)
         self.add_item(self.discord_request)
 
     async def on_submit(self, interaction: discord.Interaction):
+        cog = interaction.client.get_cog("TwilightTickets")
+        if not cog:
+            await interaction.response.send_message("The ticket system is currently offline.", ephemeral=True)
+            return
+
         await create_ticket(
             interaction,
             ticket_type="Discord",
@@ -198,19 +198,23 @@ class DiscordModal(discord.ui.Modal):
             category_id=1414502599293407324, #1349563765842247784, #set whenever testing or when active
             staff_role_id=1345963295575769088, #1009509393609535548, #set whenever testing or when active
             embed_color=0x5865f2,
-            cog=self.cog
+            cog=cog
         )
 
 class GameModal(discord.ui.Modal):
-    def __init__(self, cog: commands.Cog):
+    def __init__(self):
         super().__init__(title="Game Staff Help Request", timeout=None)
-        self.cog = cog
         self.game_request_name = discord.ui.TextInput(label="What is your issue?", required=True, style=discord.TextStyle.short)
         self.game_request = discord.ui.TextInput(label="Describe the issue", required=True, style=discord.TextStyle.paragraph)
         self.add_item(self.game_request_name)
         self.add_item(self.game_request)
     
     async def on_submit(self, interaction: discord.Interaction):
+        cog = interaction.client.get_cog("TwilightTickets")
+        if not cog:
+            await interaction.response.send_message("The ticket system is currently offline.", ephemeral=True)
+            return
+
         await create_ticket(
             interaction,
             ticket_type="SCP:SL",
@@ -219,13 +223,12 @@ class GameModal(discord.ui.Modal):
             category_id=1414502707309314088, #1414397144370122833, #set whenever testing or when active
             staff_role_id=1345963237316890776, #1009509393609535548, #set whenever testing or when active
             embed_color=0x3498db,
-            cog=self.cog
+            cog=cog
         )
 
 class AppealModal(discord.ui.Modal):
-    def __init__(self, cog: commands.Cog):
+    def __init__(self):
         super().__init__(title="Ban Appeal", timeout=None)
-        self.cog = cog
         self.appeal_user = discord.ui.TextInput(
             label="SteamID64 or Discord Username/ID",
             placeholder="Format: [Platform]: [SteamId64 or Discord Username/ID]",
@@ -242,17 +245,21 @@ class AppealModal(discord.ui.Modal):
         self.add_item(self.appeal_info)
 
     async def on_submit(self, interaction: discord.Interaction): 
+        cog = interaction.client.get_cog("TwilightTickets")
+        if not cog:
+            await interaction.response.send_message("The ticket system is currently offline.", ephemeral=True)
+            return
+
         await create_ban_appeal(
             interaction=interaction,
             banned_user=self.appeal_user.value,
             appeal_request=self.appeal_info.value,
-            cog=self.cog
+            cog=cog
         )
 
 class FinishAppealModal(discord.ui.Modal):
-    def __init__(self, cog: commands.Cog, decision: str):
+    def __init__(self, decision: str):
         super().__init__(title="Finalize Appeal Decision", timeout=None)
-        self.cog = cog
         self.decision = decision
         self.finish_appeal = discord.ui.TextInput(
             label=f"Reason for {decision.lower()}ing appeal?",
@@ -263,6 +270,11 @@ class FinishAppealModal(discord.ui.Modal):
         self.add_item(self.finish_appeal)
 
     async def on_submit(self, interaction: discord.Interaction):
+        cog = interaction.client.get_cog("TwilightTickets")
+        if not cog:
+            await interaction.response.send_message("The ticket system is currently offline.", ephemeral=True)
+            return
+
         await interaction.response.send_message("⌛ Finalizing appeal and notifying user...", ephemeral=True)
 
         original_message = interaction.message
@@ -283,7 +295,7 @@ class FinishAppealModal(discord.ui.Modal):
             decision=self.decision,
             reason=reason,
             staff_member=staff_member,
-            cog=self.cog
+            cog=cog
         )
 
         new_embed = original_embed.copy()
@@ -293,10 +305,9 @@ class FinishAppealModal(discord.ui.Modal):
         else:
             new_embed.title = "🚫 Appeal Rejected"
             new_embed.color = discord.Color.red()
-        new_embed.add_field(name=f"Decision by: {staff_member.mention}", value=reason, inline=False)
+        new_embed.add_field(name=f"Decision by:", value=f"{staff_member.mention}", inline=False)
+        new_embed.add_field(name=f"Reasion:", value=reason, inline=False)
 
-        # CRITICAL FIX: Use View.from_message() to reconstruct the view from the message's components.
-        # The .view attribute on a message can sometimes be missing.
         view = discord.ui.View.from_message(original_message)
         if view:
             for item in view.children:
@@ -305,5 +316,6 @@ class FinishAppealModal(discord.ui.Modal):
         
             await original_message.edit(embed=new_embed, view=view)
         else:
-            # Fallback in case the view is somehow gone
             await original_message.edit(embed=new_embed)
+
+        await interaction.response.send_message("User successfully notified of decision!", ephemeral=True)
