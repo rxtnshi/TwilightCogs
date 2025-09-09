@@ -42,6 +42,7 @@ class TicketSelect(discord.ui.Select):
         result = self.cog.cursor.fetchone()
         if result:
             await interaction.response.send_message(f"You are blacklisted from creating tickets. Reason: {result[0]}", ephemeral=True)
+            return
 
         # check for panic mode
         if not self.cog.tickets_enabled:
@@ -244,7 +245,6 @@ class AppealModal(discord.ui.Modal):
         await create_ban_appeal(
             interaction=interaction,
             banned_user=self.appeal_user.value,
-            appeal_status='pending',
             appeal_request=self.appeal_info.value,
             cog=self.cog
         )

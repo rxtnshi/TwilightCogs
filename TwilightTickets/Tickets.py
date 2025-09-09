@@ -161,7 +161,10 @@ async def create_transcript(channel: discord.TextChannel, open_reason: str, open
 
     return log_message
 
-async def create_ban_appeal(interaction, banned_user: str, appeal_request: str, appeal_status:str, cog: commands.Cog):
+async def create_ban_appeal(interaction, banned_user: str, appeal_request: str, cog: commands.Cog):
+    """
+    Sends a new ban appeal to a single, designated channel for staff to review.
+    """
     from . import ViewsModals
 
     user = interaction.user
@@ -172,33 +175,31 @@ async def create_ban_appeal(interaction, banned_user: str, appeal_request: str, 
         await interaction.response.send_message("You already have a pending appeal. Please wait for staff to review it.", ephemeral=True)
         return
 
+    appeal_id = uuid.uuid4().hex[:8]
+
     try:
         cog.cursor.execute("""
-            INSERT INTO appeals (user_id, ban_appeal_reason, appeal_status, timestamp)
-            VALUES (?, ?, 'pending', ?)
-        """, (user.id, appeal_request, datetime.now().isoformat()))
+            INSERT INTO appeals (appeal_id, user_id, ban_appeal_reason, appeal_status, timestamp)
+            VALUES (?, ?, ?, 'pending', ?)
+        """, (appeal_id, user.id, appeal_request, datetime.now().isoformat()))
     except sqlite3.IntegrityError:
         cog.cursor.execute("""
             UPDATE appeals SET ban_appeal_reason = ?, appeal_status = 'pending', timestamp = ? WHERE user_id = ?
-        """, (appeal_request, appeal_status, datetime.now().isoformat(), user.id))
+        """, (appeal_request, datetime.now().isoformat(), user.id))
     cog.conn.commit()
 
-    appeals_channel_id = 1414770277782392993 # APPEAL CHANNEL ID
+    appeals_channel_id = 1414770277782392993
     appeals_channel = guild.get_channel(appeals_channel_id)
 
     if not appeals_channel:
-        print(f"ERROR: Appeal channel not found with ID: {appeals_channel_id}")
-        await interaction.response.send_message("Unable to send appeal. Please contact management.", ephemeral=True)
+        print(f"ERROR: Could not find the appeals channel with ID {appeals_channel_id}")
+        await interaction.response.send_message("The appeal system is misconfigured. Please contact an administrator.", ephemeral=True)
         return
     
-    embed = discord.Embed(
-        title="Ban Appeal Received", 
-        description=f"Submitted by {user.mention}", 
-        color=0xffa500
-    )
-    embed.add_field(name="Platform & Account Banned", value=banned_user, inline=False)
-    embed.add_field(name="Appeal Description:", value=appeal_request, inline=False)
-    embed.set_footer(text=f"User ID: {user.id}") # Store the user ID here to retrieve later
+    embed = discord.Embed(title="Ban Appeal Received", description=f"Submitted by {user.mention}", color=0xffa500)
+    embed.add_field(name="Banned Account ID", value=banned_user, inline=False)
+    embed.add_field(name="User's Appeal", value=appeal_request, inline=False)
+    embed.set_footer(text=f"User ID: {user.id} | Appeal ID: {appeal_id}")
 
     await appeals_channel.send(embed=embed, view=ViewsModals.AppealView(cog))
     
