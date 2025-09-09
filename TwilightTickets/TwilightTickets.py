@@ -112,7 +112,7 @@ class TwilightTickets(commands.Cog):
 		self.tickets_enabled = not self.tickets_enabled
 		status = "enabled" if self.tickets_enabled else "disabled"
 
-		await interaction.response.send_message(f"Ticket creation is now {status}.")
+		await interaction.response.send_message(f"✅ Ticket creation is now {status}.")
 
 	@staff.command(name="set", description="Enable/disable a specific ticket type")
 	@app_commands.choices(
