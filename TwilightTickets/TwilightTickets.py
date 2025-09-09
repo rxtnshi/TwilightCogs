@@ -75,6 +75,13 @@ class TwilightTickets(commands.Cog):
 	def cog_unload(self):
 		self.conn.close()
 
+	def cog_load(self):
+		self.bot.add_view(ViewsModals.TicketView())
+		self.bot.add_view(ViewsModals.CloseTicketView())
+		self.bot.add_view(ViewsModals.AppealView())
+
+	
+
 	staff = app_commands.Group(name="staff", description="Staff commands", guild_only=True)
 
 	@staff.command(name="panel", description="Sets up the panel used for the ticket option selection")
