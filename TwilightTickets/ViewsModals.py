@@ -24,7 +24,7 @@ class TicketSelect(discord.ui.Select):
             discord.SelectOption(label="🎮 Game Staff", description="Contact SCP:SL staff", value="game"),
             discord.SelectOption(label="🔨 Ban Appeals", description="Request a ban appeal", value="appeals")
         ]
-        super().__init__(placeholder="Select a category...", options=options)
+        super().__init__(placeholder="Select a category...", options=options, custom_id="twilight_ticket_select")
 
     async def callback(self, interaction: discord.Interaction):
         cog = interaction.client.get_cog("TwilightTickets")
@@ -93,7 +93,7 @@ class DecisionSelect(discord.ui.Select):
             discord.SelectOption(label="✅ Accept Appeal", value="accept"),
             discord.SelectOption(label="⛔ Deny Appeal", value="reject"),
         ]
-        super().__init__(placeholder="Accept or Reject this Appeal", options=options)
+        super().__init__(placeholder="Accept or Reject this Appeal", options=options, custom_id="twilight_appeal_decision_select")
 
     async def callback(self, interaction: discord.Interaction):
         if not any(role.id in staff_roles_elevated for role in interaction.user.roles):
@@ -106,7 +106,7 @@ class DecisionSelect(discord.ui.Select):
         
 class CloseTicket(discord.ui.Button):
     def __init__(self):
-        super().__init__(label="Close Ticket", style=discord.ButtonStyle.danger)
+        super().__init__(label="Close Ticket", style=discord.ButtonStyle.danger, custom_id="twilight_close_ticket_button")
 
     async def callback(self, interaction: discord.Interaction):
         if not any(role.id in staff_roles for role in interaction.user.roles):
