@@ -109,7 +109,8 @@ class TwilightTickets(commands.Cog):
 			await interaction.response.send_message("You do not have permission to use this command.", ephemeral=True)
 			return
 
-		self.tickets_enabled = not self.tickets_enabled
+		if status:
+			self.tickets_enabled = not self.tickets_enabled 
 		status = "enabled" if self.tickets_enabled else "disabled"
 
 		await interaction.response.send_message(f"✅ Ticket creation is now {status}.")
