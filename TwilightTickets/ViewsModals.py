@@ -20,7 +20,7 @@ log_channel_id = 1414502972964212857 #1414397193934213140 test server
 class TicketSelect(discord.ui.Select):
     def __init__(self):
         options = [
-            discord.SelectOption(label="⚠️ Discord Staff", description="Contact Discord staff", value="discord"),
+            discord.SelectOption(label="⚙️ Discord Staff", description="Contact Discord staff", value="discord"),
             discord.SelectOption(label="🎮 Game Staff", description="Contact SCP:SL staff", value="game"),
             discord.SelectOption(label="🔨 Ban Appeals", description="Request a ban appeal", value="appeals")
         ]
