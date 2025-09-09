@@ -218,12 +218,14 @@ async def finalize_appeal(opener_id: int, decision: str, reason: str, staff_memb
 
     if status == "accepted":
         embed_color = discord.Color.green()
-        title = "✅ Your Ban Appeal has been Accepted"
+        title = "✅ Ban Appeal Accepted"
+        description = "Your appeal has been accepted. Apologies for the inconvenience."
     else:
         embed_color = discord.Color.red()
-        title = "🚫 Your Ban Appeal has been Denied"
+        title = "🚫 Ban Appeal Rejected"
+        description = "Unfortunately, your appeal has been rejected. Please check below for details."
 
-    dm_embed = discord.Embed(title=title, color=embed_color)
+    dm_embed = discord.Embed(title=title, description=description, color=embed_color)
     dm_embed.add_field(name="Reason from Staff", value=reason, inline=False)
     dm_embed.set_footer(text=f"TWZ Management")
 

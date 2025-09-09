@@ -227,8 +227,8 @@ class AppealModal(discord.ui.Modal):
         super().__init__(title="Ban Appeal", timeout=None)
         self.cog = cog
         self.appeal_user = discord.ui.TextInput(
-            label="SteamID64 or Discord Username/UserID",
-            placeholder="Please provide the ID of the user on the platform they were banned from.",
+            label="SteamID64 or Discord Username/ID",
+            placeholder="Format: [Platform]: [SteamId64 or Discord Username/ID]",
             required=True, 
             style=discord.TextStyle.short
         )
@@ -295,9 +295,12 @@ class FinishAppealModal(discord.ui.Modal):
             new_embed.color = discord.Color.red()
         new_embed.add_field(name=f"Decision by: {staff_member.mention}", value=reason, inline=False)
 
-        view = self.view
-        for item in view.children:
-            if isinstance(item, discord.ui.Select):
-                item.disabled = True
-
-        await original_message.edit(embed=new_embed, view=view)
+        view = original_message.view
+        if view:
+            for item in view.children:
+                if isinstance(item, discord.ui.Select):
+                    item.disabled = True
+        
+            await original_message.edit(embed=new_embed, view=view)
+        else:
+            await original_message.edit(embed=new_embed)
