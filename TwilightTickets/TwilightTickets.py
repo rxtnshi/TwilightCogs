@@ -99,7 +99,7 @@ class TwilightTickets(commands.Cog):
 		embed.set_footer(text="Ghostz's Twilight Zone")
 		embed.timestamp = datetime.now()
 
-		view = ViewsModals.TicketView(self)
+		view = ViewsModals.TicketView()
 		await channel.send(embed=embed, view=view)
 		await interaction.response.send_message(f"The panel has been sucessfully sent into {channel.mention}!", ephemeral=True)
 		
