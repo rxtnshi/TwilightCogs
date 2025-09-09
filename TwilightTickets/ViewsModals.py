@@ -34,6 +34,7 @@ class TicketSelect(discord.ui.Select):
             return
         
         log_channel = interaction.guild.get_channel(log_channel_id)
+        selected_type = self.values[0]
         
         cog.cursor.execute("SELECT reason FROM blacklist WHERE user_id = ?", (interaction.user.id,))
         if result := cog.cursor.fetchone():
@@ -43,11 +44,10 @@ class TicketSelect(discord.ui.Select):
 
         if not cog.tickets_enabled:
             await interaction.response.send_message("Ticket creation is currently disabled.", ephemeral=True)
-            await log_channel.send(f"{interaction.user.mention} tried opening a ticket during panic mode.")
+            await log_channel.send(f"{interaction.user} ({interaction.user.id}) tried opening a ticket during panic mode for `{selected_type}` tickets.")
             await interaction.message.edit(view=TicketView())
             return
         
-        selected_type = self.values[0]
         if not cog.ticket_statuses.get(selected_type, False):
             await interaction.response.send_message("This ticket category has been disabled.", ephemeral=True)
             await interaction.message.edit(view=TicketView())
