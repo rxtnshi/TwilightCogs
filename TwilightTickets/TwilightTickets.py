@@ -108,13 +108,11 @@ class TwilightTickets(commands.Cog):
 		if not role_check_elevated(interaction.user):
 			await interaction.response.send_message("You do not have permission to use this command.", ephemeral=True)
 			return
-		log_channel = interaction.guild.get_channel(log_channel_id)
 
 		self.tickets_enabled = not self.tickets_enabled
 		status = "enabled" if self.tickets_enabled else "disabled"
 
-		await interaction.response.send_message(f"Ticket creation is now {status}")
-		await log_channel.send(f"{interaction.user} tried to open a ticket in panic mode.")
+		await interaction.response.send_message(f"Ticket creation is now {status}.")
 
 	@staff.command(name="set", description="Enable/disable a specific ticket type")
 	@app_commands.choices(
