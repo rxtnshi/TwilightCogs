@@ -4,7 +4,7 @@ import datetime
 import io
 import re
 
-from .Tickets import create_transcript, create_ticket, close_ticket
+from .Tickets import create_transcript, create_ticket, close_ticket, create_ban_appeal, finalize_appeal
 from datetime import datetime
 from discord import app_commands, utils
 from discord.ext import commands
@@ -13,11 +13,16 @@ staff_roles = [1345963237316890776, 1345963295575769088, 1009509393609535548, 10
 staff_roles_elevated = [1398449212219457577, 1009509393609535548]
 log_channel_id = 1414502972964212857 #1414397193934213140 test server
 
+#
+# Dropdowns and Buttons
+# 
+
 class TicketSelect(discord.ui.Select):
     def __init__(self, cog: commands.Cog):
         options = [
             discord.SelectOption(label="⚠️ Discord Staff", description="Contact Discord staff", value="discord"),
-            discord.SelectOption(label="🎮 Game Staff", description="Contact SCP:SL staff", value="game")
+            discord.SelectOption(label="🎮 Game Staff", description="Contact SCP:SL staff", value="game"),
+            discord.SelectOption(label="🔨 Ban Appeals", description="Request a ban appeal", value="appeals")
         ]
 
         super().__init__(placeholder="Select a category...", options=options)
@@ -72,6 +77,15 @@ class TicketSelect(discord.ui.Select):
                         await interaction.message.edit(view=TicketView(self.cog))
                         return
             modal = GameModal(self.cog)
+        elif selected_type == "appeals":
+            category_id = 1414757537764606012 #1414397144370122833 # change when testing or active
+            if category:
+                for channel in category.text_channels:
+                    if channel.topic and f"({interaction.user.id})" in channel.topic:
+                        await interaction.response.send_message(f"You already have an existing appeal. You will be sent the result of the appeal in your DMs.", ephemeral=True)
+                        await interaction.message.edit(view=TicketView(self.cog))
+                        return
+            modal = AppealModal(self.cog)
         else:
             await interaction.response.send_message("An unexpected error occurred upon trying to show a modal.", ephemeral=True)
             await interaction.message.edit(view=TicketView(self.cog))
@@ -80,11 +94,21 @@ class TicketSelect(discord.ui.Select):
         await interaction.response.send_modal(modal)
         await interaction.message.edit(view=TicketView(self.cog))
 
-class TicketView(discord.ui.View):
+class DecisionSelect(discord.ui.Select):
     def __init__(self, cog: commands.Cog):
-        super().__init__(timeout=None)
-        self.add_item(TicketSelect(cog))
+        options = [
+            discord.SelectOption(label="✅ Accept Appeal", description="Bans related to this Discord", value="accept"),
+            discord.SelectOption(label="⛔ Deny Appeal", description="Bans related to SCP:SL or other games", value="reject"),
+        ]
+        self.cog = cog
 
+        super().__init__(placeholder="Accept or Reject this Appeal", options=options)
+
+    async def callback(self, interaction: discord.Interaction):
+        decision = self.values[0]
+
+        await interaction.response.send_modal(FinishAppealModal(self.cog, decision))
+        
 class CloseTicket(discord.ui.Button):
     def __init__(self, cog: commands.Cog):
         super().__init__(label="Close Ticket", style=discord.ButtonStyle.danger)
@@ -99,10 +123,29 @@ class CloseTicket(discord.ui.Button):
 
         await interaction.response.send_modal(CloseTicketModal(self.cog))
 
+#
+# Views
+# 
+
+class TicketView(discord.ui.View):
+    def __init__(self, cog: commands.Cog):
+        super().__init__(timeout=None)
+        self.add_item(TicketSelect(cog))
+
+
 class CloseTicketView(discord.ui.View):
     def __init__(self, cog: commands.Cog):
         super().__init__(timeout=None)
         self.add_item(CloseTicket(cog))
+
+class AppealView(discord.ui.View):
+    def __init__(self, cog: commands.Cog):
+        super().__init__(timeout=None)
+        self.add_item(DecisionSelect(cog))
+
+#
+# Modals
+# 
 
 class CloseTicketModal(discord.ui.Modal):
     def __init__(self, cog: commands.Cog):
@@ -137,7 +180,6 @@ class CloseTicketModal(discord.ui.Modal):
         log_message = await create_transcript(channel, open_reason, opener, closer, logs_channel, close_reason_value, self.cog)
 
         await close_ticket(channel, closer, close_reason_value, log_message, self.cog)
-
 
 class DiscordModal(discord.ui.Modal):
     def __init__(self, cog: commands.Cog):
@@ -180,3 +222,81 @@ class GameModal(discord.ui.Modal):
             embed_color=0x3498db,
             cog=self.cog
         )
+
+class AppealModal(discord.ui.Modal):
+    def __init__(self, cog: commands.Cog):
+        super().__init__(title="Ban Appeal", timeout=None)
+        self.cog = cog
+        self.appeal_user = discord.ui.TextInput(
+            label="SteamID64 or Discord Username/UserID",
+            placeholder="Please provide the ID of the user on the platform they were banned from.",
+            required=True, 
+            style=discord.TextStyle.short
+        )
+        self.appeal_info = discord.ui.TextInput(
+            label="Relevent Information/Evidence", 
+            placeholder="Please provide evidence that supports your appeal to help us investigate it further.",
+            required=True, 
+            style=discord.TextStyle.paragraph
+        )
+        self.add_item(self.appeal_user)
+        self.add_item(self.appeal_info)
+
+    async def on_submit(self, interaction: discord.Interaction): 
+        await create_ban_appeal(
+            interaction=interaction,
+            banned_user=self.appeal_user.value,
+            appeal_request=self.appeal_info.value,
+            cog=self.cog
+        )
+
+class FinishAppealModal(discord.ui.Modal):
+    def __init__(self, cog: commands.Cog, decision: str):
+        super().__init__(title="Finalize Appeal Decision", timeout=None)
+        self.cog = cog
+        self.decision = decision
+        self.finish_appeal = discord.ui.TextInput(
+            label=f"Reason for {decision.lower()}ing appeal?",
+            placeholder="Provide a detailed response to the user.",
+            required=True, 
+            style=discord.TextStyle.paragraph
+        )
+        self.add_item(self.finish_appeal)
+
+    async def on_submit(self, interaction: discord.Interaction):
+        await interaction.response.send_message("⌛ Finalizing appeal and notifying user...", ephemeral=True)
+
+        original_message = interaction.message
+        original_embed = original_message.embeds[0]
+        reason = self.finish_appeal.value
+
+        footer_user_id = original_embed.footer.text
+        try:
+            opener_id = int(footer_user_id.split("Discord User ID: ")[1])
+        except (IndexError, ValueError):
+            await interaction.followup.send("Error: Could not parse the original User ID from the embed.", ephemeral=True)
+            return
+        
+        await finalize_appeal(
+            interaction=interaction,
+            opener_id=opener_id,
+            decision=self.decision,
+            reason=reason,
+        )
+
+        new_embed = original_embed.copy()
+        if self.decision == "accept":
+            new_embed.title = "✅ Appeal Accepted"
+            new_embed.color = discord.Color.green()
+        else:
+            new_embed.title = "🚫 Appeal Rejected"
+            new_embed.color = discord.Color.red()
+
+        new_embed.add_field(name=f"Decision by: {interaction.user}")
+
+        view = self.view
+        for item in view.children:
+            if isinstance(item, discord.ui.Select):
+                item.disabled = True
+
+        await original_message.edit(embed=new_embed, view=view)

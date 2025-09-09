@@ -61,6 +61,16 @@ class TwilightTickets(commands.Cog):
 				timestamp TEXT NOT NULL
 			)
 		""")
+
+		self.cursor.execute("""
+			CREATE TABLE IF NOT EXISTS appeals (
+				user_id INTEGER PRIMARY KEY,
+				appeal_id INTEGER NOT NULL,
+				ban_appeal_reason TEXT,
+				appeal_status TEXT NOT NULL,
+				timestamp TEXT NOT NULL
+			)
+		""")
 	def cog_unload(self):
 		self.conn.close()
 
@@ -189,7 +199,7 @@ class TwilightTickets(commands.Cog):
 		history_embed.set_thumbnail(url=user.display_avatar.url)
 
 		history_text = ""
-		for ticket in tickets[:10]:
+		for ticket in tickets[:5]:
 			ticket_id, closer_id, open_time_str, close_time_str, log_message_id = ticket
 			
 			open_dt = datetime.fromisoformat(open_time_str)
@@ -216,6 +226,6 @@ class TwilightTickets(commands.Cog):
 			)
 		
 		history_embed.description = history_text
-		history_embed.set_footer(text=f"Showing the last 10 tickets for {user.display_name}")
+		history_embed.set_footer(text=f"Displaying the last 5 tickets made")
 
 		await interaction.response.send_message(embed=history_embed)

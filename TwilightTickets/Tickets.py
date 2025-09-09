@@ -86,7 +86,6 @@ async def close_ticket(channel: discord.TextChannel, closer: discord.Member, clo
 
     await channel.delete()
 
-
 async def create_transcript(channel: discord.TextChannel, open_reason: str, opener, closer, logs_channel, close_reason: str, cog: commands.Cog):
     ticket_id = None
     if channel.topic and "ID:" in channel.topic:
@@ -130,12 +129,12 @@ async def create_transcript(channel: discord.TextChannel, open_reason: str, open
         color=0x00FF00,
         timestamp=close_time_dt
     )
-    user_embed.add_field(name="Opened by:", value=f"{opener.mention} ({opener.id})", inline=True)
-    user_embed.add_field(name="Closed by:", value=f"{closer.mention} ({closer.id})", inline=True)
-    user_embed.add_field(name="Opened at:", value=open_time_ts, inline=True)
-    user_embed.add_field(name="Closed at:", value=close_time_ts, inline=True)
-    user_embed.add_field(name="Ticket Issue:", value=f"{open_reason}", inline=True)
-    user_embed.add_field(name="Close Reason:", value=close_reason, inline=True)
+    user_embed.add_field(name="Opened by:", value=f"{opener.mention} ({opener.id})", inline=False)
+    user_embed.add_field(name="Closed by:", value=f"{closer.mention} ({closer.id})", inline=False)
+    user_embed.add_field(name="Opened at:", value=open_time_ts, inline=False)
+    user_embed.add_field(name="Closed at:", value=close_time_ts, inline=False)
+    user_embed.add_field(name="Ticket Issue:", value=f"{open_reason}", inline=False)
+    user_embed.add_field(name="Close Reason:", value=close_reason, inline=False)
 
     logs_channel_embed = discord.Embed(
         title=f"📋 Ticket Transcript",
@@ -165,3 +164,73 @@ async def create_transcript(channel: discord.TextChannel, open_reason: str, open
         await log_message.reply(f"Unable to send transcript to {opener.mention} (DMs may be closed or user not found).")
 
     return log_message
+
+async def create_ban_appeal(interaction, banned_user: str, appeal_request: str, cog: commands.Cog):
+    from . import ViewsModals
+
+    user = interaction.user
+    guild = interaction.guild
+    
+    cog.cursor.execute("SELECT 1 FROM appeals WHERE user_id = ? AND appeal_status = 'pending'", (user.id,))
+    if cog.cursor.fetchone():
+        await interaction.response.send_message("You already have a pending appeal. Please wait for staff to review it.", ephemeral=True)
+        return
+
+    try:
+        cog.cursor.execute("""
+            INSERT INTO appeals (user_id, ban_appeal_reason, appeal_status, timestamp)
+            VALUES (?, ?, 'pending', ?)
+        """, (user.id, appeal_request, datetime.now().isoformat()))
+    except sqlite3.IntegrityError:
+        cog.cursor.execute("""
+            UPDATE appeals SET ban_appeal_reason = ?, appeal_status = 'pending', timestamp = ? WHERE user_id = ?
+        """, (appeal_request, datetime.now().isoformat(), user.id))
+    cog.conn.commit()
+
+    appeals_channel_id = 1414770277782392993 # APPEAL CHANNEL ID
+    appeals_channel = guild.get_channel(appeals_channel_id)
+
+    if not appeals_channel:
+        print(f"ERROR: Appeal channel not found with ID: {appeals_channel_id}")
+        await interaction.response.send_message("Unable to send appeal. Please contact management.", ephemeral=True)
+        return
+    
+    embed = discord.Embed(
+        title="Ban Appeal Received", 
+        description=f"Submitted by {user.mention}", 
+        color=0xffa500
+    )
+    embed.add_field(name="Platform & Account Banned", value=banned_user, inline=False)
+    embed.add_field(name="Appeal Description:", value=appeal_request, inline=False)
+    embed.set_footer(text=f"Discord User ID: {user.id}") # Store the user ID here to retrieve later
+
+    await appeals_channel.send(embed=embed, view=ViewsModals.AppealView(cog))
+    
+    await interaction.response.send_message("✅ Your appeal has been submitted for review.", ephemeral=True)
+
+
+async def finalize_appeal(interaction: discord.Interaction, opener_id: int, decision: str, reason: str, cog: commands.Cog):
+    status = "accepted" if decision == "accept" else "denied"
+    cog.cursor.execute("UPDATE appeals SET appeal_status = ? WHERE user_id = ?", (status, opener_id))
+    cog.conn.commit()
+
+    user = await cog.bot.fetch_user(opener_id)
+    if not user:
+        return
+
+    if status == "accepted":
+        embed_color = discord.Color.green()
+        title = "✅ Your Ban Appeal has been Accepted"
+    else:
+        embed_color = discord.Color.red()
+        title = "⛔ Your Ban Appeal has been Denied"
+
+    dm_embed = discord.Embed(title=title, color=embed_color)
+    dm_embed.add_field(name="Reason from Staff", value=reason, inline=False)
+    dm_embed.set_footer(text=f"Ghostz's Twilight Zone", icon_url=discord.guild.icon.url)
+
+    try:
+        await user.send(embed=dm_embed)
+    except discord.Forbidden:
+        print(f"Could not DM appeal result to user {opener_id}")
+        await interaction.response.send_message("Unable to send the user the decision. This may be due their DM settings or they left the server.")
