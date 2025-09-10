@@ -6,7 +6,6 @@ from . import ViewsModals
 from datetime import datetime
 from discord import app_commands
 from discord.app_commands import Choice
-from discord.ext import commands
 from redbot.core import commands, app_commands, Config
 from redbot.core.data_manager import cog_data_path
 
@@ -92,8 +91,8 @@ class TwilightTickets(commands.Cog):
 	async def cog_load(self):
 		guild = self.bot.get_guild(1341956884059521025)
 		if guild:
-			self.tickets_enabled = self.config.guild(guild).tickets_enabled()
-			self.ticket_statuses = self.config.guild(guild).ticket_statuses()
+			self.tickets_enabled = await self.config.guild(guild).tickets_enabled()
+			self.ticket_statuses = await self.config.guild(guild).ticket_statuses()
 
 		self.bot.add_view(ViewsModals.TicketView())
 		self.bot.add_view(ViewsModals.CloseTicketView())
