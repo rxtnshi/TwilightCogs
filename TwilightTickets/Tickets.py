@@ -137,7 +137,7 @@ async def create_transcript(channel: discord.TextChannel, open_reason: str, open
 
     logs_channel_embed = discord.Embed(
         title=f"📋 Ticket Transcript",
-        description=f"Ticket log for {channel.name}",
+        description=f"Ticket log for `{channel.name}`",
         color=0x00FF00,
         timestamp=close_time_dt
     )
