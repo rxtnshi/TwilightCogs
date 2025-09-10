@@ -288,4 +288,4 @@ class FinishAppealModal(discord.ui.Modal):
         else:
             await original_message.edit(embed=new_embed)
 
-        await interaction.response.edit_message(f"✅ <@{opener_id}> has been successfully notified. Appeal status has been updated.", ephemeral=True)
+        await interaction.response.edit_message(f"✅ <@{opener_id}> has been successfully notified. Appeal status has been updated.")
