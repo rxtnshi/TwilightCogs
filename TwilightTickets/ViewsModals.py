@@ -9,8 +9,8 @@ from datetime import datetime
 from discord import app_commands, utils
 from discord.ext import commands
 
-staff_roles = [1345963237316890776, 1345963295575769088, 1009509393609535548, 1009509393609535548]
-staff_roles_elevated = [1398449212219457577, 1009509393609535548]
+staff_roles = [1345963237316890776, 1345963295575769088]
+staff_roles_elevated = [1341957856232210492, 1341958721793691669, 1341957864650047569, 1362917217611546705, 1342201478122704989, 1341961378100936735]
 log_channel_id = 1414502972964212857 #1414397193934213140 test server
 
 #
@@ -182,8 +182,13 @@ class DiscordModal(discord.ui.Modal):
         if not cog: return
 
         await create_ticket(
-            interaction, "Discord", self.discord_request_name.value, self.discord_request.value,
-            1414502599293407324, 1345963295575769088, 0x5865f2, cog
+            interaction, "Discord", 
+            self.discord_request_name.value, 
+            self.discord_request.value,
+            1414502599293407324, # category id
+            1345963295575769088, # staff id
+            0x5865f2, 
+            cog
         )
 
 class GameModal(discord.ui.Modal):
@@ -199,8 +204,14 @@ class GameModal(discord.ui.Modal):
         if not cog: return
 
         await create_ticket(
-            interaction, "SCP:SL", self.game_request_name.value, self.game_request.value,
-            1414502707309314088, 1345963237316890776, 0x3498db, cog
+            interaction, 
+            "SCP:SL", 
+            self.game_request_name.value, 
+            self.game_request.value,
+            1414502707309314088, # category id
+            1345963237316890776, # staff id
+            0x3498db, 
+            cog
         )
 
 class AppealModal(discord.ui.Modal):
