@@ -65,7 +65,7 @@ class TwilightTickets(commands.Cog):
 
 		self.cursor.execute("""
 			CREATE TABLE IF NOT EXISTS appeals (
-				appeal_id INTEGER PRIMARY KEY,
+				appeal_id TEXT PRIMARY KEY,
 				user_id INTEGER NOT NULL,
 				ban_appeal_reason TEXT,
 				appeal_status TEXT NOT NULL,
