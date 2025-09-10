@@ -142,7 +142,7 @@ class TwilightTickets(commands.Cog):
 		new_status = (status == "enable")
 		self.ticket_statuses[ticket_type] = new_status
 
-		await interaction.response.send_message(f"{ticket_type.capitalize()} tickets have been {status}d successfully.", ephemeral=True)
+		await interaction.response.send_message(f"**`✅ Success!`** {ticket_type.capitalize()} tickets have been {status}d successfully.")
 
 	@staff.command(name="blacklist", description="Blacklists a user")
 	async def blacklist_user(self, interaction: discord.Interaction, user: discord.Member, reason: str):

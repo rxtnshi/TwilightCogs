@@ -252,7 +252,7 @@ class FinishAppealModal(discord.ui.Modal):
         cog = interaction.client.get_cog("TwilightTickets")
         if not cog: return
 
-        await interaction.response.send_message("⌛ Finalizing appeal and notifying user...", ephemeral=False)
+        await interaction.response.send_message("⌛ Finalizing appeal and notifying user...")
 
         original_message = interaction.message
         original_embed = original_message.embeds[0]
