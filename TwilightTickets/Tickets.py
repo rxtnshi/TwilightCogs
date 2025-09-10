@@ -56,8 +56,8 @@ async def create_ticket(
         color=embed_color,
         timestamp=datetime.now()
     )
-    embed.add_field(name="Issue:", value=request_name, inline=False)
-    embed.add_field(name="Description:", value=request_description, inline=False)
+    embed.add_field(name="Issue", value=request_name, inline=False)
+    embed.add_field(name="Description", value=request_description, inline=False)
 
     # await channel.send(f"{discord.utils.get(guild.roles, id=staff_role_id).mention}")
     await channel.send(embed=embed, view=ViewsModals.CloseTicketView())
@@ -128,12 +128,12 @@ async def create_transcript(channel: discord.TextChannel, open_reason: str, open
         color=0x00FF00,
         timestamp=close_time_dt
     )
-    user_embed.add_field(name="Opened by:", value=f"{opener.mention} ({opener.id})", inline=False)
-    user_embed.add_field(name="Closed by:", value=f"{closer.mention} ({closer.id})", inline=False)
-    user_embed.add_field(name="Opened at:", value=open_time_ts, inline=False)
-    user_embed.add_field(name="Closed at:", value=close_time_ts, inline=False)
-    user_embed.add_field(name="Ticket Issue:", value=f"{open_reason}", inline=False)
-    user_embed.add_field(name="Close Reason:", value=close_reason, inline=False)
+    user_embed.add_field(name="Opened by", value=f"{opener.mention} ({opener.id})", inline=False)
+    user_embed.add_field(name="Closed by", value=f"{closer.mention} ({closer.id})", inline=False)
+    user_embed.add_field(name="Opened at", value=open_time_ts, inline=False)
+    user_embed.add_field(name="Closed at", value=close_time_ts, inline=False)
+    user_embed.add_field(name="Ticket Issue", value=f"{open_reason}", inline=False)
+    user_embed.add_field(name="Close Reason", value=close_reason, inline=False)
 
     logs_channel_embed = discord.Embed(
         title=f"📋 Ticket Transcript",
@@ -141,12 +141,12 @@ async def create_transcript(channel: discord.TextChannel, open_reason: str, open
         color=0x00FF00,
         timestamp=close_time_dt
     )
-    logs_channel_embed.add_field(name="Opened by:", value=f"{opener} ({opener.id})", inline=False)
-    logs_channel_embed.add_field(name="Closed by:", value=f"{closer} ({closer.id})", inline=False)
-    logs_channel_embed.add_field(name="Opened at:", value=open_time_ts, inline=True)
-    logs_channel_embed.add_field(name="Closed at:", value=close_time_ts, inline=True)
-    logs_channel_embed.add_field(name="Ticket issue:", value=f"{open_reason}", inline=False)
-    logs_channel_embed.add_field(name="Close Reason:", value=close_reason, inline=False)
+    logs_channel_embed.add_field(name="Opened by", value=f"{opener} ({opener.id})", inline=False)
+    logs_channel_embed.add_field(name="Closed by", value=f"{closer} ({closer.id})", inline=False)
+    logs_channel_embed.add_field(name="Opened at", value=open_time_ts, inline=True)
+    logs_channel_embed.add_field(name="Closed at", value=close_time_ts, inline=True)
+    logs_channel_embed.add_field(name="Ticket issue", value=f"{open_reason}", inline=False)
+    logs_channel_embed.add_field(name="Close Reason", value=close_reason, inline=False)
 
     transcript_text = transcript
     file_user = discord.File(io.StringIO(transcript_text), filename=f"transcript.txt")
@@ -169,6 +169,9 @@ async def create_ban_appeal(interaction, banned_user: str, appeal_request: str, 
     
     appeal_id = uuid.uuid4().hex[:8]
 
+    time_sent = datetime.fromisoformat(datetime.now().isoformat())
+    time_sent_ts = f"<t:{int(time_sent.timestamp())}:f>"
+
     cog.cursor.execute("""
         INSERT INTO appeals (appeal_id, user_id, ban_appeal_reason, appeal_status, timestamp)
         VALUES (?, ?, ?, 'pending', ?)
@@ -190,6 +193,7 @@ async def create_ban_appeal(interaction, banned_user: str, appeal_request: str, 
     )
     appeals_embed.add_field(name="Platform and AccountID", value=banned_user, inline=False)
     appeals_embed.add_field(name="Appeal Description", value=appeal_request, inline=False)
+    appeals_embed.add_field(name="Time Submitted", value=time_sent_ts, inline=False)
     appeals_embed.set_footer(text=f"User ID: {user.id} | Appeal ID: {appeal_id}")
 
     user_embed = discord.Embed(
@@ -199,6 +203,7 @@ async def create_ban_appeal(interaction, banned_user: str, appeal_request: str, 
     )
     user_embed.add_field(name="Platform and AccountID", value=banned_user, inline=False)
     user_embed.add_field(name="Appeal Description", value=appeal_request, inline=False)
+    user_embed.add_field(name="Time Submitted", value=time_sent_ts, inline=False)
     user_embed.set_footer(text=f"User ID: {user.id} | Appeal ID: {appeal_id}")
 
     await appeals_channel.send(embed=appeals_embed, view=ViewsModals.AppealView())
@@ -212,6 +217,10 @@ async def finalize_appeal(opener_id: int, appeal_id: str, decision: str, reason:
     
     cog.cursor.execute("UPDATE appeals SET appeal_status = ? WHERE appeal_id = ?", (status, appeal_id))
     cog.conn.commit()
+
+    time_final_str = datetime.now().isoformat()
+    time_final = datetime.fromisoformat(time_final_str)
+    time_final_ts = f"<t:{int(time_final.timestamp())}:f>"
 
     user = await cog.bot.fetch_user(opener_id)
     if not user:
@@ -229,6 +238,7 @@ async def finalize_appeal(opener_id: int, appeal_id: str, decision: str, reason:
 
     dm_embed = discord.Embed(title=title, description=description, color=embed_color)
     dm_embed.add_field(name="Reason from Staff", value=reason, inline=False)
+    dm_embed.add_field(name="Decision Time", value=time_final_ts, inline=False)
     dm_embed.set_footer(text=f"TWZ Management")
 
     try:

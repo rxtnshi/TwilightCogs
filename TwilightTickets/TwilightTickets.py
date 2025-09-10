@@ -65,7 +65,7 @@ class TwilightTickets(commands.Cog):
 
 		self.cursor.execute("""
 			CREATE TABLE IF NOT EXISTS appeals (
-				appeal_id TEXT PRIMARY KEY,
+				appeal_id INTEGER PRIMARY KEY,
 				user_id INTEGER NOT NULL,
 				ban_appeal_reason TEXT,
 				appeal_status TEXT NOT NULL,
@@ -239,7 +239,7 @@ class TwilightTickets(commands.Cog):
 	@appeals.command(name="status", description="Gets the status of an appeal")
 	async def get_status_appeal(self, interaction: discord.Interaction, appeal_id: str):
     	# Get ban appeal status based on appeal id and discord user id
-		self.cursor.execute("SELECT appeal_status, timestamp, user_id, ban_appeal_reason FROM appeals WHERE appeal_id = ?", (appeal_id,))
+		self.cursor.execute("SELECT appeal_status, timestamp, user_id, ban_appeal_reason FROM appeals WHERE appeal_id = ?", (appeal_id))
 		result = self.cursor.fetchone()
 
 		if not result:
@@ -261,7 +261,7 @@ class TwilightTickets(commands.Cog):
 			status = "🚫 Appeal Rejected"
 
 		time_sent = datetime.fromisoformat(timestamp_str)
-		time_sent_ts = f"<t:{int(time_sent.timestamp())}:R>"
+		time_sent_ts = f"<t:{int(time_sent.timestamp())}:f>"
 
 		# Create the base embed
 		appeal_stat_embed = discord.Embed(
