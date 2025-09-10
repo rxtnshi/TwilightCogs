@@ -3,6 +3,7 @@ from . import ViewsModals
 
 async def setup(bot):
     await bot.add_cog(TwilightTickets(bot))
+    await bot.tree.sync()
 
 async def setup_hook(bot):
     bot.add_view(ViewsModals.CloseTicketView())
