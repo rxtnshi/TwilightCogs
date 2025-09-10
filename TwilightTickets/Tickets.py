@@ -167,7 +167,7 @@ async def create_ban_appeal(interaction, banned_user: str, appeal_request: str, 
     user = interaction.user
     guild = interaction.guild
     
-    cog.cursor.execute(("SELECT 1 FROM appeals WHERE user_id = ? AND appeal_status = 'pending'"), (user.id,))
+    cog.cursor.execute("SELECT appeal_id FROM appeals WHERE user_id = ? AND appeal_status = 'pending'", (user.id,))
     result = cog.cursor.fetchone()
 
     if result:
@@ -177,15 +177,10 @@ async def create_ban_appeal(interaction, banned_user: str, appeal_request: str, 
 
     appeal_id = uuid.uuid4().hex[:8]
 
-    try:
-        cog.cursor.execute("""
-            INSERT INTO appeals (appeal_id, user_id, ban_appeal_reason, appeal_status, timestamp)
-            VALUES (?, ?, ?, 'pending', ?)
-        """, (appeal_id, user.id, appeal_request, datetime.now().isoformat()))
-    except sqlite3.IntegrityError:
-        cog.cursor.execute("""
-            UPDATE appeals SET ban_appeal_reason = ?, appeal_status = 'pending', timestamp = ? WHERE user_id = ?
-        """, (appeal_request, datetime.now().isoformat(), user.id))
+    cog.cursor.execute("""
+        INSERT INTO appeals (appeal_id, user_id, ban_appeal_reason, appeal_status, timestamp)
+        VALUES (?, ?, ?, 'pending', ?)
+    """, (appeal_id, user.id, appeal_request, datetime.now().isoformat()))
     cog.conn.commit()
 
     appeals_channel_id = 1414770277782392993
@@ -223,7 +218,6 @@ async def create_ban_appeal(interaction, banned_user: str, appeal_request: str, 
 async def finalize_appeal(opener_id: int, appeal_id: str, decision: str, reason: str, staff_member: discord.Member, cog: commands.Cog):
     status = "accepted" if decision == "accept" else "denied"
     
-    # Use the specific appeal_id to update the correct record.
     cog.cursor.execute("UPDATE appeals SET appeal_status = ? WHERE appeal_id = ?", (status, appeal_id))
     cog.conn.commit()
 
