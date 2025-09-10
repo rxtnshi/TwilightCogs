@@ -45,12 +45,12 @@ class TicketSelect(discord.ui.Select):
             return
 
         if not cog.tickets_enabled:
-            if log_channel:
-                await log_channel.send(f"**INFO:** {interaction.user} ({interaction.user.id}) tried opening `{selected_type}` tickets during panic mode.")
-                return
             await interaction.response.send_message("Ticket creation is currently disabled.", ephemeral=True)
             new_view = TicketView()
             await interaction.message.edit(view=new_view)
+            if log_channel:
+                await log_channel.send(f"**INFO:** {interaction.user} ({interaction.user.id}) tried opening `{selected_type}` tickets during panic mode.")
+                return
         
         if not cog.ticket_statuses.get(selected_type, False):
             await interaction.response.send_message("This ticket category has been disabled.", ephemeral=True)
