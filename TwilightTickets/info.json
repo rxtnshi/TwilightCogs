@@ -2,7 +2,7 @@
     "author": ["rxtnshi/Insurgent"],
     "install_msg" : "TwilightTickets has been successfully installed! Please reach out to the bot owner if you need support.",
     "name" : "TwilightTickets",
-    "short" : "Ticket system for the Twilight Zone. This will NOT work on other servers due to the nature of how this cog was made.",
-    "description" : "yes",
+    "short" : "Ticket system for the Twilight Zone.",
+    "description" : "This will NOT work on other servers due to the nature of how this cog was made. Please UNINSTALL this cog as it will not function in your server!",
     "end_user_data_statement": "This cog persistently stores identifiable information such as an Account's User ID and/or message history of previous tickets."
 }
