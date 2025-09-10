@@ -59,6 +59,7 @@ async def create_ticket(
     embed.add_field(name="Issue", value=request_name, inline=False)
     embed.add_field(name="Description", value=request_description, inline=False)
 
+    ping_message = ""
     if cog.ticket_statuses.get('staffping', True):
         staff_role = discord.utils.get(guild.roles, id=staff_role_id)
         if staff_role:
@@ -211,6 +212,7 @@ async def create_ban_appeal(interaction, banned_user: str, appeal_request: str, 
     user_embed.add_field(name="Time Submitted", value=time_sent_ts, inline=False)
     user_embed.set_footer(text=f"User ID: {user.id} | Appeal ID: {appeal_id}")
 
+    ping_message = ""
     if cog.ticket_statuses.get('staffping', True):
         appeal_role = discord.utils.get(guild.roles, id=appeal_team_id)
         if appeal_role:
