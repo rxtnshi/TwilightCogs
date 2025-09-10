@@ -25,7 +25,7 @@ async def create_ticket(
     
     category = discord.utils.get(guild.categories, id=category_id)
     if category is None:
-        await interaction.response.send_message("Cannot open a ticket right now.", ephemeral=True)
+        await interaction.response.send_message("`🛑 Error!` Cannot open a ticket right now.", ephemeral=True)
         return
 
     ticket_id = uuid.uuid4().hex[:6]
@@ -60,7 +60,7 @@ async def create_ticket(
     embed.add_field(name="Description", value=request_description, inline=False)
 
     await channel.send(f"{discord.utils.get(guild.roles, id=staff_role_id).mention}", allowed_mentions=discord.AllowedMentions.all(), embed=embed, view=ViewsModals.CloseTicketView())
-    await interaction.response.send_message(f"✅ Ticket opened! Access it at {channel.mention}", ephemeral=True)
+    await interaction.response.send_message(f"`✅ Success!` Ticket opened! Access it at {channel.mention}", ephemeral=True)
 
 async def close_ticket(channel: discord.TextChannel, closer: discord.Member, close_reason: str, log_message: discord.Message, cog: commands.Cog):
     ticket_id = None
@@ -156,7 +156,7 @@ async def create_transcript(channel: discord.TextChannel, open_reason: str, open
     try:
         await opener.send(embed=user_embed, file=file_user)
     except (discord.Forbidden, AttributeError):
-        await log_message.reply(f"Unable to send transcript to {opener.mention} (DMs may be closed or user not found).")
+        await log_message.reply(f"`🛑 Error!` Unable to send transcript to {opener.mention} (DMs may be closed or user not found).")
 
     return log_message
 
@@ -209,7 +209,7 @@ async def create_ban_appeal(interaction, banned_user: str, appeal_request: str, 
     await appeals_channel.send(f"{discord.utils.get(guild.roles, id=appeal_team_id).mention}", embed=appeals_embed, view=ViewsModals.AppealView(), allowed_mentions=discord.AllowedMentions.all())
     await user.send(embed=user_embed)
     
-    await interaction.response.send_message(f"✅ Your appeal has been submitted for review. Appeal ID: `{appeal_id}`", ephemeral=True)
+    await interaction.response.send_message(f"`✅ Success!` Your appeal has been submitted for review and a receipt has been sent to you. Appeal ID: `{appeal_id}`", ephemeral=True)
 
 
 async def finalize_appeal(opener_id: int, appeal_id: str, decision: str, reason: str, staff_member: discord.Member, cog: commands.Cog):
