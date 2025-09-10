@@ -59,7 +59,12 @@ async def create_ticket(
     embed.add_field(name="Issue", value=request_name, inline=False)
     embed.add_field(name="Description", value=request_description, inline=False)
 
-    await channel.send(f"{discord.utils.get(guild.roles, id=staff_role_id).mention}", allowed_mentions=discord.AllowedMentions.all(), embed=embed, view=ViewsModals.CloseTicketView())
+    if cog.ticket_statuses.get('staffping', True):
+        staff_role = discord.utils.get(guild.roles, id=staff_role_id)
+        if staff_role:
+            ping_message = staff_role.mention
+
+    await channel.send(ping_message, allowed_mentions=discord.AllowedMentions.all(), embed=embed, view=ViewsModals.CloseTicketView())
     await interaction.response.send_message(f"**`✅ Success!`** Ticket opened! Access it at {channel.mention}", ephemeral=True)
 
 async def close_ticket(channel: discord.TextChannel, closer: discord.Member, close_reason: str, log_message: discord.Message, cog: commands.Cog):

@@ -7,7 +7,7 @@ from datetime import datetime
 from discord import app_commands
 from discord.app_commands import Choice
 from discord.ext import commands
-from redbot.core import commands, app_commands
+from redbot.core import commands, app_commands, Config
 from redbot.core.data_manager import cog_data_path
 
 staff_roles = [1345963237316890776, 1345963295575769088]
@@ -19,25 +19,39 @@ def role_check(member: discord.Member):
 def role_check_elevated(member: discord.Member):
 	return any(role.id in staff_roles_elevated for role in member.roles)
 
-tickets_enabled = True
-
 class TwilightTickets(commands.Cog):
 	"""Ticketing system for the Twilight Zone"""
 
 	def __init__(self, bot):
-		self.bot = bot
-		self.tickets_enabled = True
-		self.ticket_statuses = {
-			"discord": True,
-			"game": True,
-			"appeals": True
+		self.bot = bot		
+
+		self.config = Config.get_conf(self, identifier=99204742, force_registration=True)
+		default_guild = {
+			"tickets_enabled": True,
+			"ticket_statuses": {
+				"discord": True,
+				"game": True,
+				"appeals": True,
+				"staffping": True
+			}
 		}
+		self.config.register_guild(**default_guild)
+
+		self.tickets_enabled = True
+		self.ticket_statuses = {}
+
 		db_path = cog_data_path(self) / "tickets.db"
 		os.makedirs(os.path.dirname(db_path), exist_ok=True)
 
 		self.conn = sqlite3.connect(db_path)
 		self.cursor = self.conn.cursor()
 		self.setup_db()
+
+	def cog_check(self, ctx):
+		guild_check = ctx.guild is not None and ctx.guild.id == 1341956884059521025 # TWILIGHT ZONE GUILDID
+		if not guild_check:
+			ctx.send("Sorry this cog is not available ")
+			return
 
 	def setup_db(self):
 		"""Creates DB for stats, history, whatnot"""
@@ -122,12 +136,13 @@ class TwilightTickets(commands.Cog):
 
 		await interaction.response.send_message(f"**`✅ Success!`** Ticket creation is now {status}.")
 
-	@staff.command(name="set", description="Enable/disable a specific ticket type")
+	@staff.command(name="set", description="Enable/disable a specific ticket type or ticket pings")
 	@app_commands.choices(
 		ticket_type=[
 			Choice(name="Discord Tickets", value="discord"),
 			Choice(name="SCP:SL Tickets", value="game"),
-			Choice(name="Ban Appeals", value="appeals")
+			Choice(name="Ban Appeals", value="appeals"),
+			Choice(name="Staff Pings", value="staffping")
 		],
 		status=[
 			Choice(name="Enable", value="enable"),
@@ -142,6 +157,10 @@ class TwilightTickets(commands.Cog):
 		new_status = (status == "enable")
 		self.ticket_statuses[ticket_type] = new_status
 
+		if ticket_type == "staffping":
+			await interaction.response.send_message(f"**`✅ Success!`** Staff pings on tickets have been {status}d successfully.")
+			return
+			
 		await interaction.response.send_message(f"**`✅ Success!`** {ticket_type.capitalize()} tickets have been {status}d successfully.")
 
 	@staff.command(name="blacklist", description="Blacklists a user")
@@ -256,7 +275,7 @@ class TwilightTickets(commands.Cog):
 			"`history <user>`: Gets the ticket history for a user. Currently, the last 5 tickets are displayed.\n\n"
 			"`panel <channel>`: Initiates the ticket panel used to create tickets and sends it into the specified channel.\n\n"
 			"`panic`: Enables or disables ticket creation.\n __Warning:__ This will reset if the bot or cog is restarted.\n\n"
-			"`set <ticket_type> <status>`: Enables or disables a specific ticket type.\n __Warning:__ This will reset if the bot or cog is restarted."
+			"`set <ticket_type_or_pings> <status>`: Enables or disables a specific ticket type or staff pings in tickets.\n __Warning:__ This will reset if the bot or cog is restarted."
 		)
 		appeal_group = ""
 		appeal_group += (
