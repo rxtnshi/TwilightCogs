@@ -89,11 +89,11 @@ class TwilightTickets(commands.Cog):
 	async def start_panel(self, interaction: discord.Interaction, channel: discord.TextChannel):
 		"""Sets up the panel used for the ticket option selection"""
 		if not role_check(interaction.user):
-			await interaction.response.send_message("`🚫 Prohibited!` You don't have permission to use this command.", ephemeral=True)
+			await interaction.response.send_message("`**🚫 Prohibited!**` You don't have permission to use this command.", ephemeral=True)
 			return
 		
 		if channel is None:
-			await interaction.response.send_message("`🛑 Error!` You must specify which channel the panel is going to be posted in.", ephemeral=True)
+			await interaction.response.send_message("`**🛑 Error!**` You must specify which channel the panel is going to be posted in.", ephemeral=True)
 			return
 		
 		embed = discord.Embed(title="Twilight Zone Support & Reporting",
@@ -109,18 +109,18 @@ class TwilightTickets(commands.Cog):
 
 		view = ViewsModals.TicketView()
 		await channel.send(embed=embed, view=view)
-		await interaction.response.send_message(f"`✅ Success!` The panel has been sucessfully sent into {channel.mention}!", ephemeral=True)
+		await interaction.response.send_message(f"`**✅ Success!**` The panel has been sucessfully sent into {channel.mention}!", ephemeral=True)
 		
 	@staff.command(name="panic", description="Enables or disables panic mode")
 	async def panic(self, interaction: discord.Interaction):
 		if not role_check_elevated(interaction.user):
-			await interaction.response.send_message("`🚫 Prohibited!` You do not have permission to use this command.", ephemeral=True)
+			await interaction.response.send_message("`**🚫 Prohibited!**` You do not have permission to use this command.", ephemeral=True)
 			return
 		
 		self.tickets_enabled = not self.tickets_enabled
 		status = "enabled" if self.tickets_enabled else "disabled"
 
-		await interaction.response.send_message(f"`✅ Success!` Ticket creation is now {status}.")
+		await interaction.response.send_message(f"`**✅ Success!**` Ticket creation is now {status}.")
 
 	@staff.command(name="set", description="Enable/disable a specific ticket type")
 	@app_commands.choices(
@@ -136,7 +136,7 @@ class TwilightTickets(commands.Cog):
     )
 	async def enable_disable_type(self, interaction: discord.Interaction, ticket_type: str, status: str):
 		if not role_check_elevated(interaction.user):
-			await interaction.response.send_message("`🚫 Prohibited!` You don't have permission to use this command.", ephemeral=True)
+			await interaction.response.send_message("`**🚫 Prohibited!**` You don't have permission to use this command.", ephemeral=True)
 			return
 		
 		new_status = (status == "enable")
@@ -147,7 +147,7 @@ class TwilightTickets(commands.Cog):
 	@staff.command(name="blacklist", description="Blacklists a user")
 	async def blacklist_user(self, interaction: discord.Interaction, user: discord.Member, reason: str):
 		if not role_check_elevated(interaction.user):
-			await interaction.response.send_message("`🚫 Prohibited!` You don't have permission to use this command.", ephemeral=True)
+			await interaction.response.send_message("`**🚫 Prohibited!**` You don't have permission to use this command.", ephemeral=True)
 			return
 		
 		try:
@@ -156,28 +156,28 @@ class TwilightTickets(commands.Cog):
 				VALUES(?, ?, ?, ?)
 			""", (user.id, reason, interaction.user.id, datetime.now().isoformat()))
 			self.conn.commit()
-			await interaction.response.send_message(f"`✅ Success!` {user.mention} has been successfully blacklisted. **Reason:** {reason}")
+			await interaction.response.send_message(f"`**✅ Success!**` {user.mention} has been successfully blacklisted. **Reason:** {reason}")
 		except sqlite3.IntegrityError:
-			await interaction.response.send_message(f"`🛑 Error!` {user.mention} has already been blacklisted.")
+			await interaction.response.send_message(f"`**🛑 Error!**` {user.mention} has already been blacklisted.")
 			return
 	
 	@staff.command(name="unblacklist", description="Removes a user from the blacklist")
 	async def unblacklist_user(self, interaction: discord.Interaction, user: discord.Member):
 		if not role_check_elevated(interaction.user):
-			await interaction.response.send_message("`🚫 Prohibited!` You don't have permission to use this command.", ephemeral=True)
+			await interaction.response.send_message("`**🚫 Prohibited!**` You don't have permission to use this command.", ephemeral=True)
 			return
 		
 		self.cursor.execute("DELETE FROM blacklist WHERE user_id = ?", (user.id,))
 		if self.cursor.rowcount > 0:
 			self.conn.commit()
-			await interaction.response.send_message(f"`✅ Success!` {user.mention} has been successfully removed from the blacklist!")
+			await interaction.response.send_message(f"`**✅ Success!**` {user.mention} has been successfully removed from the blacklist!")
 		else:
-			await interaction.response.send_message(f"`🛑 Error!` {user.mention} was not found in the blacklist.")
+			await interaction.response.send_message(f"`**🛑 Error!**` {user.mention} was not found in the blacklist.")
 
 	@staff.command(name="history", description="Grabs the ticket history of a user")
 	async def ticket_history(self, interaction: discord.Interaction, user: discord.Member):
 		if not role_check(interaction.user):
-			await interaction.response.send_message("`🚫 Prohibited!` You don't have permission to use this command.", ephemeral=True)
+			await interaction.response.send_message("`**🚫 Prohibited!**` You don't have permission to use this command.", ephemeral=True)
 			return
 		
 		self.cursor.execute(
@@ -240,7 +240,7 @@ class TwilightTickets(commands.Cog):
 	@staff.command(name="commands", description="Display all commands for the ticket system")
 	async def help_menu(self, interaction: discord.Interaction):
 		if not role_check(interaction.user):
-			await interaction.response.send_message("`🚫 Prohibited!` You don't have permission to use this command.", ephemeral=True)
+			await interaction.response.send_message("`**🚫 Prohibited!**` You don't have permission to use this command.", ephemeral=True)
 			return
 		
 		embed = discord.Embed(
@@ -275,7 +275,7 @@ class TwilightTickets(commands.Cog):
 		result = self.cursor.fetchone()
 
 		if not result:
-			await interaction.response.send_message(f"`🛑 Error!` There was no appeal matching ID: `{appeal_id}`. Please try again with a valid AID.", ephemeral=True)
+			await interaction.response.send_message(f"`**🛑 Error!**` There was no appeal matching ID: `{appeal_id}`. Please try again with a valid AID.", ephemeral=True)
 			return
 		
 		# Hopefully it assigns the correct values if I'm doing it correctly
