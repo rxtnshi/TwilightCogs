@@ -65,8 +65,8 @@ class TwilightTickets(commands.Cog):
 
 		self.cursor.execute("""
 			CREATE TABLE IF NOT EXISTS appeals (
-				user_id INTEGER PRIMARY KEY,
-				appeal_id INTEGER NOT NULL,
+				appeal_id INTEGER PRIMARY KEY,
+				user_id INTEGER NOT NULL,
 				ban_appeal_reason TEXT,
 				appeal_status TEXT NOT NULL,
 				timestamp TEXT NOT NULL
@@ -83,6 +83,7 @@ class TwilightTickets(commands.Cog):
 	
 
 	staff = app_commands.Group(name="staff", description="Staff commands", guild_only=True)
+	appeals = app_commands.Group(name="appeals", description="Appeal commands", guild_only=True)
 
 	@staff.command(name="panel", description="Sets up the panel used for the ticket option selection")
 	async def start_panel(self, interaction: discord.Interaction, channel: discord.TextChannel):
@@ -234,3 +235,43 @@ class TwilightTickets(commands.Cog):
 		history_embed.set_footer(text=f"Displaying the last 5 tickets made")
 
 		await interaction.response.send_message(embed=history_embed)
+
+	@appeals.command(name="status", description="Gets the status of an appeal")
+	async def get_status_appeal(self, appeal_id: str, interaction: discord.Interaction):
+    	# Get ban appeal status based on appeal id and discord user id
+		self.cursor.execute("SELECT appeal_status, timestamp, user_id, ban_appeal_reason FROM appeals WHERE appeal_id = ?", (appeal_id))
+		result = self.cursor.fetchone()
+
+		if not result:
+			await interaction.response.send_message(f"There was no appeal matching ID: `{appeal_id}`. Please try again with a valid AID.", ephemeral=True)
+			return
+		
+		# Hopefully it assigns the correct values if I'm doing it correctly
+		appeal_status, timestamp_str, user_id, appeal_reason = result
+
+		# Create the base embed
+		appeal_stat_embed = discord.Embed(
+			title=f"Status for Appeal {appeal_id}",
+			description=f"Appeal made by <@{user_id}>",
+			timestamp=datetime.now()
+		)
+		
+		# Check status?
+		if appeal_status == "pending":
+			color = 0xffa500
+			status = "📥 Appeal Received"
+		elif status == "accepted":
+			color = discord.Color.green()
+			status = "✅ Appeal Accepted"
+		else:
+			color = discord.Color.red()
+			status = "🚫 Appeal Rejected"
+
+		time_sent = datetime.fromisoformat(timestamp_str)
+		time_sent_ts = f"<t:{int(time_sent.timestamp())}:R>"
+
+		appeal_stat_embed.add_field(name="Status:", value=status, inline=False)
+		appeal_stat_embed.add_field(name="Time Sent:", value=time_sent_ts, inline=False)
+		appeal_stat_embed.add_field(name="Appeal Reason:", value=appeal_reason, inline=False)
+
+		await interaction.response.send_message(embed=appeal_stat_embed, ephemeral=True)
