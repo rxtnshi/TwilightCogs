@@ -207,6 +207,7 @@ async def create_ban_appeal(interaction, banned_user: str, appeal_request: str, 
     user_embed = discord.Embed(
         title="📥 Ban Appeal Received",
         description="Thank you for submitted a ban appeal. Your appeal will be looked at within the next 48 hours.",
+        color=0xffa500
     )
     user_embed.add_field(name="Platform and AccountID", value=banned_user, inline=False)
     user_embed.add_field(name="Appeal Description", value=appeal_request, inline=False)
