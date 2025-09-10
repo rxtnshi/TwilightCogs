@@ -167,7 +167,7 @@ async def create_ban_appeal(interaction, banned_user: str, appeal_request: str, 
     user = interaction.user
     guild = interaction.guild
     
-    cog.cursor.execute(("SELECT appeal_id FROM appeals WHERE user_id = ? AND appeal_status = 'pending'"), (user.id))
+    cog.cursor.execute(("SELECT appeal_id FROM appeals WHERE user_id = ? AND appeal_status = 'pending'"), (user.id,))
     result = cog.cursor.fetchone()
 
     fetched_appeal_id = result
