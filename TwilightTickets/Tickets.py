@@ -213,7 +213,7 @@ async def create_ban_appeal(interaction, banned_user: str, appeal_request: str, 
     user_embed.add_field(name="Appeal Description", value=appeal_request, inline=False)
     user_embed.set_footer(text=f"User ID: {user.id} | Appeal ID: {appeal_id}")
 
-    await appeals_channel.send(embed=appeals_embed, view=ViewsModals.AppealView(), color=0xffa500)
+    await appeals_channel.send(embed=appeals_embed, view=ViewsModals.AppealView())
     await user.send(embed=user_embed)
     
     await interaction.response.send_message(f"✅ Your appeal has been submitted for review. Appeal ID: `{appeal_id}`", ephemeral=True)
