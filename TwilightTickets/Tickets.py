@@ -59,8 +59,7 @@ async def create_ticket(
     embed.add_field(name="Issue", value=request_name, inline=False)
     embed.add_field(name="Description", value=request_description, inline=False)
 
-    await channel.send(f"{discord.utils.get(guild.roles, id=staff_role_id).mention}", allowed_mentions=discord.AllowedMentions.all())
-    await channel.send(embed=embed, view=ViewsModals.CloseTicketView())
+    await channel.send(f"{discord.utils.get(guild.roles, id=staff_role_id).mention}", allowed_mentions=discord.AllowedMentions.all(), embed=embed, view=ViewsModals.CloseTicketView())
     await interaction.response.send_message(f"✅ Ticket opened! Access it at {channel.mention}", ephemeral=True)
 
 async def close_ticket(channel: discord.TextChannel, closer: discord.Member, close_reason: str, log_message: discord.Message, cog: commands.Cog):
@@ -207,8 +206,7 @@ async def create_ban_appeal(interaction, banned_user: str, appeal_request: str, 
     user_embed.add_field(name="Time Submitted", value=time_sent_ts, inline=False)
     user_embed.set_footer(text=f"User ID: {user.id} | Appeal ID: {appeal_id}")
 
-    await appeals_channel.send(f"{discord.utils.get(guild.roles, id=appeal_team_id).mention}", allowed_mentions=discord.AllowedMentions.all())
-    await appeals_channel.send(embed=appeals_embed, view=ViewsModals.AppealView())
+    await appeals_channel.send(f"{discord.utils.get(guild.roles, id=appeal_team_id).mention}", embed=appeals_embed, view=ViewsModals.AppealView(), allowed_mentions=discord.AllowedMentions.all())
     await user.send(embed=user_embed)
     
     await interaction.response.send_message(f"✅ Your appeal has been submitted for review. Appeal ID: `{appeal_id}`", ephemeral=True)
