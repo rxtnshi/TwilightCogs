@@ -73,6 +73,7 @@ class TicketSelect(discord.ui.Select):
                         return
             modal = GameModal()
         elif selected_type == "appeals":
+            user = interaction.user
             cog.cursor.execute("SELECT appeal_id FROM appeals WHERE user_id = ? AND appeal_status = 'pending'", (user.id,))
             result = cog.cursor.fetchone()
 
