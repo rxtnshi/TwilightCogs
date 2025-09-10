@@ -35,10 +35,6 @@ class TwilightTickets(commands.Cog):
 		}
 		self.config.register_guild(**default_guild)
 
-		guild = self.bot.get_guild(1341956884059521025)
-		self.tickets_enabled = self.config.guild(guild).tickets_enabled()
-		self.ticket_statuses = self.config.guild(guild).ticket_statuses()
-
 		db_path = cog_data_path(self) / "tickets.db"
 		os.makedirs(os.path.dirname(db_path), exist_ok=True)
 
@@ -87,6 +83,12 @@ class TwilightTickets(commands.Cog):
 		""")
 	def cog_unload(self):
 		self.conn.close()
+
+	async def cog_load(self):
+		guild = self.bot.get_guild(1341956884059521025)
+		if guild:
+			self.tickets_enabled = await self.config.guild(guild).tickets_enabled()
+			self.ticket_statuses = await self.config.guild(guild).ticket_statuses()
 
 	staff = app_commands.Group(name="staff", description="Staff commands", guild_only=True)
 	appeals = app_commands.Group(name="appeals", description="Appeal commands", guild_only=True)
