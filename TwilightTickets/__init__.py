@@ -11,9 +11,11 @@ async def setup_hook(bot):
     bot.add_view(ViewsModals.AppealView())
 
     cog = bot.get_cog("TwilightTickets")
-    guild = cog.bot.get_guild(1341956884059521025)
+
     if not cog:
         return
+    
+    guild = cog.bot.get_guild(1341956884059521025)
     
     cog.tickets_enabled = await cog.config.guild(guild).tickets_enabled()
     cog.ticket_statuses = await cog.config.guild(guild).ticket_statuses()
