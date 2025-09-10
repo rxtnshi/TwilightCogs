@@ -318,7 +318,7 @@ class TwilightTickets(commands.Cog):
 		for category, is_enabled in ticket_statuses.items():
 			emoji = "✅" if is_enabled else "🚫"
 			category_name = ticket_category_names.get(category, category.capitalize())
-			ticket_category_status.append(f"**{category_name}**: `{emoji} {'Enabled' if is_enabled else 'Disabled'}`")
+			ticket_category_status.append(f"{category_name}:\n `{emoji} {'Enabled' if is_enabled else 'Disabled'}`")
 		embed.add_field(name="Ticket Categories", value="\n".join(ticket_category_status))
 
 		await interaction.response.send_message(embed=embed)
