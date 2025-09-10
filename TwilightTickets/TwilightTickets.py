@@ -147,17 +147,17 @@ class TwilightTickets(commands.Cog):
 			Choice(name="Disable", value="disable")
 		]
     )
-	async def enable_disable_type(self, interaction: discord.Interaction, option: str, status: str):
+	async def enable_disable_type(self, interaction: discord.Interaction, options: str, status: str):
 		if not role_check_elevated(interaction.user):
 			await interaction.response.send_message("**`🚫 Prohibited!`** You don't have permission to use this command.", ephemeral=True)
 			return
 		
 		new_status = (status == "enable")
-		self.ticket_statuses[option] = new_status
+		self.ticket_statuses[options] = new_status
 
 		await self.config.guild(interaction.guild).ticket_statuses.set(self.ticket_statuses)
 
-		if option == "staffping":
+		if options == "staffping":
 			await interaction.response.send_message(f"**`✅ Success!`** Staff pings on tickets have been {status}d successfully.")
 			return
 			
