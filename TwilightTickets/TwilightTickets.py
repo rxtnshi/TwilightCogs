@@ -89,7 +89,7 @@ class TwilightTickets(commands.Cog):
 	def cog_unload(self):
 		self.conn.close()
 
-	def cog_load(self):
+	async def cog_load(self):
 		guild = self.bot.get_guild(1341956884059521025)
 		if guild:
 			self.tickets_enabled = self.config.guild(guild).tickets_enabled()
