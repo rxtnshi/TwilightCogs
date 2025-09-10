@@ -265,7 +265,7 @@ class TwilightTickets(commands.Cog):
 
 		# Create the base embed
 		appeal_stat_embed = discord.Embed(
-			title=f"Status for Appeal {appeal_id}",
+			title=f"Status for Appeal `{appeal_id}`",
 			description=f"Appeal made by <@{user_id}>",
 			timestamp=datetime.now(),
 			color=color
