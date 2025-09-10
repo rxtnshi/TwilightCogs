@@ -10,8 +10,8 @@ from discord.ext import commands
 from redbot.core import commands
 from redbot.core.data_manager import cog_data_path
 
-staff_roles = [1345963237316890776, 1345963295575769088, 1009509393609535548, 1009509393609535548]
-staff_roles_elevated = [1398449212219457577, 1009509393609535548]
+staff_roles = [1345963237316890776, 1345963295575769088]
+staff_roles_elevated = [1341957856232210492, 1341958721793691669, 1341957864650047569, 1362917217611546705, 1342201478122704989, 1341961378100936735]
 log_channel_id = 1414502972964212857 # 1414397193934213140 test channel
 def role_check(member: discord.Member):
 	return any(role.id in staff_roles for role in member.roles)
