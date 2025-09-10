@@ -80,6 +80,7 @@ class TicketSelect(discord.ui.Select):
             if result:
                 existing_appeal_id = result[0]
                 await interaction.response.send_message(f"You already have an appeal open. Please wait for staff to review it. (Reference AID: `{existing_appeal_id}`)", ephemeral=True)
+                await interaction.message.edit(view=TicketView())
             modal = AppealModal()
         else:
             await interaction.response.send_message("An unexpected error occurred.", ephemeral=True)
