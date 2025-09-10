@@ -253,7 +253,7 @@ class TwilightTickets(commands.Cog):
 		if appeal_status == "pending":
 			color = 0xffa500
 			status = "📥 Appeal Received"
-		elif status == "accepted":
+		elif appeal_status == "accepted":
 			color = discord.Color.green()
 			status = "✅ Appeal Accepted"
 		else:
