@@ -10,9 +10,8 @@ async def setup_hook(bot):
     bot.add_view(ViewsModals.CloseTicketView())
     bot.add_view(ViewsModals.AppealView())
 
-    guild = cog.bot.get_guild(1341956884059521025)
-    
     cog = bot.get_cog("TwilightTickets")
+    guild = cog.bot.get_guild(1341956884059521025)
     if not cog:
         return
     
