@@ -167,14 +167,6 @@ async def create_ban_appeal(interaction, banned_user: str, appeal_request: str, 
     user = interaction.user
     guild = interaction.guild
     
-    cog.cursor.execute("SELECT appeal_id FROM appeals WHERE user_id = ? AND appeal_status = 'pending'", (user.id,))
-    result = cog.cursor.fetchone()
-
-    if result:
-        existing_appeal_id = result[0]
-        await interaction.response.send_message(f"You already have an appeal open. (Reference AID: `{existing_appeal_id}`)", ephemeral=True)
-        return
-
     appeal_id = uuid.uuid4().hex[:8]
 
     cog.cursor.execute("""
