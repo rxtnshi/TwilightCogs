@@ -10,6 +10,7 @@ from redbot.core.data_manager import cog_data_path
 staff_roles = [1345963237316890776, 1345963295575769088]
 staff_roles_elevated = [1341957856232210492, 1341958721793691669, 1341957864650047569, 1362917217611546705, 1342201478122704989, 1341961378100936735]
 log_channel_id = 1414502972964212857 # 1414397193934213140 test channel
+
 def role_check(member: discord.Member):
 	return any(role.id in staff_roles for role in member.roles)
 
@@ -33,6 +34,10 @@ class TwilightTickets(commands.Cog):
 			}
 		}
 		self.config.register_guild(**default_guild)
+
+		guild = self.bot.get_guild(1341956884059521025)
+		self.tickets_enabled = self.config.guild(guild).tickets_enabled()
+		self.ticket_statuses = self.config.guild(guild).ticket_statuses()
 
 		db_path = cog_data_path(self) / "tickets.db"
 		os.makedirs(os.path.dirname(db_path), exist_ok=True)
