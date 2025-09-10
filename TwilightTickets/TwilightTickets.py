@@ -237,7 +237,7 @@ class TwilightTickets(commands.Cog):
 		await interaction.response.send_message(embed=history_embed)
 
 	@appeals.command(name="status", description="Gets the status of an appeal")
-	async def get_status_appeal(self, appeal_id: str, interaction: discord.Interaction):
+	async def get_status_appeal(self, interaction: discord.Interaction, appeal_id: str):
     	# Get ban appeal status based on appeal id and discord user id
 		self.cursor.execute("SELECT appeal_status, timestamp, user_id, ban_appeal_reason FROM appeals WHERE appeal_id = ?", (appeal_id))
 		result = self.cursor.fetchone()
@@ -248,13 +248,6 @@ class TwilightTickets(commands.Cog):
 		
 		# Hopefully it assigns the correct values if I'm doing it correctly
 		appeal_status, timestamp_str, user_id, appeal_reason = result
-
-		# Create the base embed
-		appeal_stat_embed = discord.Embed(
-			title=f"Status for Appeal {appeal_id}",
-			description=f"Appeal made by <@{user_id}>",
-			timestamp=datetime.now()
-		)
 		
 		# Check status?
 		if appeal_status == "pending":
@@ -269,6 +262,14 @@ class TwilightTickets(commands.Cog):
 
 		time_sent = datetime.fromisoformat(timestamp_str)
 		time_sent_ts = f"<t:{int(time_sent.timestamp())}:R>"
+
+		# Create the base embed
+		appeal_stat_embed = discord.Embed(
+			title=f"Status for Appeal {appeal_id}",
+			description=f"Appeal made by <@{user_id}>",
+			timestamp=datetime.now(),
+			color=color
+		)
 
 		appeal_stat_embed.add_field(name="Status:", value=status, inline=False)
 		appeal_stat_embed.add_field(name="Time Sent:", value=time_sent_ts, inline=False)
