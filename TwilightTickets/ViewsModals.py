@@ -29,7 +29,7 @@ class TicketSelect(discord.ui.Select):
     async def callback(self, interaction: discord.Interaction):
         cog = interaction.client.get_cog("TwilightTickets")
         if not cog:
-            await interaction.response.send_message("`**🛑 Error!**` The ticket system is currently offline.", ephemeral=True)
+            await interaction.response.send_message("**`🛑 Error!`** The ticket system is currently offline.", ephemeral=True)
             new_view = TicketView()
             await interaction.message.edit(view=new_view)
             return
@@ -39,13 +39,13 @@ class TicketSelect(discord.ui.Select):
         
         cog.cursor.execute("SELECT reason FROM blacklist WHERE user_id = ?", (interaction.user.id,))
         if result := cog.cursor.fetchone():
-            await interaction.response.send_message(f"`**🚫 Prohibited!**` You are blacklisted from creating tickets.", ephemeral=True)
+            await interaction.response.send_message(f"**`🚫 Prohibited!`** You are blacklisted from creating tickets.", ephemeral=True)
             new_view = TicketView()
             await interaction.message.edit(view=new_view)
             return
 
         if not cog.tickets_enabled:
-            await interaction.response.send_message("``**🛑 Error!**` Ticket creation is currently disabled.", ephemeral=True)
+            await interaction.response.send_message("`**`🛑 Error!`** Ticket creation is currently disabled.", ephemeral=True)
             new_view = TicketView()
             await interaction.message.edit(view=new_view)
             if log_channel:
@@ -53,7 +53,7 @@ class TicketSelect(discord.ui.Select):
                 return
         
         if not cog.ticket_statuses.get(selected_type, False):
-            await interaction.response.send_message("``**🛑 Error!**` This ticket category has been disabled.", ephemeral=True)
+            await interaction.response.send_message("`**`🛑 Error!`** This ticket category has been disabled.", ephemeral=True)
             new_view = TicketView()
             await interaction.message.edit(view=new_view)
             return
@@ -63,7 +63,7 @@ class TicketSelect(discord.ui.Select):
             if category:
                 for channel in category.text_channels:
                     if channel.topic and f"({interaction.user.id})" in channel.topic:
-                        await interaction.response.send_message(f"`**🚫 Prohibited!**` An existing ticket has been found: {channel.mention}", ephemeral=True)
+                        await interaction.response.send_message(f"**`🚫 Prohibited!`** An existing ticket has been found: {channel.mention}", ephemeral=True)
                         new_view = TicketView()
                         await interaction.message.edit(view=new_view)
                         return
@@ -73,7 +73,7 @@ class TicketSelect(discord.ui.Select):
             if category:
                 for channel in category.text_channels:
                     if channel.topic and f"({interaction.user.id})" in channel.topic:
-                        await interaction.response.send_message(f"`**🚫 Prohibited!**` An existing ticket has been found: {channel.mention}", ephemeral=True)
+                        await interaction.response.send_message(f"**`🚫 Prohibited!`** An existing ticket has been found: {channel.mention}", ephemeral=True)
                         new_view = TicketView()
                         await interaction.message.edit(view=new_view)
                         return
@@ -85,12 +85,12 @@ class TicketSelect(discord.ui.Select):
 
             if result:
                 existing_appeal_id = result[0]
-                await interaction.response.send_message(f"`**🚫 Prohibited!**` You already have an appeal open. Please wait for staff to review it. (Reference AID: `{existing_appeal_id}`)", ephemeral=True)
+                await interaction.response.send_message(f"**`🚫 Prohibited!`** You already have an appeal open. Please wait for staff to review it. (Reference AID: `{existing_appeal_id}`)", ephemeral=True)
                 new_view = TicketView()
                 await interaction.message.edit(view=new_view)
             modal = AppealModal()
         else:
-            await interaction.response.send_message("`**🛑 Error!**` An unexpected error occurred.", ephemeral=True)
+            await interaction.response.send_message("**`🛑 Error!`** An unexpected error occurred.", ephemeral=True)
             return
 
         await interaction.response.send_modal(modal)
@@ -111,7 +111,7 @@ class DecisionSelect(discord.ui.Select):
         appeal_team_role = guild.get_role(appeal_team_id)
 
         if not appeal_team_role or appeal_team_role not in interaction.user.roles:
-            await interaction.response.send_message("`**🚫 Prohibited!**` You do not have permission to make appeal decisions.", ephemeral=True)
+            await interaction.response.send_message("**`🚫 Prohibited!`** You do not have permission to make appeal decisions.", ephemeral=True)
             return
         
         decision = self.values[0]
@@ -125,7 +125,7 @@ class CloseTicket(discord.ui.Button):
 
     async def callback(self, interaction: discord.Interaction):
         if not any(role.id in staff_roles for role in interaction.user.roles):
-            await interaction.response.send_message("`**🚫 Prohibited!**` You do not have permission to close this ticket.", ephemeral=True)
+            await interaction.response.send_message("**`🚫 Prohibited!`** You do not have permission to close this ticket.", ephemeral=True)
             return
         await interaction.response.send_modal(CloseTicketModal())
         new_view = CloseTicketView()
@@ -288,4 +288,4 @@ class FinishAppealModal(discord.ui.Modal):
         else:
             await original_message.edit(embed=new_embed)
 
-        await interaction.edit_original_response(content=f"`**✅ Success!**` <@{opener_id}> has been successfully notified. Appeal status has been updated.")
+        await interaction.edit_original_response(content=f"**`✅ Success!`** <@{opener_id}> has been successfully notified. Appeal status has been updated.")
