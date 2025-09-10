@@ -130,7 +130,7 @@ class TwilightTickets(commands.Cog):
 
 	@staff.command(name="set", description="Enable/disable a specific ticket type or ticket pings")
 	@app_commands.choices(
-		options=[
+		option=[
 			Choice(name="Discord Tickets", value="discord"),
 			Choice(name="SCP:SL Tickets", value="game"),
 			Choice(name="Ban Appeals", value="appeals"),
@@ -141,21 +141,21 @@ class TwilightTickets(commands.Cog):
 			Choice(name="Disable", value="disable")
 		]
     )
-	async def enable_disable_type(self, interaction: discord.Interaction, options: str, status: str):
+	async def enable_disable_type(self, interaction: discord.Interaction, option: str, status: str):
 		if not role_check_elevated(interaction.user):
 			await interaction.response.send_message("**`🚫 Prohibited!`** You don't have permission to use this command.", ephemeral=True)
 			return
 		
 		new_status = (status == "enable")
-		self.ticket_statuses[options] = new_status
+		self.ticket_statuses[option] = new_status
 
 		await self.config.guild(interaction.guild).ticket_statuses.set(self.ticket_statuses)
 
-		if options == "staffping":
+		if option == "staffping":
 			await interaction.response.send_message(f"**`✅ Success!`** Staff pings on tickets have been {status}d successfully.")
 			return
 			
-		await interaction.response.send_message(f"**`✅ Success!`** {options.capitalize()} tickets have been {status}d successfully.")
+		await interaction.response.send_message(f"**`✅ Success!`** {option.capitalize()} tickets have been {status}d successfully.")
 
 	@staff.command(name="blacklist", description="Blacklists a user")
 	async def blacklist_user(self, interaction: discord.Interaction, user: discord.Member, reason: str):
