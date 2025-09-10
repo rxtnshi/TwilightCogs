@@ -7,7 +7,6 @@ from datetime import datetime
 from discord import app_commands
 from discord.app_commands import Choice
 from discord.ext import commands
-from redbot.core import commands
 from redbot.core.data_manager import cog_data_path
 
 staff_roles = [1345963237316890776, 1345963295575769088, 1009509393609535548, 1009509393609535548]
