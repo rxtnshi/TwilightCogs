@@ -89,6 +89,7 @@ class TwilightTickets(commands.Cog):
 		self.conn.close()
 
 	async def cog_load(self):
+		await self.bot.wait_until_ready()
 		guild = self.bot.get_guild(1341956884059521025)
 		if guild:
 			self.tickets_enabled = await self.config.guild(guild).tickets_enabled()
