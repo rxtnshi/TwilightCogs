@@ -236,6 +236,37 @@ class TwilightTickets(commands.Cog):
 
 		await interaction.response.send_message(embed=history_embed)
 
+	@staff.command(name="commands", description="Display all commands for the ticket system")
+	async def help_menu(self, interaction: discord.Interaction):
+		if not role_check(interaction.user):
+			await interaction.response.send_message("You don't have permission to use this command.", ephemeral=True)
+			return
+		
+		embed = discord.Embed(
+			title="Ticket System Command List",
+			description="Here is a list of all commands used for the ticket system! Keep in mind these are all slash commands.",
+			timestamp=datetime.now(),
+			color=discord.Color.orange()
+		)
+		staff_group = ""
+		staff_group += (
+			"`blacklist <user> <reason>`: Blacklists a user from the ticketing system.\n"
+			"`unblacklist <user> <reason>`: Removes a user the blacklist.\n"
+			"`history <user>`: Gets the ticket history for a user. Currently, the last 5 tickets are displayed.\n"
+			"`panel <channel>`: Initiates the ticket panel used to create tickets and sends it into the specified channel.\n"
+			"`panic`: Enables or disables ticket creation.\n **Warning:** This will reset if the bot or cog is restarted.\n"
+			"`set <ticket_type> <status>`: Enables or disables a specific ticket type.\n **Warning:** This will reset if the bot or cog is restarted.\n"
+		)
+		appeal_group = ""
+		appeal_group += (
+			"`status <appeal_id>`: Gets the appeal status for an appeal. This command is open to everyone as long they have an appeal id."
+		)
+
+		embed.add_field(name="/staff", value=staff_group, inline=False)
+		embed.add_field(name="/appeal", value=appeal_group, inline=False)
+
+		await interaction.response.send_message(embed=embed)
+
 	@appeals.command(name="status", description="Gets the status of an appeal")
 	async def get_status_appeal(self, interaction: discord.Interaction, appeal_id: str):
     	# Get ban appeal status based on appeal id and discord user id
