@@ -98,9 +98,12 @@ class DecisionSelect(discord.ui.Select):
         super().__init__(placeholder="Accept or Reject this Appeal", options=options, custom_id="persistent_appeal_decision")
 
     async def callback(self, interaction: discord.Interaction):
-        if not any(role.id in staff_roles_elevated for role in interaction.user.roles):
-            await interaction.response.send_message("You do not have permission to make appeal decisions", ephemeral=True)
-            await interaction.message.edit(view=AppealView())
+        guild = interaction.guild
+        appeal_team_id = 1415179872241975368
+        appeal_team_role = guild.get_role(appeal_team_id)
+
+        if not appeal_team_role or appeal_team_role not in interaction.user.roles:
+            await interaction.response.send_message("You do not have permission to make appeal decisions.", ephemeral=True)
             return
         
         decision = self.values[0]

@@ -179,6 +179,7 @@ async def create_ban_appeal(interaction, banned_user: str, appeal_request: str, 
     cog.conn.commit()
 
     appeals_channel_id = 1414770277782392993
+    appeal_team_id = 1415179872241975368
     appeals_channel = guild.get_channel(appeals_channel_id)
 
     if not appeals_channel:
@@ -206,6 +207,7 @@ async def create_ban_appeal(interaction, banned_user: str, appeal_request: str, 
     user_embed.add_field(name="Time Submitted", value=time_sent_ts, inline=False)
     user_embed.set_footer(text=f"User ID: {user.id} | Appeal ID: {appeal_id}")
 
+    await appeals_channel.send(f"{discord.utils.get(guild.roles, id=appeal_team_id).mention}", allowed_mentions=discord.AllowedMentions.all())
     await appeals_channel.send(embed=appeals_embed, view=ViewsModals.AppealView())
     await user.send(embed=user_embed)
     
