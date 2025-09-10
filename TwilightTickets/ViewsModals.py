@@ -31,7 +31,7 @@ class TicketSelect(discord.ui.Select):
         if not cog:
             await interaction.response.send_message("The ticket system is currently offline.", ephemeral=True)
             new_view = TicketView()
-            await interaction.message.edit(views=new_view)
+            await interaction.message.edit(view=new_view)
             return
         
         log_channel = interaction.guild.get_channel(log_channel_id)
@@ -41,7 +41,7 @@ class TicketSelect(discord.ui.Select):
         if result := cog.cursor.fetchone():
             await interaction.response.send_message(f"You are blacklisted from creating tickets. Reason: {result[0]}", ephemeral=True)
             new_view = TicketView()
-            await interaction.message.edit(views=new_view)
+            await interaction.message.edit(view=new_view)
             return
 
         if not cog.tickets_enabled:
@@ -50,12 +50,12 @@ class TicketSelect(discord.ui.Select):
                 return
             await interaction.response.send_message("Ticket creation is currently disabled.", ephemeral=True)
             new_view = TicketView()
-            await interaction.message.edit(views=new_view)
+            await interaction.message.edit(view=new_view)
         
         if not cog.ticket_statuses.get(selected_type, False):
             await interaction.response.send_message("This ticket category has been disabled.", ephemeral=True)
             new_view = TicketView()
-            await interaction.message.edit(views=new_view)
+            await interaction.message.edit(view=new_view)
             return
 
         if selected_type == "discord":
@@ -65,7 +65,7 @@ class TicketSelect(discord.ui.Select):
                     if channel.topic and f"({interaction.user.id})" in channel.topic:
                         await interaction.response.send_message(f"An existing ticket has been found: {channel.mention}", ephemeral=True)
                         new_view = TicketView()
-                        await interaction.message.edit(views=new_view)
+                        await interaction.message.edit(view=new_view)
                         return
             modal = DiscordModal()
         elif selected_type == "game":
@@ -75,7 +75,7 @@ class TicketSelect(discord.ui.Select):
                     if channel.topic and f"({interaction.user.id})" in channel.topic:
                         await interaction.response.send_message(f"An existing ticket has been found: {channel.mention}", ephemeral=True)
                         new_view = TicketView()
-                        await interaction.message.edit(views=new_view)
+                        await interaction.message.edit(view=new_view)
                         return
             modal = GameModal()
         elif selected_type == "appeals":
@@ -87,7 +87,7 @@ class TicketSelect(discord.ui.Select):
                 existing_appeal_id = result[0]
                 await interaction.response.send_message(f"You already have an appeal open. Please wait for staff to review it. (Reference AID: `{existing_appeal_id}`)", ephemeral=True)
                 new_view = TicketView()
-                await interaction.message.edit(views=new_view)
+                await interaction.message.edit(view=new_view)
             modal = AppealModal()
         else:
             await interaction.response.send_message("An unexpected error occurred.", ephemeral=True)
@@ -95,7 +95,7 @@ class TicketSelect(discord.ui.Select):
 
         await interaction.response.send_modal(modal)
         new_view = TicketView()
-        await interaction.message.edit(views=new_view)
+        await interaction.message.edit(view=new_view)
 
 class DecisionSelect(discord.ui.Select):
     def __init__(self):
@@ -117,7 +117,7 @@ class DecisionSelect(discord.ui.Select):
         decision = self.values[0]
         await interaction.response.send_modal(FinishAppealModal(decision))
         new_view = AppealView()
-        await interaction.message.edit(views=new_view)
+        await interaction.message.edit(view=new_view)
         
 class CloseTicket(discord.ui.Button):
     def __init__(self):
@@ -129,7 +129,7 @@ class CloseTicket(discord.ui.Button):
             return
         await interaction.response.send_modal(CloseTicketModal())
         new_view = CloseTicketView()
-        await interaction.message.edit(views=new_view)
+        await interaction.message.edit(view=new_view)
 
 #
 # Views
