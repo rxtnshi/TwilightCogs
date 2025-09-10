@@ -250,12 +250,12 @@ class TwilightTickets(commands.Cog):
 		)
 		staff_group = ""
 		staff_group += (
-			"`blacklist <user> <reason>`: Blacklists a user from the ticketing system.\n"
-			"`unblacklist <user> <reason>`: Removes a user the blacklist.\n"
-			"`history <user>`: Gets the ticket history for a user. Currently, the last 5 tickets are displayed.\n"
-			"`panel <channel>`: Initiates the ticket panel used to create tickets and sends it into the specified channel.\n"
-			"`panic`: Enables or disables ticket creation.\n **Warning:** This will reset if the bot or cog is restarted.\n\n"
-			"`set <ticket_type> <status>`: Enables or disables a specific ticket type.\n **Warning:** This will reset if the bot or cog is restarted.\n\n"
+			"`blacklist <user> <reason>`: Blacklists a user from the ticketing system.\n\n"
+			"`unblacklist <user> <reason>`: Removes a user the blacklist.\n\n"
+			"`history <user>`: Gets the ticket history for a user. Currently, the last 5 tickets are displayed.\n\n"
+			"`panel <channel>`: Initiates the ticket panel used to create tickets and sends it into the specified channel.\n\n"
+			"`panic`: Enables or disables ticket creation.\n __Warning:__ This will reset if the bot or cog is restarted.\n\n"
+			"`set <ticket_type> <status>`: Enables or disables a specific ticket type.\n __Warning:__ This will reset if the bot or cog is restarted."
 		)
 		appeal_group = ""
 		appeal_group += (
