@@ -161,7 +161,7 @@ class TwilightTickets(commands.Cog):
 			await interaction.response.send_message(f"**`✅ Success!`** Staff pings on tickets have been {status}d successfully.")
 			return
 			
-		await interaction.response.send_message(f"**`✅ Success!`** {option.capitalize()} tickets have been {status}d successfully.")
+		await interaction.response.send_message(f"**`✅ Success!`** {options.capitalize()} tickets have been {status}d successfully.")
 
 	@staff.command(name="blacklist", description="Blacklists a user")
 	async def blacklist_user(self, interaction: discord.Interaction, user: discord.Member, reason: str):
