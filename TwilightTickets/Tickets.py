@@ -211,7 +211,12 @@ async def create_ban_appeal(interaction, banned_user: str, appeal_request: str, 
     user_embed.add_field(name="Time Submitted", value=time_sent_ts, inline=False)
     user_embed.set_footer(text=f"User ID: {user.id} | Appeal ID: {appeal_id}")
 
-    await appeals_channel.send(f"{discord.utils.get(guild.roles, id=appeal_team_id).mention}", embed=appeals_embed, view=ViewsModals.AppealView(), allowed_mentions=discord.AllowedMentions.all())
+    if cog.ticket_statuses.get('staffping', True):
+        appeal_role = discord.utils.get(guild.roles, id=appeal_team_id)
+        if appeal_role:
+            ping_message = appeal_role.mention
+
+    await appeals_channel.send(ping_message, embed=appeals_embed, view=ViewsModals.AppealView(), allowed_mentions=discord.AllowedMentions.all())
     await user.send(embed=user_embed)
     
     await interaction.response.send_message(f"**`✅ Success!`** Your appeal has been submitted for review and a receipt has been sent to you. Appeal ID: `{appeal_id}`", ephemeral=True)
