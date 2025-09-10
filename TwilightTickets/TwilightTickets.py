@@ -50,7 +50,7 @@ class TwilightTickets(commands.Cog):
 	def cog_check(self, ctx):
 		guild_check = ctx.guild is not None and ctx.guild.id == 1341956884059521025 # TWILIGHT ZONE GUILDID
 		if not guild_check:
-			ctx.send("Sorry this cog is not available ")
+			ctx.send("Sorry this cog is not available.")
 			return
 
 	def setup_db(self):
@@ -90,6 +90,11 @@ class TwilightTickets(commands.Cog):
 		self.conn.close()
 
 	def cog_load(self):
+		guild = self.bot.get_guild(1341956884059521025)
+		if guild:
+			self.tickets_enabled = self.config.guild(guild).tickets_enabled()
+			self.ticket_statuses = self.config.guild(guild).ticket_statuses()
+
 		self.bot.add_view(ViewsModals.TicketView())
 		self.bot.add_view(ViewsModals.CloseTicketView())
 		self.bot.add_view(ViewsModals.AppealView())
@@ -132,6 +137,7 @@ class TwilightTickets(commands.Cog):
 			return
 		
 		self.tickets_enabled = not self.tickets_enabled
+		await self.config.guild(interaction.guild).tickets_enabled.set(self.tickets_enabled)
 		status = "enabled" if self.tickets_enabled else "disabled"
 
 		await interaction.response.send_message(f"**`✅ Success!`** Ticket creation is now {status}.")
@@ -156,6 +162,8 @@ class TwilightTickets(commands.Cog):
 		
 		new_status = (status == "enable")
 		self.ticket_statuses[ticket_type] = new_status
+
+		await self.config.guild(interaction.guild).ticket_statuses.set(self.ticket_statuses)
 
 		if ticket_type == "staffping":
 			await interaction.response.send_message(f"**`✅ Success!`** Staff pings on tickets have been {status}d successfully.")

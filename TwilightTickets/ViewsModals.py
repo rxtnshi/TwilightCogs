@@ -45,7 +45,7 @@ class TicketSelect(discord.ui.Select):
             return
 
         if not cog.tickets_enabled:
-            await interaction.response.send_message("`**`🛑 Error!`** Ticket creation is currently disabled.", ephemeral=True)
+            await interaction.response.send_message("**`🛑 Error!`** Ticket creation is currently disabled.", ephemeral=True)
             new_view = TicketView()
             await interaction.message.edit(view=new_view)
             if log_channel:
@@ -53,7 +53,7 @@ class TicketSelect(discord.ui.Select):
                 return
         
         if not cog.ticket_statuses.get(selected_type, False):
-            await interaction.response.send_message("`**`🛑 Error!`** This ticket category has been disabled.", ephemeral=True)
+            await interaction.response.send_message("**`🛑 Error!`** This ticket category has been disabled.", ephemeral=True)
             new_view = TicketView()
             await interaction.message.edit(view=new_view)
             return
