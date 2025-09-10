@@ -130,8 +130,8 @@ async def create_transcript(channel: discord.TextChannel, open_reason: str, open
     )
     user_embed.add_field(name="Opened by", value=f"{opener.mention} ({opener.id})", inline=False)
     user_embed.add_field(name="Closed by", value=f"{closer.mention} ({closer.id})", inline=False)
-    user_embed.add_field(name="Opened at", value=open_time_ts, inline=False)
-    user_embed.add_field(name="Closed at", value=close_time_ts, inline=False)
+    user_embed.add_field(name="Opened at", value=open_time_ts, inline=True)
+    user_embed.add_field(name="Closed at", value=close_time_ts, inline=True)
     user_embed.add_field(name="Ticket Issue", value=f"{open_reason}", inline=False)
     user_embed.add_field(name="Close Reason", value=close_reason, inline=False)
 
