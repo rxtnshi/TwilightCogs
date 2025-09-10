@@ -305,7 +305,7 @@ class TwilightTickets(commands.Cog):
 
 
 		ticket_creation_status = "`✅ Enabled`" if tickets_enabled else "`🚫 Disabled`"
-		embed.add_field(name="Overall Ticket Creation", value=f"The below categories will not matter if this is disabled.\n{ticket_creation_status}", inline=False)
+		embed.add_field(name="Overall Ticket Creation", value=f"The below categories will not matter if this is disabled.\n".join(ticket_creation_status), inline=False)
 
 		ticket_category_names = {
 			"discord": "Discord Tickets",
