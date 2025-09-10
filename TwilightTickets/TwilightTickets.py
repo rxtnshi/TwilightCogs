@@ -4,7 +4,6 @@ import os
 
 from . import ViewsModals
 from datetime import datetime
-from discord.app_commands import Choice
 from redbot.core import commands, app_commands, Config
 from redbot.core.data_manager import cog_data_path
 
@@ -34,9 +33,6 @@ class TwilightTickets(commands.Cog):
 			}
 		}
 		self.config.register_guild(**default_guild)
-
-		self.tickets_enabled = True
-		self.ticket_statuses = {}
 
 		db_path = cog_data_path(self) / "tickets.db"
 		os.makedirs(os.path.dirname(db_path), exist_ok=True)
@@ -131,14 +127,14 @@ class TwilightTickets(commands.Cog):
 	@staff.command(name="set", description="Enable/disable a specific ticket type or ticket pings")
 	@app_commands.choices(
 		option=[
-			Choice(name="Discord Tickets", value="discord"),
-			Choice(name="SCP:SL Tickets", value="game"),
-			Choice(name="Ban Appeals", value="appeals"),
-			Choice(name="Staff Pings", value="staffping")
+			app_commands.Choice(name="Discord Tickets", value="discord"),
+			app_commands.Choice(name="SCP:SL Tickets", value="game"),
+			app_commands.Choice(name="Ban Appeals", value="appeals"),
+			app_commands.Choice(name="Staff Pings", value="staffping")
 		],
 		status=[
-			Choice(name="Enable", value="enable"),
-			Choice(name="Disable", value="disable")
+			app_commands.Choice(name="Enable", value="enable"),
+			app_commands.Choice(name="Disable", value="disable")
 		]
     )
 	async def enable_disable_type(self, interaction: discord.Interaction, option: str, status: str):
@@ -334,13 +330,13 @@ class TwilightTickets(commands.Cog):
 		# Check status?
 		if appeal_status == "pending":
 			color = 0xffa500
-			status = "📥 Appeal Received"
+			status_text = "📥 Appeal Received"
 		elif appeal_status == "accepted":
 			color = discord.Color.green()
-			status = "✅ Appeal Accepted"
+			status_text = "✅ Appeal Accepted"
 		else:
 			color = discord.Color.red()
-			status = "🚫 Appeal Rejected"
+			status_text = "🚫 Appeal Rejected"
 
 		time_sent = datetime.fromisoformat(timestamp_str)
 		time_sent_ts = f"<t:{int(time_sent.timestamp())}:f>"
@@ -353,8 +349,8 @@ class TwilightTickets(commands.Cog):
 			color=color
 		)
 
-		appeal_stat_embed.add_field(name="Status:", value=status, inline=False)
-		appeal_stat_embed.add_field(name="Time Sent:", value=time_sent_ts, inline=False)
-		appeal_stat_embed.add_field(name="Appeal Reason:", value=appeal_reason, inline=False)
+		appeal_stat_embed.add_field(name="Status", value=status_text, inline=False)
+		appeal_stat_embed.add_field(name="Time Sent", value=time_sent_ts, inline=False)
+		appeal_stat_embed.add_field(name="Appeal Reason", value=appeal_reason, inline=False)
 
 		await interaction.response.send_message(embed=appeal_stat_embed, ephemeral=True)
