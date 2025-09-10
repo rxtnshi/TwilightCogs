@@ -4,9 +4,7 @@ import os
 
 from . import ViewsModals
 from datetime import datetime
-from discord import app_commands
 from discord.app_commands import Choice
-from discord.ext import commands
 from redbot.core import commands, app_commands, Config
 from redbot.core.data_manager import cog_data_path
 
@@ -138,7 +136,7 @@ class TwilightTickets(commands.Cog):
 
 	@staff.command(name="set", description="Enable/disable a specific ticket type or ticket pings")
 	@app_commands.choices(
-		type=[
+		options=[
 			Choice(name="Discord Tickets", value="discord"),
 			Choice(name="SCP:SL Tickets", value="game"),
 			Choice(name="Ban Appeals", value="appeals"),
@@ -149,21 +147,21 @@ class TwilightTickets(commands.Cog):
 			Choice(name="Disable", value="disable")
 		]
     )
-	async def enable_disable_type(self, interaction: discord.Interaction, type: str, status: str):
+	async def enable_disable_type(self, interaction: discord.Interaction, option: str, status: str):
 		if not role_check_elevated(interaction.user):
 			await interaction.response.send_message("**`🚫 Prohibited!`** You don't have permission to use this command.", ephemeral=True)
 			return
 		
 		new_status = (status == "enable")
-		self.ticket_statuses[type] = new_status
+		self.ticket_statuses[option] = new_status
 
 		await self.config.guild(interaction.guild).ticket_statuses.set(self.ticket_statuses)
 
-		if type == "staffping":
+		if option == "staffping":
 			await interaction.response.send_message(f"**`✅ Success!`** Staff pings on tickets have been {status}d successfully.")
 			return
 			
-		await interaction.response.send_message(f"**`✅ Success!`** {type.capitalize()} tickets have been {status}d successfully.")
+		await interaction.response.send_message(f"**`✅ Success!`** {option.capitalize()} tickets have been {status}d successfully.")
 
 	@staff.command(name="blacklist", description="Blacklists a user")
 	async def blacklist_user(self, interaction: discord.Interaction, user: discord.Member, reason: str):
@@ -288,6 +286,43 @@ class TwilightTickets(commands.Cog):
 		embed.add_field(name="/appeal", value=appeal_group, inline=False)
 
 		await interaction.response.send_message(embed=embed)
+
+	@staff.command(name="getstatus", description="Display all ticket and ping statuses")
+	async def get_type_status(self, interaction: discord.Interaction):
+		if not role_check(interaction.user):
+			await interaction.response.send_message("**`🚫 Prohibited!`** You don't have permission to use this command.", ephemeral=True)
+			return
+
+		tickets_enabled = self.tickets_enabled
+		ticket_statuses = self.ticket_statuses
+
+		embed = discord.Embed(
+			title="⚙️ Current statuses",
+			description="Showing all ticket and ping statuses below!",
+			timestamp=datetime.now(),
+			color=discord.Color.blue()
+		)
+
+
+		ticket_creation_status = "`✅ Enabled`" if tickets_enabled else "`🚫 Disabled`"
+		embed.add_field(name="Ticket Creation", value=ticket_creation_status, inline=False)
+
+		ticket_category_names = {
+			"discord": "Discord Tickets",
+			"game": "SCP:SL Tickets",
+			"appeals": "Ban Appeals",
+			"staffping": "Staff Ping in Tickets"
+		}
+
+		ticket_category_status = []
+		for category, is_enabled in ticket_statuses.items():
+			emoji = "✅" if is_enabled else "🚫"
+			category_name = ticket_category_names.get(category, category.capitalize())
+			ticket_category_status.append(f"**{category_name}**: `{emoji} {'Enabled' if is_enabled else 'Disabled'}`")
+		embed.add_field(name="Ticket Categories", value="\n".join(ticket_category_status))
+
+		await interaction.response.send_message(embed=embed)
+
 
 	@appeals.command(name="status", description="Gets the status of an appeal")
 	async def get_status_appeal(self, interaction: discord.Interaction, appeal_id: str):
