@@ -138,7 +138,7 @@ class TwilightTickets(commands.Cog):
 
 	@staff.command(name="set", description="Enable/disable a specific ticket type or ticket pings")
 	@app_commands.choices(
-		ticket_type=[
+		type=[
 			Choice(name="Discord Tickets", value="discord"),
 			Choice(name="SCP:SL Tickets", value="game"),
 			Choice(name="Ban Appeals", value="appeals"),
