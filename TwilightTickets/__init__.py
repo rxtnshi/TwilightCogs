@@ -4,7 +4,7 @@ from . import ViewsModals
 async def setup(bot):
     await bot.add_cog(TwilightTickets(bot))
 
-async def setup_hook(bot):
+async def cog_load(bot):
     await bot.wait_until_ready()
     cog = bot.get_cog("TwilightTickets")
     guild = bot.get_guild(1341956884059521025)
