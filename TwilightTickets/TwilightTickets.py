@@ -36,7 +36,12 @@ class TwilightTickets(commands.Cog):
 		self.config.register_guild(**default_global)
 
 		self.tickets_enabled = True
-		self.ticket_statuses = {}
+		self.ticket_statuses = {
+				"discord": True,
+				"game": True,
+				"appeals": True,
+				"staffping": True
+		}
 
 		db_path = cog_data_path(self) / "tickets.db"
 		os.makedirs(os.path.dirname(db_path), exist_ok=True)
