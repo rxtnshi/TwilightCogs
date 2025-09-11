@@ -93,7 +93,7 @@ class TwilightTickets(commands.Cog):
 	def cog_unload(self):
 		self.conn.close()
 
-	async def load_configs(self, ctx):
+	async def load_configs(self):
 		if self.settings_loaded:
 			return
 		await self.bot.wait_until_ready()
