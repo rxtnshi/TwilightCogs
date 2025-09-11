@@ -378,3 +378,5 @@ class TwilightTickets(commands.Cog):
 		appeal_stat_embed.add_field(name="Appeal Reason", value=appeal_reason, inline=False)
 
 		await interaction.response.send_message(embed=appeal_stat_embed, ephemeral=True)
+
+	# create manual appeal decision command later
