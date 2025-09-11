@@ -39,8 +39,8 @@ class TwilightTickets(commands.Cog):
 		os.makedirs(os.path.dirname(db_path), exist_ok=True)
 
 		guild = self.bot.get_guild(1341956884059521025)
-		self.tickets_enabled = await self.config.guild(guild).tickets_enabled()
-		self.ticket_statuses = await self.config.guild(guild).ticket_statuses()
+		self.tickets_enabled = self.config.guild(guild).tickets_enabled()
+		self.ticket_statuses = self.config.guild(guild).ticket_statuses()
 
 		self.conn = sqlite3.connect(db_path)
 		self.cursor = self.conn.cursor()
