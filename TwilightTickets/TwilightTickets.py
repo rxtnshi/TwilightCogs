@@ -42,7 +42,7 @@ class TwilightTickets(commands.Cog):
             "appeals": True,
             "staffping": True
         }
-		self.settings_loaded = True
+		self.settings_loaded = False
 
 		db_path = cog_data_path(self) / "tickets.db"
 		os.makedirs(os.path.dirname(db_path), exist_ok=True)
