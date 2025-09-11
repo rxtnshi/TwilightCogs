@@ -24,7 +24,7 @@ class TwilightTickets(commands.Cog):
 		self.bot = bot		
 
 		self.config = Config.get_conf(self, identifier=99204742, force_registration=True)
-		default_guild = {
+		default_global = {
 			"tickets_enabled": True,
 			"ticket_statuses": {
 				"discord": True,
@@ -33,10 +33,16 @@ class TwilightTickets(commands.Cog):
 				"staffping": True
 			}
 		}
-		self.config.register_guild(**default_guild)
+		self.config.register_guild(**default_global)
 
 		self.tickets_enabled = True
-		self.ticket_statuses = {}
+		self.ticket_statuses = {
+            "discord": True,
+            "game": True,
+            "appeals": True,
+            "staffping": True
+        }
+		self.settings_loaded = True
 
 		db_path = cog_data_path(self) / "tickets.db"
 		os.makedirs(os.path.dirname(db_path), exist_ok=True)
@@ -86,7 +92,12 @@ class TwilightTickets(commands.Cog):
 		""")
 	def cog_unload(self):
 		self.conn.close()
-	
+
+	async def load_configs(self, ctx):
+		self.ticket_statuses = await self.config.guild(ctx.guild).ticket_statuses()
+		self.tickets_enabled = await self.config.guild(ctx.guild).tickets_enabled()
+
+
 	staff = app_commands.Group(name="staff", description="Staff commands", guild_only=True)
 	appeals = app_commands.Group(name="appeals", description="Appeal commands", guild_only=True)
 
