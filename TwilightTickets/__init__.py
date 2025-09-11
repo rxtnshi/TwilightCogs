@@ -12,4 +12,4 @@ async def setup_hook(bot):
     bot.add_view(ViewsModals.AppealView())
     
     cog.ticket_statuses = await cog.config.get_raw("tickets_enabled")
-	cog.tickets_enabled = await cog.config.get_raw("ticket_statuses")
+    cog.tickets_enabled = await cog.config.get_raw("ticket_statuses")
