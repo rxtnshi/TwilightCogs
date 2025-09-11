@@ -94,9 +94,18 @@ class TwilightTickets(commands.Cog):
 		self.conn.close()
 
 	async def load_configs(self, ctx):
-		self.ticket_statuses = await self.config.guild(ctx.guild).ticket_statuses()
-		self.tickets_enabled = await self.config.guild(ctx.guild).tickets_enabled()
+		if self.settings_loaded:
+			return
+		await self.bot.wait_until_ready()
+		guild = self.bot.get_guild(1341956884059521025)
+		if guild:
+			self.tickets_enabled = await self.config.guild(guild).tickets_enabled()
+			self.ticket_statuses = await self.config.guild(guild).ticket_statuses()
+		self.settings_loaded = True
 
+	async def check_loaded_configs(self):
+		if not self.settings_loaded:
+			await self.load_configs()
 
 	staff = app_commands.Group(name="staff", description="Staff commands", guild_only=True)
 	appeals = app_commands.Group(name="appeals", description="Appeal commands", guild_only=True)
