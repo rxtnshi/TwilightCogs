@@ -9,10 +9,6 @@ from datetime import datetime
 from discord import app_commands, utils
 from discord.ext import commands
 
-staff_roles = [1345963237316890776, 1345963295575769088]
-staff_roles_elevated = [1341957856232210492, 1341958721793691669, 1341957864650047569, 1362917217611546705, 1342201478122704989, 1341961378100936735]
-log_channel_id = 1414502972964212857 #1414397193934213140 test server
-
 #
 # Dropdowns and Buttons
 # 
@@ -20,63 +16,73 @@ log_channel_id = 1414502972964212857 #1414397193934213140 test server
 class TicketSelect(discord.ui.Select):
     def __init__(self):
         options = [
-            discord.SelectOption(label="⚙️ Discord Staff", description="Contact Discord staff", value="discord"),
-            discord.SelectOption(label="🎮 Game Staff", description="Contact SCP:SL staff", value="game"),
-            discord.SelectOption(label="🔨 Ban Appeals", description="Request a ban appeal", value="appeals")
+            discord.SelectOption(label="👮 Discord Staff", description="Open a ticket for reports/inquiries", value="discord"),
+            discord.SelectOption(label="🎮 SCP:SL Staff", description="Open a ticket for reports/inquiries", value="scpsl"),
+            discord.SelectOption(label="🔨 Appeals Requests", description="Request an appeal for a punishment", value="appeals")
         ]
         super().__init__(placeholder="Select a category...", options=options, custom_id="persistent_ticket_select")
 
     async def callback(self, interaction: discord.Interaction):
         cog = interaction.client.get_cog("TwilightTickets")
         if not cog:
-            await interaction.response.send_message("**`🛑 Error!`** The ticket system is currently offline.", ephemeral=True)
             new_view = TicketView()
+            await interaction.response.send_message("**`⚠️ Error!`** Ticket system not loaded.", ephemeral=True)
+            await interaction.message.edit(view=new_view)
+            return
+
+        gconf = cog.config.guild(interaction.guild)
+
+        # Check for panic mode
+        tickets_enabled = await gconf.tickets_enabled()
+        if not tickets_enabled:
+            log_ch_id = await gconf.ticket_log_channel()
+            log_ch = interaction.guild.get_channel(log_ch_id) if log_ch_id else None
+            if log_ch:
+                await log_ch.send(f"{interaction.user} ({interaction.user.id}) attempted to open `{self.values[0]}` tickets during panic mode.")
+            new_view = TicketView()
+            await interaction.response.send_message("**`⚠️ Error!`** Tickets are currently disabled.", ephemeral=True)
             await interaction.message.edit(view=new_view)
             return
         
-        log_channel = interaction.guild.get_channel(log_channel_id)
-        selected_type = self.values[0]
-        
+        # Check for blacklist
         cog.cursor.execute("SELECT reason FROM blacklist WHERE user_id = ?", (interaction.user.id,))
         if result := cog.cursor.fetchone():
-            await interaction.response.send_message(f"**`🚫 Prohibited!`** You are blacklisted from creating tickets.", ephemeral=True)
             new_view = TicketView()
+            await interaction.response.send_message(f"**`🚫 Prohibited!`** You are blacklisted from creating tickets.", ephemeral=True)
             await interaction.message.edit(view=new_view)
             return
 
-        if not cog.tickets_enabled:
-            await interaction.response.send_message("**`🛑 Error!`** Ticket creation is currently disabled.", ephemeral=True)
+        # Check ticket type status
+        ticket_statuses = await gconf.ticket_statuses()
+        selected_type = self.values[0]
+        if not ticket_statuses.get(selected_type, True):
             new_view = TicketView()
-            await interaction.message.edit(view=new_view)
-            if log_channel:
-                await log_channel.send(f"{interaction.user} ({interaction.user.id}) tried opening `{selected_type}` tickets during panic mode.")
-                return
-        
-        if not cog.ticket_statuses.get(selected_type, False):
-            await interaction.response.send_message("**`🛑 Error!`** This ticket category has been disabled.", ephemeral=True)
-            new_view = TicketView()
+            await interaction.response.send_message("**`🛑 Sorry!`** That ticket category is currently not active", ephemeral=True)
             await interaction.message.edit(view=new_view)
             return
+
+        # Prevent duplicate ticket in same category
+        cats = await gconf.ticket_categories()
+        if selected_type == "discord":
+            cat_id = cats.get("discord")
+        elif selected_type == "scpsl":
+            cat_id = cats.get("scpsl")
+        else:
+            cat_id = None
+
+        if cat_id:
+            category = discord.utils.get(interaction.guild.categories, id=cat_id)
+            if category:
+                for ch in category.text_channels:
+                    if ch.topic and f"({interaction.user.id})" in ch.topic:
+                        new_view = TicketView()
+                        await interaction.response.send_message(f"**`🚫 Prohibited!`** You already have an open ticket in this category. You may access it here {ch.mention}", ephemeral=True)
+                        await interaction.message.edit(view=new_view)
+                        return
 
         if selected_type == "discord":
-            category = discord.utils.get(interaction.guild.categories, id=1414502599293407324)
-            if category:
-                for channel in category.text_channels:
-                    if channel.topic and f"({interaction.user.id})" in channel.topic:
-                        await interaction.response.send_message(f"**`🚫 Prohibited!`** An existing ticket has been found: {channel.mention}", ephemeral=True)
-                        new_view = TicketView()
-                        await interaction.message.edit(view=new_view)
-                        return
             modal = DiscordModal()
-        elif selected_type == "game":
-            category = discord.utils.get(interaction.guild.categories, id=1414502707309314088)
-            if category:
-                for channel in category.text_channels:
-                    if channel.topic and f"({interaction.user.id})" in channel.topic:
-                        await interaction.response.send_message(f"**`🚫 Prohibited!`** An existing ticket has been found: {channel.mention}", ephemeral=True)
-                        new_view = TicketView()
-                        await interaction.message.edit(view=new_view)
-                        return
+        elif selected_type == "scpsl":
             modal = GameModal()
         elif selected_type == "appeals":
             user = interaction.user
@@ -85,13 +91,15 @@ class TicketSelect(discord.ui.Select):
 
             if result:
                 existing_appeal_id = result[0]
-                await interaction.response.send_message(f"**`🚫 Prohibited!`** You already have an appeal open. Please wait for staff to review it. (Reference AID: `{existing_appeal_id}`)", ephemeral=True)
                 new_view = TicketView()
+                await interaction.response.send_message(f"**`🚫 Prohibited!`** You already have an appeal open. Please wait for staff to review it. (Reference AID: `{existing_appeal_id}`)", ephemeral=True)
                 await interaction.message.edit(view=new_view)
                 return
             modal = AppealModal()
         else:
-            await interaction.response.send_message("**`🛑 Error!`** An unexpected error occurred.", ephemeral=True)
+            new_view = TicketView()
+            await interaction.response.send_message("**`⚠️ Error!`** An unexpected error occurred.", ephemeral=True)
+            await interaction.message.edit(view=new_view)
             return
 
         await interaction.response.send_modal(modal)
@@ -108,11 +116,16 @@ class DecisionSelect(discord.ui.Select):
 
     async def callback(self, interaction: discord.Interaction):
         guild = interaction.guild
-        appeal_team_id = 1415179872241975368
+        cog = interaction.client.get_cog("TwilightTickets")
+
+        sconfg = cog.config.guild(guild)
+        appeal_team_id = await sconfg.appeal_team_role()
         appeal_team_role = guild.get_role(appeal_team_id)
 
         if not appeal_team_role or appeal_team_role not in interaction.user.roles:
             await interaction.response.send_message("**`🚫 Prohibited!`** You do not have permission to make appeal decisions.", ephemeral=True)
+            new_view = AppealView()
+            await interaction.message.edit(view=new_view)
             return
         
         decision = self.values[0]
@@ -125,12 +138,25 @@ class CloseTicket(discord.ui.Button):
         super().__init__(label="Close Ticket", style=discord.ButtonStyle.danger, custom_id="persistent_close_ticket")
 
     async def callback(self, interaction: discord.Interaction):
-        if not any(role.id in staff_roles for role in interaction.user.roles):
-            await interaction.response.send_message("**`🚫 Prohibited!`** You do not have permission to close this ticket.", ephemeral=True)
+        cog = interaction.client.get_cog("TwilightTickets")
+        if not cog:
+            await interaction.response.send_message("`🛑` Ticket system not loaded.", ephemeral=True)
             return
-        await interaction.response.send_modal(CloseTicketModal())
+
+        gconf = cog.config.guild(interaction.guild)
+        mod_role_id = await gconf.modmail_access_role()
+        is_allowed = interaction.user.guild_permissions.administrator or (
+            mod_role_id and any(r.id == mod_role_id for r in interaction.user.roles)
+        )
+        if not is_allowed:
+            new_view = CloseTicketView()
+            await interaction.response.send_message("**`🚫 Prohibited!`** You do not have permission to close this ticket.", ephemeral=True)
+            await interaction.message.edit(view=new_view)
+            return
+
         new_view = CloseTicketView()
         await interaction.message.edit(view=new_view)
+        await interaction.response.send_modal(CloseTicketModal())
 
 #
 # Views
@@ -167,9 +193,13 @@ class CloseTicketModal(discord.ui.Modal):
         
         await interaction.response.send_message("⌛ Creating transcript and closing ticket...", ephemeral=True)
 
+
+        sconfg = cog.config.guild(interaction.guild)
         channel = interaction.channel
         closer = interaction.user
-        logs_channel = interaction.guild.get_channel(log_channel_id)
+
+        logs_channel_id = await sconfg.ticket_log_channel()
+        logs_channel = interaction.guild.get_channel(logs_channel_id)
         topic = interaction.channel.topic
         open_reason = "N/A"
         opening_user_id = None
@@ -195,12 +225,17 @@ class DiscordModal(discord.ui.Modal):
         cog = interaction.client.get_cog("TwilightTickets")
         if not cog: return
 
+        sconfg = cog.config.guild(interaction.guild)
+        categories = await sconfg.ticket_categories()
+        category_id = categories.get("discord")
+        staff_role_id = await sconfg.discord_staff_role()
+
         await create_ticket(
             interaction, "Discord", 
             self.discord_request_name.value, 
             self.discord_request.value,
-            1414502599293407324, # category id
-            1345963295575769088, # staff id
+            category_id, # category id
+            staff_role_id, # staff id
             0x5865f2, 
             cog
         )
@@ -217,13 +252,18 @@ class GameModal(discord.ui.Modal):
         cog = interaction.client.get_cog("TwilightTickets")
         if not cog: return
 
+        sconfg = cog.config.guild(interaction.guild)
+        categories = await sconfg.ticket_categories()
+        category_id = categories.get("scpsl")
+        staff_role_id = await sconfg.scpsl_staff_role()
+
         await create_ticket(
             interaction, 
             "SCP:SL", 
             self.game_request_name.value, 
             self.game_request.value,
-            1414502707309314088, # category id
-            1345963237316890776, # staff id
+            category_id, # category id
+            staff_role_id, # staff id
             0x3498db, 
             cog
         )
@@ -265,7 +305,7 @@ class FinishAppealModal(discord.ui.Modal):
             opener_id = int(user_id_part.split(" | ")[0])
             appeal_id = footer_text.split("Appeal ID: ")[1]
         except (IndexError, ValueError):
-            await interaction.followup.send("`🛑 Error:` Could not parse IDs from the embed.", ephemeral=True)
+            await interaction.followup.send("`⚠️ Error:` Could not parse IDs from the embed.", ephemeral=True)
             return
         
         await finalize_appeal(opener_id, appeal_id, self.decision, reason, staff_member, cog)
@@ -289,4 +329,4 @@ class FinishAppealModal(discord.ui.Modal):
         else:
             await original_message.edit(embed=new_embed)
 
-        await interaction.edit_original_response(content=f"**`✅ Success!`** <@{opener_id}> has been successfully notified. Appeal status has been updated.")
+        await interaction.edit_original_response(content=f"**`✅ Success!`** Appeal `{appeal_id}` has been finalized.")
