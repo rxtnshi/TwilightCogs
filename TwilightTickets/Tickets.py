@@ -65,7 +65,7 @@ async def create_ticket(
         if staff_role:
             ping_message = staff_role.mention
 
-    await channel.send(ping_message, allowed_mentions=discord.AllowedMentions.all(), embed=embed, view=ViewsModals.CloseTicketView())
+    await channel.send(ping_message, embed=embed, view=ViewsModals.CloseTicketView(), allowed_mentions=discord.AllowedMentions.all())
     await interaction.response.send_message(f"**`✅ Success!`** Ticket opened! Access it at {channel.mention}", ephemeral=True)
 
 async def close_ticket(channel: discord.TextChannel, closer: discord.Member, close_reason: str, log_message: discord.Message, cog: commands.Cog):

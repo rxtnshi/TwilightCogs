@@ -8,5 +8,3 @@ async def setup(bot):
     bot.add_view(ViewsModals.TicketView())
     bot.add_view(ViewsModals.CloseTicketView())
     bot.add_view(ViewsModals.AppealView())
-    
-    bot.loop.create_task(cog.load_configs())
