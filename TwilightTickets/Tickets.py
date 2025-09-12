@@ -162,13 +162,14 @@ async def create_transcript(channel: discord.TextChannel, open_reason: str, open
     try:
         await opener.send(embed=user_embed, file=file_user)
     except (discord.Forbidden, AttributeError):
-        await log_message.reply(f"**`🛑 Error!`** Unable to send transcript to {opener.mention} (DMs may be closed or user not found).")
+        await log_message.reply(f"**`⚠️ Error!`** Unable to send transcript to {opener.mention} (DMs may be closed).")
 
     return log_message
 
 async def create_ban_appeal(interaction, banned_user: str, appeal_request: str, cog: commands.Cog):
     from . import ViewsModals
-
+    
+    sconfg = cog.config.guild(interaction.guild)
     user = interaction.user
     guild = interaction.guild
     
@@ -183,13 +184,14 @@ async def create_ban_appeal(interaction, banned_user: str, appeal_request: str, 
     """, (appeal_id, user.id, appeal_request, datetime.now().isoformat()))
     cog.conn.commit()
 
-    appeals_channel_id = 1414770277782392993
-    appeal_team_id = 1415179872241975368
+    appeals_channel_id = await sconfg.appeal_log_channel()
+    appeal_team_id = await sconfg.appeal_team_role()
+    appeal_team_role = guild.get_role(appeal_team_id)
     appeals_channel = guild.get_channel(appeals_channel_id)
 
     if not appeals_channel:
-        print(f"ERROR: Could not find the appeals channel with ID {appeals_channel_id}")
-        await interaction.response.send_message("The appeal system is misconfigured. Please contact an administrator.", ephemeral=True)
+        print(f"**`⚠️ Error!`** Could not find the appeals channel with ID {appeals_channel_id}")
+        await interaction.response.send_message("**`⚠️ Error!`** The appeal system is misconfigured. Please contact an administrator.", ephemeral=True)
         return
     
     appeals_embed = discord.Embed(
@@ -214,15 +216,18 @@ async def create_ban_appeal(interaction, banned_user: str, appeal_request: str, 
 
     ping_message = ""
     if cog.ticket_statuses.get('staffping', True):
-        appeal_role = discord.utils.get(guild.roles, id=appeal_team_id)
-        if appeal_role:
-            ping_message = appeal_role.mention
+        if appeal_team_role:
+            ping_message = appeal_team_role.mention
 
-    await appeals_channel.send(ping_message, embed=appeals_embed, view=ViewsModals.AppealView(), allowed_mentions=discord.AllowedMentions.all())
-    await user.send(embed=user_embed)
+    appeals_message = await appeals_channel.send(ping_message, embed=appeals_embed, view=ViewsModals.AppealView(), allowed_mentions=discord.AllowedMentions.all())
+    try:
+        await user.send(embed=user_embed)
+    except discord.Forbidden:
+        await appeals_message.reply(f"**`⚠️ Error!`** Unable to send appeal confirmation to {user.mention} (DMs may be closed).")
+        await interaction.response.send_message(f"**`⚠️ Success!`** However, your message requests were turned off so I was unable to send you a confirmation. You may check your appeal status by using `/appeal status {appeal_id}`.", ephemeral=True)
+        return
     
     await interaction.response.send_message(f"**`✅ Success!`** Your appeal has been submitted for review and a receipt has been sent to you. Appeal ID: `{appeal_id}`", ephemeral=True)
-
 
 async def finalize_appeal(opener_id: int, appeal_id: str, decision: str, reason: str, staff_member: discord.Member, cog: commands.Cog):
     status = "accepted" if decision == "accept" else "denied"
@@ -233,6 +238,11 @@ async def finalize_appeal(opener_id: int, appeal_id: str, decision: str, reason:
     time_final_str = datetime.now().isoformat()
     time_final = datetime.fromisoformat(time_final_str)
     time_final_ts = f"<t:{int(time_final.timestamp())}:f>"
+
+    guild = staff_member.guild
+    sconfg = cog.config.guild(guild)
+    appeals_channel_id = await sconfg.appeal_log_channel()
+    appeals_channel = guild.get_channel(appeals_channel_id)
 
     user = await cog.bot.fetch_user(opener_id)
     if not user:
@@ -256,4 +266,4 @@ async def finalize_appeal(opener_id: int, appeal_id: str, decision: str, reason:
     try:
         await user.send(embed=dm_embed)
     except discord.Forbidden:
-        print(f"Could not DM appeal result to user {opener_id} (DMs closed).")
+        await appeals_channel.send(f"**`⚠️ Error!`** Unable to send the decision to {user.mention}. This may be due to their message requests turned off. (AID: `{appeal_id}`)")

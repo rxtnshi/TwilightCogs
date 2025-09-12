@@ -145,6 +145,18 @@ class TwilightTickets(commands.Cog):
 		role_id = await self.config.guild(interaction.guild).management_access_role()
 		return bool(role_id and any(r.id == role_id for r in interaction.user.roles))
 	
+	async def check_protected_status(self, guild: discord.Guild, member: discord.Member) -> bool:
+		if member.guild_permissions.administrator:
+			return True
+		sconfg = self.config.guild(guild)
+		protected_role_ids =[
+			await sconfg.modmail_access_role(),
+			await sconfg.management_access_role(),
+			await sconfg.discord_staff_role(),
+			await sconfg.scpsl_staff_role()
+		]
+		role_ids = [rid for rid in protected_role_ids if rid]
+		return any(r.id in role_ids for r in member.roles)
 
 	staff = app_commands.Group(name="staff", description="Staff commands", guild_only=True)
 	appeals = app_commands.Group(name="appeals", description="Appeal commands", guild_only=True)
@@ -336,6 +348,10 @@ class TwilightTickets(commands.Cog):
 		if not await self.has_management(interaction):
 			await interaction.response.send_message("**`🚫 Prohibited!`** You don't have permission.", ephemeral=True)
 			return
+
+		if await self.check_protected_status(interaction.guild, user):
+			await interaction.response.send_message("**`🚫 Prohibited!`** This is a protected user. You cannot blacklist them.")
+			return
 		
 		try:
 			self.cursor.execute("""
@@ -345,7 +361,7 @@ class TwilightTickets(commands.Cog):
 			self.conn.commit()
 			await interaction.response.send_message(f"**`✅ Success!`**: {user.mention} has been successfully blacklisted. **Reason:** {reason}")
 		except sqlite3.IntegrityError:
-			await interaction.response.send_message(f"**`🛑 Error!`** {user.mention} has already been blacklisted.")
+			await interaction.response.send_message(f"**`⚠️ Error!`** {user.mention} has already been blacklisted.")
 			return
 	
 	@staff.command(name="unblacklist", description="Removes a user from the blacklist")
@@ -359,7 +375,7 @@ class TwilightTickets(commands.Cog):
 			self.conn.commit()
 			await interaction.response.send_message(f"**`✅ Success!`**: {user.mention} has been successfully removed from the blacklist!")
 		else:
-			await interaction.response.send_message(f"**`🛑 Error!`** {user.mention} was not found in the blacklist.")
+			await interaction.response.send_message(f"**`⚠️ Error!`** {user.mention} was not found in the blacklist.")
 
 	@staff.command(name="history", description="Grabs the ticket history of a user")
 	async def ticket_history(self, interaction: discord.Interaction, user: discord.Member):
@@ -531,7 +547,7 @@ class TwilightTickets(commands.Cog):
 		result = self.cursor.fetchone()
 
 		if not result:
-			await interaction.response.send_message(f"**`🛑 Error!`** There was no appeal matching ID: `{appeal_id}`. Please try again with a valid AID.", ephemeral=True)
+			await interaction.response.send_message(f"**`⚠️ Error!`** There was no appeal matching ID: `{appeal_id}`. Please try again with a valid AID.", ephemeral=True)
 			return
 		
 		# Hopefully it assigns the correct values if I'm doing it correctly
@@ -563,4 +579,4 @@ class TwilightTickets(commands.Cog):
 		appeal_stat_embed.add_field(name="Time Sent", value=time_sent_ts, inline=False)
 		appeal_stat_embed.add_field(name="Appeal Reason", value=appeal_reason, inline=False)
 
-		await interaction.response.send_message(embed=appeal_stat_embed)
+		await interaction.response.send_message(embed=appeal_stat_embed, ephemeral=True)

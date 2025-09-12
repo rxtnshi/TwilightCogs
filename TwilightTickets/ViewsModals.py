@@ -117,7 +117,9 @@ class DecisionSelect(discord.ui.Select):
     async def callback(self, interaction: discord.Interaction):
         guild = interaction.guild
         cog = interaction.client.get_cog("TwilightTickets")
-        appeal_team_id = cog.appeal_team_role
+
+        sconfg = cog.config.guild(guild)
+        appeal_team_id = await sconfg.appeal_team_role()
         appeal_team_role = guild.get_role(appeal_team_id)
 
         if not appeal_team_role or appeal_team_role not in interaction.user.roles:
@@ -303,7 +305,7 @@ class FinishAppealModal(discord.ui.Modal):
             opener_id = int(user_id_part.split(" | ")[0])
             appeal_id = footer_text.split("Appeal ID: ")[1]
         except (IndexError, ValueError):
-            await interaction.followup.send("`🛑 Error:` Could not parse IDs from the embed.", ephemeral=True)
+            await interaction.followup.send("`⚠️ Error:` Could not parse IDs from the embed.", ephemeral=True)
             return
         
         await finalize_appeal(opener_id, appeal_id, self.decision, reason, staff_member, cog)
@@ -327,4 +329,4 @@ class FinishAppealModal(discord.ui.Modal):
         else:
             await original_message.edit(embed=new_embed)
 
-        await interaction.edit_original_response(content=f"**`✅ Success!`** <@{opener_id}> has been successfully notified. Appeal status has been updated.")
+        await interaction.edit_original_response(content=f"**`✅ Success!`** Appeal `{appeal_id}` has been finalized.")
