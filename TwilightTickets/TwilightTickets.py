@@ -495,6 +495,7 @@ class TwilightTickets(commands.Cog):
 
 		tickets_enabled = await sconfg.tickets_enabled()
 		ticket_statuses = await sconfg.ticket_statuses()
+		modmail_access_role = await sconfg.modmail_access_role()
 		management_role_id = await sconfg.management_access_role()
 		appeal_team_role_id = await sconfg.appeal_team_role()
 		discord_staff_role_id = await sconfg.discord_staff_role()
@@ -531,7 +532,7 @@ class TwilightTickets(commands.Cog):
 		embed.add_field(name="Ticket Categories", value="\n".join(lines) or "`Not Set`", inline=False)
 
 		roles_text = (
-			f"Staff Access: {format_mention(modmail_role_id, 'role')}\n"
+			f"Staff Access: {format_mention(modmail_access_role, 'role')}\n"
 			f"Management Access: {format_mention(management_role_id, 'role')}\n"
 			f"Appeals: {format_mention(appeal_team_role_id, 'role')}\n"
 			f"Discord Staff: {format_mention(discord_staff_role_id, 'role')}\n"
