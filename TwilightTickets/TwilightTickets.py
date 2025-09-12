@@ -7,12 +7,18 @@ from datetime import datetime
 from redbot.core import commands, app_commands, Config
 from redbot.core.data_manager import cog_data_path
 
+""" 
+TO-DO List:
+	-  Double check for typos and what not on development branch/instance
+"""
+
 class TwilightTickets(commands.Cog):
 	"""Ticketing system for the Twilight Zone"""
 
 	def __init__(self, bot):
 		self.bot = bot		
 
+		# Setup Redbot config (guild config since I don't want these settings to be global)
 		self.config = Config.get_conf(self, identifier=99204742, force_registration=True)
 		default_guild = {
 			"tickets_enabled": True,
@@ -38,6 +44,7 @@ class TwilightTickets(commands.Cog):
 		}
 		self.config.register_guild(**default_guild)
 
+		# Temporarily assign the self values and then have Config load it later on
 		self.tickets_enabled = True
 		self.ticket_statuses = {
 			"discord": True,
@@ -59,8 +66,7 @@ class TwilightTickets(commands.Cog):
 			"scpsl": None,
 		}
 
-		self.settings_loaded = False
-
+		# DB setup
 		db_path = cog_data_path(self) / "tickets.db"
 		os.makedirs(os.path.dirname(db_path), exist_ok=True)
 
@@ -111,17 +117,22 @@ class TwilightTickets(commands.Cog):
 				timestamp TEXT NOT NULL
 			)
 		""")
+
 	def cog_unload(self):
+		"""Close the local database connection once this cog unloads"""
 		self.conn.close()
 
+	# Bool function to check for standard level access to the system
 	async def has_staff(self, interaction: discord.Interaction) -> bool:
 		role_id = await self.config.guild(interaction.guild).modmail_access_role()
 		return bool(role_id and any(r.id == role_id for r in interaction.user.roles))
 	
+	# Bool function to check for elevated level access to the system
 	async def has_management(self, interaction: discord.Interaction) -> bool:
 		role_id = await self.config.guild(interaction.guild).management_access_role()
 		return bool(role_id and any(r.id == role_id for r in interaction.user.roles))
 	
+	# Bool function to check if a user is a protected user (ticket staff or management or has administrator permission enabled)
 	async def check_protected_status(self, guild: discord.Guild, member: discord.Member) -> bool:
 		if member.guild_permissions.administrator:
 			return True
@@ -135,11 +146,20 @@ class TwilightTickets(commands.Cog):
 		role_ids = [rid for rid in protected_role_ids if rid]
 		return any(r.id in role_ids for r in member.roles)
 
+
+	# Assign the command groups so I don't have to make several disorganized commands
 	staff = app_commands.Group(name="staff", description="Staff commands", guild_only=True)
 	appeals = app_commands.Group(name="appeals", description="Appeal commands", guild_only=True)
 		
 	@staff.command(name="initiate", description="Starts the setup process for the ticketing system. Sends the panel if setup has been done.")
 	async def setup_tool(self, interaction: discord.Interaction, refresh_panel: bool = False, reset: bool = False):
+		"""
+		Runs first time setup for the ticket system. If the ticket system was 
+		already configured, then there are arguments to either refresh 
+		the panel or restart the setup process.
+		"""
+
+		# Permission check
 		if not (interaction.user.guild_permissions.administrator or await self.has_management(interaction)):
 			await interaction.response.send_message("**`🚫 Prohibited!`** You need Administrator or the configured management role.", ephemeral=True)
 			return
@@ -147,10 +167,13 @@ class TwilightTickets(commands.Cog):
 		if not interaction.response.is_done():
 			await interaction.response.defer()
 
+		
+		# Get the server config and assign the necessary values
 		sconfg = self.config.guild(interaction.guild)
 		ticket_log_ch = await sconfg.ticket_log_channel()
 		panel_channel_id = await sconfg.panel_channel()
 		panel_message_id = await sconfg.panel_message_id()
+		
 
 		def make_embed():
 			embed = discord.Embed(
@@ -193,6 +216,7 @@ class TwilightTickets(commands.Cog):
 				await interaction.followup.send("**`⚠️ Error`**: Panel channel no longer exists. Please re-run `/staff initiate reset:true` to reconfigure the ticket system.")
 				return
 			
+		# If reset is True and refresh panel is false, then it will pass to the setup process
 		if reset and not refresh_panel:
 			pass
 
@@ -208,6 +232,7 @@ class TwilightTickets(commands.Cog):
 		# Start the interactive setup process
 		await interaction.followup.send("**`⚙️ First Time Setup`**: Hello! Please answer the following questions in order to start the ticket system!")
 
+		# Helper function to ask the prompts
 		async def ask_for(item_type: str, prompt: str):
 			await interaction.followup.send(prompt)
 			while True:
@@ -285,6 +310,9 @@ class TwilightTickets(commands.Cog):
 
 	@staff.command(name="panic", description="Enables or disables panic mode")
 	async def panic(self, interaction: discord.Interaction):
+		"""
+		This will set the status for overall ticket creation.
+		"""
 		allowed = (
 			await self.has_management(interaction)
 		)
@@ -313,6 +341,9 @@ class TwilightTickets(commands.Cog):
 		]
 	)
 	async def enable_disable_type(self, interaction: discord.Interaction, option: str, status: str):
+		"""
+		This will enable or disable specific ticket categories as an alternative to panic mode.
+		"""
 		allowed = (
 			await self.has_management(interaction)
 		)
@@ -324,6 +355,7 @@ class TwilightTickets(commands.Cog):
 		sconfg = self.config.guild(interaction.guild)
 		ticket_statuses = await sconfg.ticket_statuses()
 		ticket_statuses[option] = (status == "enable")
+
 		await sconfg.ticket_statuses.set(ticket_statuses)
 		if option == "staffping":
 			await interaction.response.send_message(f"**`✅ Success!`**: Staff pings have been {status}d.")
@@ -332,6 +364,9 @@ class TwilightTickets(commands.Cog):
 
 	@staff.command(name="blacklist", description="Blacklists a user")
 	async def blacklist_user(self, interaction: discord.Interaction, user: discord.Member, reason: str):
+		"""
+		Blacklists a user from the ticket system if they're misusing the system
+		"""
 		allowed = (
 			await self.has_management(interaction)
 		)
@@ -358,6 +393,9 @@ class TwilightTickets(commands.Cog):
 	
 	@staff.command(name="unblacklist", description="Removes a user from the blacklist")
 	async def unblacklist_user(self, interaction: discord.Interaction, user: discord.Member):
+		"""
+		Removes a user from the blacklist.
+		"""
 		allowed = (
 			await self.has_management(interaction)
 		)
@@ -376,6 +414,9 @@ class TwilightTickets(commands.Cog):
 
 	@staff.command(name="history", description="Grabs the ticket history of a user")
 	async def ticket_history(self, interaction: discord.Interaction, user: discord.Member):
+		"""
+		Get the ticket history for a user
+		"""
 		allowed = (
 			await self.has_staff(interaction)
 			or await self.has_management(interaction)
@@ -385,13 +426,14 @@ class TwilightTickets(commands.Cog):
 			await interaction.response.send_message("**`🚫 Prohibited!`** You don't have permission.", ephemeral=True)
 			return
 		 
-
+		# Get the history for local DB
 		self.cursor.execute(
 			"SELECT ticket_id, closer_id, open_time, close_time, log_message_id FROM tickets WHERE opener_id = ? ORDER BY open_time DESC",
 			(user.id,)
 		)
 		tickets = self.cursor.fetchall()
 
+		# If no history is found, then this would be sent
 		if not tickets:
 			no_history_embed = discord.Embed(
 				title=f"📋 Ticket History for {user.display_name}",
@@ -482,6 +524,9 @@ class TwilightTickets(commands.Cog):
 
 	@staff.command(name="settings", description="Display all current settings and ticket statuses")
 	async def get_type_status(self, interaction: discord.Interaction):
+		"""
+		Used to be called the status command, but I merged it to include the set roles and channels
+		"""
 		allowed = (
 			await self.has_staff(interaction)
 			or await self.has_management(interaction)
@@ -560,6 +605,9 @@ class TwilightTickets(commands.Cog):
 
 	@appeals.command(name="status", description="Gets the status of an appeal")
 	async def get_status_appeal(self, interaction: discord.Interaction, appeal_id: str):
+		"""
+		If a user has an appeal id, they can check it via this command. Set to ephemeral to protect user privacy.
+		"""
 		# Get appeal status based on appeal id and discord user id
 		self.cursor.execute("SELECT appeal_status, timestamp, user_id, ban_appeal_reason FROM appeals WHERE appeal_id = ?", (appeal_id,))
 		result = self.cursor.fetchone()
