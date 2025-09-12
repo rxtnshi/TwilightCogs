@@ -152,9 +152,9 @@ class CloseTicket(discord.ui.Button):
             await interaction.message.edit(view=new_view)
             return
 
-        await interaction.response.send_modal(CloseTicketModal())
         new_view = CloseTicketView()
         await interaction.message.edit(view=new_view)
+        await interaction.response.send_modal(CloseTicketModal())
 
 #
 # Views
@@ -191,9 +191,13 @@ class CloseTicketModal(discord.ui.Modal):
         
         await interaction.response.send_message("⌛ Creating transcript and closing ticket...", ephemeral=True)
 
+
+        sconfg = cog.config.guild(interaction.guild)
         channel = interaction.channel
         closer = interaction.user
-        logs_channel = interaction.guild.get_channel(cog.ticket_log_channel)
+
+        logs_channel_id = await sconfg.ticket_log_channel()
+        logs_channel = interaction.guild.get_channel(logs_channel_id)
         topic = interaction.channel.topic
         open_reason = "N/A"
         opening_user_id = None
@@ -219,12 +223,17 @@ class DiscordModal(discord.ui.Modal):
         cog = interaction.client.get_cog("TwilightTickets")
         if not cog: return
 
+        sconfg = cog.config.guild(interaction.guild)
+        categories = await sconfg.ticket_categories()
+        category_id = categories.get("discord")
+        staff_role_id = await sconfg.discord_staff_role()
+
         await create_ticket(
             interaction, "Discord", 
             self.discord_request_name.value, 
             self.discord_request.value,
-            cog.ticket_categories.get("discord"), # category id
-            cog.discord_staff_team_role, # staff id
+            category_id, # category id
+            staff_role_id, # staff id
             0x5865f2, 
             cog
         )
@@ -241,13 +250,18 @@ class GameModal(discord.ui.Modal):
         cog = interaction.client.get_cog("TwilightTickets")
         if not cog: return
 
+        sconfg = cog.config.guild(interaction.guild)
+        categories = await sconfg.ticket_categories()
+        category_id = categories.get("scpsl")
+        staff_role_id = await sconfg.scpsl_staff_role()
+
         await create_ticket(
             interaction, 
             "SCP:SL", 
             self.game_request_name.value, 
             self.game_request.value,
-            cog.ticket_categories.get("scpsl"), # category id
-            cog.scpsl_staff_team_role, # staff id
+            category_id, # category id
+            staff_role_id, # staff id
             0x3498db, 
             cog
         )

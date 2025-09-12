@@ -25,7 +25,7 @@ async def create_ticket(
     
     category = discord.utils.get(guild.categories, id=category_id)
     if category is None:
-        await interaction.response.send_message("**`🛑 Error!`** Cannot open a ticket right now.", ephemeral=True)
+        await interaction.response.send_message("**`⚠️ Error!`** Cannot open a ticket right now.", ephemeral=True)
         return
 
     ticket_id = uuid.uuid4().hex[:6]

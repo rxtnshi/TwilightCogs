@@ -194,6 +194,7 @@ class TwilightTickets(commands.Cog):
 				new_msg = await panel_ch.send(embed=embed, view=ViewsModals.TicketView())
 				await sconfg.panel_message_id.set(new_msg.id)
 				panel_ch = interaction.guild.get_channel(panel_channel_id)
+				await interaction.followup.send("**`✅ Success!`**: Panel was deleted so it was resent.")
 				return
 			# Check if setup was configured
 			if not (ticket_log_ch and panel_channel_id):
