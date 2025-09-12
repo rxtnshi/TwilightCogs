@@ -356,7 +356,7 @@ class TwilightTickets(commands.Cog):
 
 	@staff.command(name="history", description="Grabs the ticket history of a user")
 	async def ticket_history(self, interaction: discord.Interaction, user: discord.Member):
-		if not await self.has_staff(interaction) or self.has_management(interaction):
+		if not await self.has_staff(interaction) or await self.has_management(interaction):
 			await interaction.response.send_message("**`🚫 Prohibited!`** You don't have permission.", ephemeral=True)
 			return
 
@@ -419,7 +419,7 @@ class TwilightTickets(commands.Cog):
 
 	@staff.command(name="commands", description="Display all commands for the ticket system")
 	async def help_menu(self, interaction: discord.Interaction):
-		if not await self.has_staff(interaction) or self.has_management(interaction):
+		if not await self.has_staff(interaction) or await self.has_management(interaction):
 			await interaction.response.send_message("**`🚫 Prohibited!`** You don't have permission.", ephemeral=True)
 			return
 		
@@ -453,7 +453,7 @@ class TwilightTickets(commands.Cog):
 	async def get_type_status(self, interaction: discord.Interaction):
 		sconfg = self.config.guild(interaction.guild)
 
-		if not await self.has_staff(interaction) or self.has_management(interaction):
+		if not await self.has_staff(interaction) or await self.has_management(interaction):
 			await interaction.response.send_message("**`🚫 Prohibited!`** You don't have permission.", ephemeral=True)
 			return
 
