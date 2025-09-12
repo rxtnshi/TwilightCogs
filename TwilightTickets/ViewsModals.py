@@ -314,9 +314,11 @@ class FinishAppealModal(discord.ui.Modal):
         if self.decision == "accept":
             new_embed.title = "✅ Appeal Accepted"
             new_embed.color = discord.Color.green()
+            new_embed.description = f"Appeal `{appeal_id} has been accepted. The appeal is now finalized."
         else:
             new_embed.title = "🚫 Appeal Rejected"
             new_embed.color = discord.Color.red()
+            new_embed.description = f"Appeal `{appeal_id} has been denied. The appeal is now finalized."
         new_embed.add_field(name=f"Decision by:", value=f"{staff_member.mention}", inline=False)
         new_embed.add_field(name="Reason:", value=reason, inline=False)
 
