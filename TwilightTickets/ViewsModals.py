@@ -270,7 +270,7 @@ class GameModal(discord.ui.Modal):
 
 class AppealModal(discord.ui.Modal):
     def __init__(self):
-        super().__init__(title="Ban Appeal", timeout=None)
+        super().__init__(title="Appeal Request", timeout=None)
         self.appeal_user = discord.ui.TextInput(label="SteamID64 or Discord Username/ID", placeholder="Format: [Platform]: [ID]", required=True, style=discord.TextStyle.short)
         self.appeal_info = discord.ui.TextInput(label="Relevant Information/Evidence", placeholder="Provide evidence to support your appeal.", required=True, style=discord.TextStyle.paragraph)
         self.add_item(self.appeal_user)

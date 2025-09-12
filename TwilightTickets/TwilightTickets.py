@@ -527,7 +527,7 @@ class TwilightTickets(commands.Cog):
 		name_map = {
 			"discord": "Discord Tickets", 
 			"scpsl": "SCP:SL Tickets", 
-			"appeals": "Ban Appeals", 
+			"appeals": "Appeals", 
 			"staffping": "Staff Ping in Tickets"
 		}
 		lines = []
@@ -560,7 +560,7 @@ class TwilightTickets(commands.Cog):
 
 	@appeals.command(name="status", description="Gets the status of an appeal")
 	async def get_status_appeal(self, interaction: discord.Interaction, appeal_id: str):
-		# Get ban appeal status based on appeal id and discord user id
+		# Get appeal status based on appeal id and discord user id
 		self.cursor.execute("SELECT appeal_status, timestamp, user_id, ban_appeal_reason FROM appeals WHERE appeal_id = ?", (appeal_id,))
 		result = self.cursor.fetchone()
 
