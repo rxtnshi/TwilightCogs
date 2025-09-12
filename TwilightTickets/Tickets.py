@@ -22,7 +22,11 @@ async def create_ticket(
 
     guild = interaction.guild
     user = interaction.user
-    
+    sconfg = cog.config.guild(guild)
+
+    ticket_statuses = await sconfg.ticket_statuses()
+    staff_ping_enabled = ticket_statuses.get("staffping", True)
+
     category = discord.utils.get(guild.categories, id=category_id)
     if category is None:
         await interaction.response.send_message("**`⚠️ Error!`** Cannot open a ticket right now.", ephemeral=True)
@@ -59,11 +63,7 @@ async def create_ticket(
     embed.add_field(name="Issue", value=request_name, inline=False)
     embed.add_field(name="Description", value=request_description, inline=False)
 
-    ping_message = ""
-    if cog.ticket_statuses.get('staffping', True):
-        staff_role = discord.utils.get(guild.roles, id=staff_role_id)
-        if staff_role:
-            ping_message = staff_role.mention
+    ping_message = f"<@&{staff_role_id}>" if (staff_ping_enabled and staff_role_id) else None
 
     await channel.send(ping_message, embed=embed, view=ViewsModals.CloseTicketView(), allowed_mentions=discord.AllowedMentions.all())
     await interaction.response.send_message(f"**`✅ Success!`** Ticket opened! Access it at {channel.mention}", ephemeral=True)
@@ -178,6 +178,9 @@ async def create_ban_appeal(interaction, banned_user: str, appeal_request: str, 
     time_sent = datetime.fromisoformat(datetime.now().isoformat())
     time_sent_ts = f"<t:{int(time_sent.timestamp())}:f>"
 
+    ticket_statuses = await sconfg.ticket_statuses()
+    staff_ping_enabled = ticket_statuses.get("staffping", True)
+
     cog.cursor.execute("""
         INSERT INTO appeals (appeal_id, user_id, ban_appeal_reason, appeal_status, timestamp)
         VALUES (?, ?, ?, 'pending', ?)
@@ -186,7 +189,6 @@ async def create_ban_appeal(interaction, banned_user: str, appeal_request: str, 
 
     appeals_channel_id = await sconfg.appeal_log_channel()
     appeal_team_id = await sconfg.appeal_team_role()
-    appeal_team_role = guild.get_role(appeal_team_id)
     appeals_channel = guild.get_channel(appeals_channel_id)
 
     if not appeals_channel:
@@ -214,10 +216,7 @@ async def create_ban_appeal(interaction, banned_user: str, appeal_request: str, 
     user_embed.add_field(name="Time Submitted", value=time_sent_ts, inline=False)
     user_embed.set_footer(text=f"User ID: {user.id} | Appeal ID: {appeal_id}")
 
-    ping_message = ""
-    if cog.ticket_statuses.get('staffping', True):
-        if appeal_team_role:
-            ping_message = appeal_team_role.mention
+    ping_message = f"<@&{appeal_team_id}>" if (staff_ping_enabled and appeal_team_id) else None
 
     appeals_message = await appeals_channel.send(ping_message, embed=appeals_embed, view=ViewsModals.AppealView(), allowed_mentions=discord.AllowedMentions.all())
     try:

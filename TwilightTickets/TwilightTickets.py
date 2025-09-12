@@ -524,7 +524,12 @@ class TwilightTickets(commands.Cog):
 			inline=False
 		)
 
-		name_map = {"discord": "Discord Tickets", "scpsl": "SCP:SL Tickets", "appeals": "Ban Appeals", "staffping": "Staff Ping in Tickets"}
+		name_map = {
+			"discord": "Discord Tickets", 
+			"scpsl": "SCP:SL Tickets", 
+			"appeals": "Ban Appeals", 
+			"staffping": "Staff Ping in Tickets"
+		}
 		lines = []
 		for key, enabled in ticket_statuses.items():
 			emoji = "✅" if enabled else "🚫"
