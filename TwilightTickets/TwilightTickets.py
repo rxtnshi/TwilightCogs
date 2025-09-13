@@ -2,6 +2,8 @@ import discord
 import sqlite3
 import asyncio
 import os
+import re
+
 from . import ViewsModals
 from datetime import datetime
 from redbot.core import commands, app_commands, Config
@@ -186,7 +188,7 @@ class TwilightTickets(commands.Cog):
 			embed.add_field(name="🎮 SCP:SL Staff", value="Report users or general inquiries", inline=False)
 			embed.add_field(name="🔨 Appeals Requests", value="Appeal Discord or SCP:SL punishments", inline=False)
 			embed.set_thumbnail(url="https://images.steamusercontent.com/ugc/961973556172351165/A41A548899E427C540698909FF523F4E7558EBAF/?imw=5000")
-			embed.set_footer("🕑 Last updated")
+			embed.set_footer(text="🕑 Last updated")
 
 			return embed
 		
@@ -231,33 +233,55 @@ class TwilightTickets(commands.Cog):
 			return
 		
 		# Start the interactive setup process
-		await interaction.followup.send("**`⚙️ First Time Setup`**: Hello! Please answer the following questions in order to start the ticket system!")
+		await interaction.followup.send("**`⚙️ First Time Setup`**: Hello! Please answer the following questions in order to start the ticket system! Each question has a timeout of 3 minutes.")
 
 		# Helper function to ask the prompts
 		async def ask_for(item_type: str, prompt: str):
 			await interaction.followup.send(prompt)
+
+			def extract_id(text: str):
+				id = re.search(r"\d{15,20}", text)
+				return int(id.group(0)) if id else None
+
 			while True:
 				try:
 					def check(m): return m.author == interaction.user and m.channel == interaction.channel
 					msg = await self.bot.wait_for("message", check=check, timeout=180.0)
 
 					if item_type in ("channel", "category"):
-						if not msg.channel_mentions:
-							await interaction.followup.send(f"**`⚠️ Invalid`** No {item_type} mentioned. Try again.")
-							continue
-						ref = msg.channel_mentions[0]
-						if item_type == "channel" and not isinstance(ref, discord.TextChannel):
-							await interaction.followup.send("**`⚠️ Invalid`** Not a text channel. Try again.")
-							continue
-						if item_type == "category" and not isinstance(ref, discord.CategoryChannel):
-							await interaction.followup.send("**`⚠️ Invalid`** Not a category. Try again.")
+						# Check for mentions
+						ref = None
+						if msg.channel_mentions:
+							ref = msg.channel_mentions[0]
+						# Check for its id if mention invalid
+						else:
+							get_id = extract_id(msg.content)
+							if get_id:
+								item = interaction.guild.get_channel(get_id)
+								if item_type == "channel" and isinstance(item, discord.TextChannel):
+									ref = item
+								if item_type == "category" and isinstance(item, discord.CategoryChannel):
+									ref = item
+						if not ref:
+							thing = "text channel" if item_type == "channel" else "category"
+							await interaction.followup.send(f"**`⚠️ Invalid`** Please mention a valid {thing} or its ID. Try again.")
 							continue
 						return ref
+					
 					elif item_type == "role":
-						if not msg.role_mentions:
-							await interaction.followup.send("**`⚠️ Invalid`** No role mentioned. Try again.")
+						role = None
+						# Check for mention
+						if msg.role_mentions:
+							role = msg.role_mentions[0]
+						# Check for its id if mention invalid
+						else:
+							id = extract_id(msg.content)
+							if id:
+								role = interaction.guild.get_role(id)
+						if not role:
+							await interaction.followup.send(f"**`⚠️ Invalid`** Please mention a valid role or its ID. Try again.")
 							continue
-						return msg.role_mentions[0]
+						return role
 					elif item_type == "question":
 						answer = msg.content.strip().lower()
 						if answer in ("yes"):
@@ -266,7 +290,7 @@ class TwilightTickets(commands.Cog):
 							return False
 						await interaction.followup.send("**`⚠️ Invalid`** Must be `yes` or `no`. Try again.")
 				except asyncio.TimeoutError:
-					await interaction.followup.send("**`🛑 Canceled`** Timed out.")
+					await interaction.followup.send("**`🛑 Canceled`** Time ran out. Please rerun `/staff initiate` to restart the setup process.")
 					return None
 
 		# Questions
