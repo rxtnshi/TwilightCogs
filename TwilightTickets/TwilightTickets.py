@@ -333,7 +333,7 @@ class TwilightTickets(commands.Cog):
 		)
 
 		if not allowed:
-			await interaction.response.send_message("**`🚫 Prohibited!`** You don't have permission.", ephemeral=True)
+			await interaction.response.send_message("**`🚫 Prohibited!`** You don't have permission to run this command.", ephemeral=True)
 			return
 		 
 		sconfg = self.config.guild(interaction.guild)
@@ -364,7 +364,7 @@ class TwilightTickets(commands.Cog):
 		)
 
 		if not allowed:
-			await interaction.response.send_message("**`🚫 Prohibited!`** You don't have permission.", ephemeral=True)
+			await interaction.response.send_message("**`🚫 Prohibited!`** You don't have permission to run this command.", ephemeral=True)
 			return
 		 
 		sconfg = self.config.guild(interaction.guild)
@@ -387,7 +387,7 @@ class TwilightTickets(commands.Cog):
 		)
 
 		if not allowed:
-			await interaction.response.send_message("**`🚫 Prohibited!`** You don't have permission.", ephemeral=True)
+			await interaction.response.send_message("**`🚫 Prohibited!`** You don't have permission to run this command.", ephemeral=True)
 			return
 		 
 
@@ -416,7 +416,7 @@ class TwilightTickets(commands.Cog):
 		)
 
 		if not allowed:
-			await interaction.response.send_message("**`🚫 Prohibited!`** You don't have permission.", ephemeral=True)
+			await interaction.response.send_message("**`🚫 Prohibited!`** You don't have permission to run this command.", ephemeral=True)
 			return
 		 
 		
@@ -438,7 +438,7 @@ class TwilightTickets(commands.Cog):
 		)
 
 		if not allowed:
-			await interaction.response.send_message("**`🚫 Prohibited!`** You don't have permission.", ephemeral=True)
+			await interaction.response.send_message("**`🚫 Prohibited!`** You don't have permission to run this command.", ephemeral=True)
 			return
 		 
 		# Get the history for local DB
@@ -502,13 +502,16 @@ class TwilightTickets(commands.Cog):
 
 	@staff.command(name="commands", description="Display all commands for the ticket system")
 	async def help_menu(self, interaction: discord.Interaction):
+		"""
+		Show all commands for the ticket system
+		"""
 		allowed = (
 			await self.has_staff(interaction)
 			or await self.has_management(interaction)
 		)
 
 		if not allowed:
-			await interaction.response.send_message("**`🚫 Prohibited!`** You don't have permission.", ephemeral=True)
+			await interaction.response.send_message("**`🚫 Prohibited!`** You don't have permission to run this command.", ephemeral=True)
 			return
 		
 		embed = discord.Embed(
@@ -549,7 +552,7 @@ class TwilightTickets(commands.Cog):
 		)
 
 		if not allowed:
-			await interaction.response.send_message("**`🚫 Prohibited!`** You don't have permission.", ephemeral=True)
+			await interaction.response.send_message("**`🚫 Prohibited!`** You don't have permission to run this command.", ephemeral=True)
 			return
 		
 		sconfg = self.config.guild(interaction.guild)
@@ -621,6 +624,9 @@ class TwilightTickets(commands.Cog):
 
 	@staff.command(name="register", description="Registers access to the ticket system")
 	async def register_access(self, interaction: discord.Interaction):
+		"""
+		Lets users with the staff roles register themselves to the ticket system for access
+		"""
 		sconfg = self.config.guild(interaction.guild)
 		user = interaction.user
 
@@ -650,13 +656,53 @@ class TwilightTickets(commands.Cog):
 			if check_modmail:
 				await interaction.response.send_message("**`⚠️ Error!`** You already have access to the ticket system.", ephemeral=True)
 				return
-			await user.add_roles(mgmt_access_role)
+			await user.add_roles(mgmt_access_role, reason="Registered user to ticket staff team")
 			await interaction.response.send_message(f"**`✅ Success!`** Assigned {mgmt_access_role.mention} to you since you have Administrator privileges in this server.", ephemeral=True)
 			return
 		
-		await user.add_roles(modmail_access_role)
+		await user.add_roles(modmail_access_role, reason="Registered user to ticket staff team")
 		await interaction.response.send_message(f"**`✅ Success!`** Assigned {modmail_access_role.mention} to you. If you are a server administrator that needs management level access, you may add {mgmt_access_role.mention} manually.", ephemeral=True)
 		return
+	
+	@staff.command(name="list", description="Gets a list of all ticket system staff that are registered")
+	async def get_ticket_staff_list(self, interaction: discord.Interaction):
+		"""
+		Get list of all staff registered to the ticket system
+		"""
+		allowed = (
+			await self.has_staff(interaction)
+			or await self.has_management(interaction)
+		)
+
+		if not allowed:
+			await interaction.response.send_message("**`🚫 Prohibited!`** You don't have permission to run this command.", ephemeral=True)
+			return
+
+		guild = interaction.guild
+		sconfg = self.config.guild(guild)
+
+		mgmt_id = await sconfg.management_access_role()
+		modmail_id = await sconfg.modmail_access_role()
+
+		mgmt_role = guild.get_role(mgmt_id) if mgmt_id else None
+		modmail_role = guild.get_role(modmail_id) if modmail_id else None
+
+		mgmt_members = mgmt_role.members if mgmt_role else []
+		modmail_members = modmail_role.members if modmail_role else []
+
+		mgmt_team = "\n".join(m.mention for m in mgmt_members) or "`No staff`"
+		modmail_team = "\n".join(m.mention for m in modmail_members) or "`No staff`"
+
+		embed = discord.Embed(
+			title="🛠️ Ticket System Staff",
+			description="Here is a list of all staff with ticket system access!",
+			color=discord.Color.blue(),
+			timestamp=datetime.now()
+		)
+		embed.add_field(name="Ticket Management", value=mgmt_team, inline=False)
+		embed.add_field(name="Ticket Staff", value=modmail_team, inline=False)
+
+		await interaction.response.send_message(embed=embed)
 
 	@appeals.command(name="status", description="Gets the status of an appeal")
 	async def get_status_appeal(self, interaction: discord.Interaction, appeal_id: str):
