@@ -38,7 +38,7 @@ class TicketSelect(discord.ui.Select):
             log_ch_id = await gconf.ticket_log_channel()
             log_ch = interaction.guild.get_channel(log_ch_id) if log_ch_id else None
             if log_ch:
-                await log_ch.send(f"{interaction.user} ({interaction.user.id}) attempted to open `{self.values[0]}` tickets during panic mode.")
+                await log_ch.send(f"{interaction.user} ({interaction.user.id}) attempted to open ticket type `{self.values[0]}` during panic mode.")
             new_view = TicketView()
             await interaction.response.send_message("**`⚠️ Error!`** Tickets are currently disabled.", ephemeral=True)
             await interaction.message.edit(view=new_view)
