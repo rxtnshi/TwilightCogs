@@ -178,7 +178,7 @@ class TwilightTickets(commands.Cog):
 			embed.add_field(name="🎮 SCP:SL Staff", value="Report users or general inquiries", inline=False)
 			embed.add_field(name="🔨 Appeals Requests", value="Appeal Discord or SCP:SL punishments", inline=False)
 			embed.set_thumbnail(url="https://images.steamusercontent.com/ugc/961973556172351165/A41A548899E427C540698909FF523F4E7558EBAF/?imw=5000")
-			embed.set_footer(text="🕑 Last updated")
+			embed.set_footer(text="🕑 Last refreshed")
 
 			return embed
 		
@@ -626,20 +626,30 @@ class TwilightTickets(commands.Cog):
 
 		discord_staff_id = await sconfg.discord_staff_role()
 		scpsl_staff_id = await sconfg.scpsl_staff_role()
-		discord_staff_role = interaction.guild.get_role(discord_staff_id)
-		scpsl_staff_role = interaction.guild.get_role(scpsl_staff_id)
-		modmail_access_role = interaction.guild.get_role(await sconfg.modmail_access_role())
-		mgmt_access_role = interaction.guild.get_role(await sconfg.management_access_role())
+		modmail_access_id = await sconfg.modmail_access_role()
+		mgmt_access_id = await sconfg.management_access_role()
 
-		if (discord_staff_role or scpsl_staff_role) not in user.roles:
+		modmail_access_role = interaction.guild.get_role(modmail_access_id)
+		mgmt_access_role = interaction.guild.get_role(mgmt_access_id)
+
+		staff_role_ids = {rid for rid in (discord_staff_id, scpsl_staff_id) if rid}
+		access_roles = {rid for rid in (modmail_access_id, mgmt_access_id) if rid}
+		
+		check_staff = bool(staff_role_ids and any(r.id in staff_role_ids for r in user.roles))
+		check_modmail = bool(access_roles and any(r.id in access_roles for r in user.roles))
+
+		if not check_staff:
 			await interaction.response.send_message("**`🚫 Prohibited!`** You do not have permission to register access.", ephemeral=True)
 			return
 		
-		if (modmail_access_role or mgmt_access_role) in user.roles:
+		if check_modmail:
 			await interaction.response.send_message("**`⚠️ Error!`** You already have access to the ticket system.", ephemeral=True)
 			return
 		
 		if user.guild_permissions.administrator:
+			if check_modmail:
+				await interaction.response.send_message("**`⚠️ Error!`** You already have access to the ticket system.", ephemeral=True)
+				return
 			await user.add_roles(mgmt_access_role)
 			await interaction.response.send_message(f"**`✅ Success!`** Assigned {mgmt_access_role.mention} to you since you have Administrator privileges in this server.", ephemeral=True)
 			return

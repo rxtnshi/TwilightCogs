@@ -30,12 +30,12 @@ class TicketSelect(discord.ui.Select):
             await interaction.message.edit(view=new_view)
             return
 
-        gconf = cog.config.guild(interaction.guild)
+        sconfg = cog.config.guild(interaction.guild)
 
         # Check for panic mode
-        tickets_enabled = await gconf.tickets_enabled()
+        tickets_enabled = await sconfg.tickets_enabled()
         if not tickets_enabled:
-            log_ch_id = await gconf.ticket_log_channel()
+            log_ch_id = await sconfg.ticket_log_channel()
             log_ch = interaction.guild.get_channel(log_ch_id) if log_ch_id else None
             if log_ch:
                 await log_ch.send(f"{interaction.user} ({interaction.user.id}) attempted to open ticket type `{self.values[0]}` during panic mode.")
@@ -53,7 +53,7 @@ class TicketSelect(discord.ui.Select):
             return
 
         # Check ticket type status
-        ticket_statuses = await gconf.ticket_statuses()
+        ticket_statuses = await sconfg.ticket_statuses()
         selected_type = self.values[0]
         if not ticket_statuses.get(selected_type, True):
             new_view = TicketView()
@@ -62,7 +62,7 @@ class TicketSelect(discord.ui.Select):
             return
 
         # Prevent duplicate ticket in same category
-        cats = await gconf.ticket_categories()
+        cats = await sconfg.ticket_categories()
         if selected_type == "discord":
             cat_id = cats.get("discord")
         elif selected_type == "scpsl":
@@ -140,14 +140,16 @@ class CloseTicket(discord.ui.Button):
     async def callback(self, interaction: discord.Interaction):
         cog = interaction.client.get_cog("TwilightTickets")
         if not cog:
-            await interaction.response.send_message("`🛑` Ticket system not loaded.", ephemeral=True)
+            await interaction.response.send_message("**`⚠️ Error!`** Ticket system not loaded.", ephemeral=True)
             return
 
-        gconf = cog.config.guild(interaction.guild)
-        mod_role_id = await gconf.modmail_access_role()
-        is_allowed = interaction.user.guild_permissions.administrator or (
-            mod_role_id and any(r.id == mod_role_id for r in interaction.user.roles)
-        )
+        sconfg = cog.config.guild(interaction.guild)
+        mod_role_id = await sconfg.modmail_access_role()
+        mgmt_role_id = await sconfg.management_access_role()
+        
+        access_roles = {rid for rid in(mod_role_id, mgmt_role_id) if rid}
+        is_allowed = bool(access_roles and any(r.id in access_roles for r in interaction.user.roles))
+
         if not is_allowed:
             new_view = CloseTicketView()
             await interaction.response.send_message("**`🚫 Prohibited!`** You do not have permission to close this ticket.", ephemeral=True)
