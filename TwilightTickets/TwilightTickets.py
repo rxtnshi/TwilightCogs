@@ -519,10 +519,11 @@ class TwilightTickets(commands.Cog):
 		)
 		staff_group = ""
 		staff_group += (
+			"`initiate`: Starts the interactive setup for the ticket system. Optional: Can resend the panel or restart setup.\n\n"
+			"`register`: Registers access to the ticket system. Users with Administrator privileges will gain elevated access to the ticket system.\n\n"
 			"`blacklist <user> <reason>`: Blacklists a user from the ticketing system.\n\n"
 			"`unblacklist <user> <reason>`: Removes a user the blacklist.\n\n"
 			"`history <user>`: Gets the ticket history for a user. Currently, the last 5 tickets are displayed.\n\n"
-			"`initiate`: Starts the interactive setup for the ticket system.\n\n"
 			"`panic`: Enables or disables ticket creation.\n\n"
 			"`set <ticket_type_or_pings> <status>`: Enables or disables a specific ticket type or staff pings in tickets.\n\n"
 			"`settings`: Displays all current settings and ticket statuses."
