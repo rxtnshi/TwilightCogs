@@ -186,6 +186,7 @@ class TwilightTickets(commands.Cog):
 			embed.add_field(name="🎮 SCP:SL Staff", value="Report users or general inquiries", inline=False)
 			embed.add_field(name="🔨 Appeals Requests", value="Appeal Discord or SCP:SL punishments", inline=False)
 			embed.set_thumbnail(url="https://images.steamusercontent.com/ugc/961973556172351165/A41A548899E427C540698909FF523F4E7558EBAF/?imw=5000")
+			embed.set_footer("🕑 Last updated")
 
 			return embed
 		
