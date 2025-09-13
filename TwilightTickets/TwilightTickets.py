@@ -76,16 +76,6 @@ class TwilightTickets(commands.Cog):
 		self.cursor = self.conn.cursor()
 		self.setup_db()
 
-	def role_check(self, member: discord.Member):
-		if not self.modmail_access_role:
-			return False
-		return any(role.id == self.modmail_access_role for role in member.roles)
-	
-	def role_check_elevated(self, member: discord.Member):
-		if not self.management_access_role:
-			return False
-		return any(role.id == self.management_access_role for role in member.roles)
-
 	def setup_db(self):
 		"""Creates DB for stats, history, whatnot"""
 		self.cursor.execute("""
@@ -627,6 +617,35 @@ class TwilightTickets(commands.Cog):
 		embed.add_field(name="Channel & Category Configuration", value=channels_text, inline=False)
 
 		await interaction.response.send_message(embed=embed)
+
+	@staff.command(name="register", description="Registers access to the ticket system")
+	async def register_access(self, interaction: discord.Interaction):
+		sconfg = self.config.guild(interaction.guild)
+		user = interaction.user
+
+		discord_staff_id = await sconfg.discord_staff_role()
+		scpsl_staff_id = await sconfg.scpsl_staff_role()
+		discord_staff_role = interaction.guild.get_role(discord_staff_id)
+		scpsl_staff_role = interaction.guild.get_role(scpsl_staff_id)
+		modmail_access_role = interaction.guild.get_role(await sconfg.modmail_access_role())
+		mgmt_access_role = interaction.guild.get_role(await sconfg.management_access_role())
+
+		if (discord_staff_role or scpsl_staff_role) not in user.roles:
+			await interaction.response.send_message("**`🚫 Prohibited!`** You do not have permission to register access.", ephemeral=True)
+			return
+		
+		if (modmail_access_role or mgmt_access_role) in user.roles:
+			await interaction.response.send_message("**`⚠️ Error!`** You already have access to the ticket system.", ephemeral=True)
+			return
+		
+		if user.guild_permissions.administrator:
+			await user.add_roles(mgmt_access_role)
+			await interaction.response.send_message(f"**`✅ Success!`** Assigned {mgmt_access_role.mention} to you since you have Administrator privileges in this server.", ephemeral=True)
+			return
+		
+		await user.add_roles(modmail_access_role)
+		await interaction.response.send_message(f"**`✅ Success!`** Assigned {modmail_access_role.mention} to you. If you are a server administrator that needs management level access, you may add {mgmt_access_role.mention} manually.", ephemeral=True)
+		return
 
 	@appeals.command(name="status", description="Gets the status of an appeal")
 	async def get_status_appeal(self, interaction: discord.Interaction, appeal_id: str):
