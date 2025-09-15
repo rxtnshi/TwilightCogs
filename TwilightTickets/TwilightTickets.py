@@ -172,7 +172,7 @@ class TwilightTickets(commands.Cog):
 		def make_embed():
 			embed = discord.Embed(
 				title=f"{interaction.guild.name} Support System",
-				description="Welcome to our support system!\n\nPlease make sure to read our guidelines below before opening a help request. If you would like to open one, please interact with the dropdown menu below.",
+				description="Welcome to our support system!\n\nPlease make sure to read our guidelines below before opening a help request. If you would like to open one, please interact with the dropdown menu below.\n\n Categories available for help are listed below:",
 				color=0x7a2db9
 			)
 
