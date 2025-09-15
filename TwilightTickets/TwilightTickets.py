@@ -87,6 +87,7 @@ class TwilightTickets(commands.Cog):
 				open_time TEXT NOT NULL,
 				close_time TEXT,
 				log_message_id INTEGER,
+				ticket_type TEXT,
 				close_reason TEXT
 			)
 		""")
@@ -104,6 +105,7 @@ class TwilightTickets(commands.Cog):
 			CREATE TABLE IF NOT EXISTS appeals (
 				appeal_id TEXT PRIMARY KEY,
 				user_id INTEGER NOT NULL,
+				ban_platform TEXT,
 				ban_appeal_reason TEXT,
 				appeal_status TEXT NOT NULL,
 				timestamp TEXT NOT NULL
@@ -176,7 +178,7 @@ class TwilightTickets(commands.Cog):
 		)
 			embed.add_field(name="👮 Discord Staff", value="Report users or general inquiries", inline=False)
 			embed.add_field(name="🎮 SCP:SL Staff", value="Report users or general inquiries", inline=False)
-			embed.add_field(name="🔨 Appeals Requests", value="Appeal Discord or SCP:SL punishments", inline=False)
+			embed.add_field(name="🔨 Appeals Requests", value="Appeal Discord or SCP:SL moderations", inline=False)
 			embed.set_thumbnail(url="https://images.steamusercontent.com/ugc/961973556172351165/A41A548899E427C540698909FF523F4E7558EBAF/?imw=5000")
 			embed.set_footer(text="🕑 Last refreshed")
 
@@ -321,7 +323,7 @@ class TwilightTickets(commands.Cog):
 		await sconfg.panel_channel.set(panel_channel.id)
 
 		await panel_channel.send(embed=embed, view=ViewsModals.TicketView())
-		await interaction.followup.send(f"**`✅ Success!`**: Panel sent to {panel_channel.mention}.")
+		await interaction.followup.send(f"**`✅ Success!`** Panel sent to {panel_channel.mention}.")
 
 	@staff.command(name="panic", description="Enables or disables panic mode")
 	async def panic(self, interaction: discord.Interaction):
@@ -340,7 +342,7 @@ class TwilightTickets(commands.Cog):
 		current = await sconfg.tickets_enabled()
 		new = not current
 		await sconfg.tickets_enabled.set(new)
-		await interaction.response.send_message(f"**`✅ Success!`**: Ticket creation is now {'enabled' if new else 'disabled'}.")
+		await interaction.response.send_message(f"**`✅ Success!`** Ticket creation is now {'enabled' if new else 'disabled'}.")
 
 	@staff.command(name="set", description="Enable/disable a specific ticket type or ticket pings")
 	@app_commands.choices(
@@ -373,9 +375,9 @@ class TwilightTickets(commands.Cog):
 
 		await sconfg.ticket_statuses.set(ticket_statuses)
 		if option == "staffping":
-			await interaction.response.send_message(f"**`✅ Success!`**: Staff pings have been {status}d.")
+			await interaction.response.send_message(f"**`✅ Success!`** Staff pings have been {status}d.")
 		else:
-			await interaction.response.send_message(f"**`✅ Success!`**: {option.capitalize()} tickets have been {status}d.")
+			await interaction.response.send_message(f"**`✅ Success!`** {option.capitalize()} tickets have been {status}d.")
 
 	@staff.command(name="blacklist", description="Blacklists a user")
 	async def blacklist_user(self, interaction: discord.Interaction, user: discord.Member, reason: str):
@@ -401,7 +403,7 @@ class TwilightTickets(commands.Cog):
 				VALUES(?, ?, ?, ?)
 			""", (user.id, reason, interaction.user.id, datetime.now().isoformat()))
 			self.conn.commit()
-			await interaction.response.send_message(f"**`✅ Success!`**: {user.mention} has been successfully blacklisted. **Reason:** {reason}")
+			await interaction.response.send_message(f"**`✅ Success!`** {user.mention} has been successfully blacklisted. **Reason:** {reason}")
 		except sqlite3.IntegrityError:
 			await interaction.response.send_message(f"**`⚠️ Error!`** {user.mention} has already been blacklisted.")
 			return
@@ -423,7 +425,7 @@ class TwilightTickets(commands.Cog):
 		self.cursor.execute("DELETE FROM blacklist WHERE user_id = ?", (user.id,))
 		if self.cursor.rowcount > 0:
 			self.conn.commit()
-			await interaction.response.send_message(f"**`✅ Success!`**: {user.mention} has been successfully removed from the blacklist!")
+			await interaction.response.send_message(f"**`✅ Success!`** {user.mention} has been successfully removed from the blacklist!")
 		else:
 			await interaction.response.send_message(f"**`⚠️ Error!`** {user.mention} was not found in the blacklist.")
 
