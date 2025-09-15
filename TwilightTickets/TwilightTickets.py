@@ -171,8 +171,8 @@ class TwilightTickets(commands.Cog):
 
 		def make_embed():
 			embed = discord.Embed(
-				title=f"{interaction.guild.name} Support & Reports",
-				description="Need to contact staff? Select a category below.",
+				title=f"{interaction.guild.name} Support System",
+				description="Welcome to our support system!\n\nPlease make sure to read our guidelines below before opening a help request. If you would like to open one, please interact with the dropdown menu below.",
 				color=0x7a2db9
 			)
 
@@ -182,7 +182,7 @@ class TwilightTickets(commands.Cog):
 			embed.set_thumbnail(url="https://media.tenor.com/Vn_Bm9z2-4EAAAAM/a-hat-in-time-hat-in-time.gif")
 
 			embed2 = discord.Embed(
-				title="❔Ticket Guidelines",
+				title="🚨 Help Request Guidelines",
 				description="Before opening a support request, please make sure to **read** the guidelines below. These guidelines may change at any given time without notice.",
 				timestamp=datetime.now(),
 				color=discord.Color.red()
