@@ -20,7 +20,7 @@ class TicketSelect(discord.ui.Select):
             discord.SelectOption(label="🎮 SCP:SL Staff", description="Open a ticket for reports/inquiries", value="scpsl"),
             discord.SelectOption(label="🔨 Appeals Requests", description="Request an appeal for a punishment", value="appeals")
         ]
-        super().__init__(placeholder="Select a category...", options=options, custom_id="persistent_ticket_select")
+        super().__init__(placeholder="Select a Category", options=options, custom_id="persistent_ticket_select")
 
     async def callback(self, interaction: discord.Interaction):
         cog = interaction.client.get_cog("TwilightTickets")
@@ -220,7 +220,6 @@ class DiscordModal(discord.ui.Modal):
         super().__init__(title="Discord Help Request", timeout=None)
         self.request_type = discord.ui.Label(
             text="What type of request are you making today?",
-            description="Valid options: User Reports, General Inquiries",
             component=discord.ui.Select(
                 required=True,
                 placeholder="Select a category",
@@ -284,7 +283,6 @@ class GameModal(discord.ui.Modal):
         super().__init__(title="Game Staff Help Request", timeout=None)
         self.request_type = discord.ui.Label(
             text="What type of request are you making today?",
-            description="Valid options: Connection Issues, Player Reports, General Inquiries",
             component=discord.ui.Select(
                 required=True,
                 placeholder="Select a category",

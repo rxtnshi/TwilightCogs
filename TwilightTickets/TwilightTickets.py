@@ -11,7 +11,7 @@ from redbot.core.data_manager import cog_data_path
 
 """ 
 TO-DO List:
-	-  Double check for typos and what not on development branch/instance
+	-  Add comments to explain thought process
 """
 
 class TwilightTickets(commands.Cog):
@@ -171,20 +171,32 @@ class TwilightTickets(commands.Cog):
 
 		def make_embed():
 			embed = discord.Embed(
-			title=f"{interaction.guild.name} Support & Reports",
-			description="Need to contact staff? Select a category below.",
-			timestamp=datetime.now(),
-			color=0x7a2db9
-		)
+				title=f"{interaction.guild.name} Support & Reports",
+				description="Need to contact staff? Select a category below.",
+				color=0x7a2db9
+			)
+
 			embed.add_field(name="👮 Discord Staff", value="Report users or general inquiries", inline=False)
 			embed.add_field(name="🎮 SCP:SL Staff", value="Report users or general inquiries", inline=False)
 			embed.add_field(name="🔨 Appeals Requests", value="Appeal Discord or SCP:SL moderations", inline=False)
-			embed.set_thumbnail(url="https://images.steamusercontent.com/ugc/961973556172351165/A41A548899E427C540698909FF523F4E7558EBAF/?imw=5000")
-			embed.set_footer(text="🕑 Last refreshed")
+			embed.set_thumbnail(url="https://media.tenor.com/Vn_Bm9z2-4EAAAAM/a-hat-in-time-hat-in-time.gif")
 
-			return embed
+			embed2 = discord.Embed(
+				title="❔Ticket Guidelines",
+				description="Before opening a support request, please make sure to **read** the guidelines below. These guidelines may change at any given time without notice.",
+				timestamp=datetime.now(),
+				color=discord.Color.red()
+			)
+			embed2.add_field(name="Duplicate Requests", value="Duplicate requests under the same user will be rejected automatically. Bypassing this with another account will result in that account getting blacklisted.", inline=False)
+			embed2.add_field(name="Violations of our Rules or the Discord Terms of Service", value="Help requests will still fall under our server rules with some exceptions. We are obligated to report Discord ToS violations as well.", inline=False)
+			embed2.add_field(name="Joke Requests", value="Opening a joke request will result in your request being closed and/or you being blacklisted from the request system indefinitely. Bypassing this would result in moderation of your account.", inline=False)
+			embed2.add_field(name="Non-related Requests", value="Requests that are not related to our servers in any way may be closed based on staff discretion.", inline=False)
+			embed2.set_footer(text="🕑 Last refreshed")
+			embed2.set_thumbnail(url="https://media.tenor.com/HSPuoBtwg8UAAAAM/hat-in-time-run.gif")
+
+			return [embed, embed2]
 		
-		embed = make_embed()
+		embeds = make_embed()
 		panel_ch = interaction.guild.get_channel(panel_channel_id) if panel_channel_id else None
 
 		# Resend panel method
@@ -193,12 +205,12 @@ class TwilightTickets(commands.Cog):
 				if panel_message_id:
 					try:
 						msg = await panel_ch.fetch_message(panel_message_id)
-						await msg.edit(embed=embed, view=ViewsModals.TicketView())
+						await msg.edit(embeds=embeds, view=ViewsModals.TicketView())
 						await interaction.followup.send("**`✅ Success!`**: Panel refreshed.")
 						return
 					except Exception:
 						pass
-				new_msg = await panel_ch.send(embed=embed, view=ViewsModals.TicketView())
+				new_msg = await panel_ch.send(embeds=embeds, view=ViewsModals.TicketView())
 				await sconfg.panel_message_id.set(new_msg.id)
 				panel_ch = interaction.guild.get_channel(panel_channel_id)
 				await interaction.followup.send("**`✅ Success!`**: Panel was deleted so it was resent.")
@@ -322,7 +334,7 @@ class TwilightTickets(commands.Cog):
 		await sconfg.appeal_team_role.set(appeal_staff.id)
 		await sconfg.panel_channel.set(panel_channel.id)
 
-		await panel_channel.send(embed=embed, view=ViewsModals.TicketView())
+		await panel_channel.send(embeds=embeds, view=ViewsModals.TicketView())
 		await interaction.followup.send(f"**`✅ Success!`** Panel sent to {panel_channel.mention}.")
 
 	@staff.command(name="panic", description="Enables or disables panic mode")
