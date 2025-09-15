@@ -218,10 +218,45 @@ class CloseTicketModal(discord.ui.Modal):
 class DiscordModal(discord.ui.Modal):
     def __init__(self):
         super().__init__(title="Discord Help Request", timeout=None)
-        self.discord_request_name = discord.ui.TextInput(label="What is your issue?", required=True, style=discord.TextStyle.short)
-        self.discord_request = discord.ui.TextInput(label="Describe the issue", required=True, style=discord.TextStyle.paragraph)
-        self.add_item(self.discord_request_name)
-        self.add_item(self.discord_request)
+        self.request_type = discord.ui.Label(
+            text="What type of request are you making today?",
+            description="Valid options: User Reports, General Inquiries",
+            component=discord.ui.Select(
+                required=True,
+                placeholder="Select a category",
+                options=[
+                    discord.SelectOption(label="User Report", description="Report a user in Discord server", value="User Report"),
+                    discord.SelectOption(label="General Inquiry", description="General questions regarding our Discord server", value="General Inquiry")
+                ]
+            )
+        )
+
+        self.request_title = discord.ui.Label(
+            text="What is your request?",
+            description="User Reports: write \"User Report: <username>\" | Other Requests: describe in a few words below",
+            component=discord.ui.TextInput(
+                required=True,
+                placeholder="What can we help with you today?",
+                style=discord.TextStyle.short,
+                min_length=10
+            )
+        )
+
+        self.request_description = discord.ui.Label(
+            text="Tell us more about your request!",
+            description="Please provide us as much information so we're able to assist you better",
+            component=discord.ui.TextInput(
+                required=True,
+                placeholder="Describe your request here!",
+                style=discord.TextStyle.paragraph,
+                min_length=10,
+                max_length=400
+            )
+        )
+
+        self.add_item(self.request_type)
+        self.add_item(self.request_title)
+        self.add_item(self.request_description)
 
     async def on_submit(self, interaction: discord.Interaction):
         cog = interaction.client.get_cog("TwilightTickets")
@@ -233,9 +268,11 @@ class DiscordModal(discord.ui.Modal):
         staff_role_id = await sconfg.discord_staff_role()
 
         await create_ticket(
-            interaction, "Discord", 
-            self.discord_request_name.value, 
-            self.discord_request.value,
+            interaction, 
+            "Discord",
+            self.request_type.component.values[0],
+            self.request_title.component.value, 
+            self.request_description.component.value,
             category_id, # category id
             staff_role_id, # staff id
             0x5865f2, 
@@ -245,10 +282,46 @@ class DiscordModal(discord.ui.Modal):
 class GameModal(discord.ui.Modal):
     def __init__(self):
         super().__init__(title="Game Staff Help Request", timeout=None)
-        self.game_request_name = discord.ui.TextInput(label="What is your issue?", required=True, style=discord.TextStyle.short)
-        self.game_request = discord.ui.TextInput(label="Describe the issue", required=True, style=discord.TextStyle.paragraph)
-        self.add_item(self.game_request_name)
-        self.add_item(self.game_request)
+        self.request_type = discord.ui.Label(
+            text="What type of request are you making today?",
+            description="Valid options: Connection Issues, Player Reports, General Inquiries",
+            component=discord.ui.Select(
+                required=True,
+                placeholder="Select a category",
+                options=[
+                    discord.SelectOption(label="Connection Issues", description="Cannot connect to SCP:SL servers, VPN Block, etc.", value="Connection Issues"),
+                    discord.SelectOption(label="Player Report", description="Report a player in our SCP:SL servers", value="Player Report"),
+                    discord.SelectOption(label="General Inquiry", description="General questions regarding our SCP:SL servers", value="General Inquiry")
+                ]
+            )
+        )
+
+        self.request_title = discord.ui.Label(
+            text="What is your request?",
+            description="Player Reports: write \"Player Report: <username>\" | Other Requests: describe in a few words below",
+            component=discord.ui.TextInput(
+                required=True,
+                placeholder="What can we help with you today?",
+                style=discord.TextStyle.short,
+                min_length=10
+            )
+        )
+
+        self.request_description = discord.ui.Label(
+            text="Tell us more about your request!",
+            description="Please provide us as much information so we're able to assist you better",
+            component=discord.ui.TextInput(
+                required=True,
+                placeholder="Describe your request here!",
+                style=discord.TextStyle.paragraph,
+                min_length=10,
+                max_length=400
+            )
+        )
+
+        self.add_item(self.request_type)
+        self.add_item(self.request_title)
+        self.add_item(self.request_description)
     
     async def on_submit(self, interaction: discord.Interaction):
         cog = interaction.client.get_cog("TwilightTickets")
@@ -261,9 +334,10 @@ class GameModal(discord.ui.Modal):
 
         await create_ticket(
             interaction, 
-            "SCP:SL", 
-            self.game_request_name.value, 
-            self.game_request.value,
+            "SCP:SL",
+            self.request_type.component.values[0],
+            self.request_title.component.value, 
+            self.request_description.component.value,
             category_id, # category id
             staff_role_id, # staff id
             0x3498db, 
@@ -273,8 +347,45 @@ class GameModal(discord.ui.Modal):
 class AppealModal(discord.ui.Modal):
     def __init__(self):
         super().__init__(title="Appeal Request", timeout=None)
-        self.appeal_user = discord.ui.TextInput(label="SteamID64 or Discord Username/ID", placeholder="Format: [Platform]: [ID]", required=True, style=discord.TextStyle.short)
-        self.appeal_info = discord.ui.TextInput(label="Relevant Information/Evidence", placeholder="Provide evidence to support your appeal.", required=True, style=discord.TextStyle.paragraph)
+        self.appeal_platform = discord.ui.Label(
+            text="What is the platform you were banned on?",
+            description="Please select the platform you were banned on.",
+            component=discord.ui.Select(
+                required=True,
+                placeholder="Select a Platform",
+                options=[
+                    discord.SelectOption(label="Steam", value="Steam"),
+                    discord.SelectOption(label="Discord", value="Discord"),
+                    discord.SelectOption(label="Other", value="Other Platform")
+                ]
+            )
+        )
+
+        self.appeal_user = discord.ui.Label(
+            text="What is your Account ID (or User ID)?",
+            description="Discord: Right click account -> Copy ID | Steam: Paste profile URL in steamid.io -> Copy SteamID64",
+            component=discord.ui.TextInput(
+                required=True,
+                placeholder="Discord UserID or SteamID64",
+                style=discord.TextStyle.short,
+                min_length=15,
+                max_length=22
+            )
+        )
+
+        self.appeal_info = discord.ui.Label(
+            text="Relevant Information",
+            description="Provide details that support your appeal.",
+            component=discord.ui.TextInput(
+                required=True,
+                placeholder="Please explain your case",
+                style=discord.TextStyle.paragraph,
+                min_length=40,
+                max_length=400
+            )
+        )
+
+        self.add_item(self.appeal_platform)
         self.add_item(self.appeal_user)
         self.add_item(self.appeal_info)
 
@@ -282,7 +393,7 @@ class AppealModal(discord.ui.Modal):
         cog = interaction.client.get_cog("TwilightTickets")
         if not cog: return
 
-        await create_ban_appeal(interaction, self.appeal_user.value, self.appeal_info.value, cog)
+        await create_ban_appeal(interaction, self.appeal_platform.component.values[0], self.appeal_user.component.value, self.appeal_info.component.value, cog)
 
 class FinishAppealModal(discord.ui.Modal):
     def __init__(self, decision: str):

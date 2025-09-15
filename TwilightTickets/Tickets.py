@@ -11,7 +11,8 @@ from discord.ext import commands
 async def create_ticket(
     interaction,
     ticket_type: str,
-    request_name: str,
+    ticket_type_request: str,
+    request_title: str,
     request_description: str,
     category_id: int,
     staff_role_id: int,
@@ -29,11 +30,11 @@ async def create_ticket(
 
     category = discord.utils.get(guild.categories, id=category_id)
     if category is None:
-        await interaction.response.send_message("**`⚠️ Error!`** Cannot open a ticket right now.", ephemeral=True)
+        await interaction.response.send_message("**`⚠️ Error!`** Cannot open a request right now.", ephemeral=True)
         return
 
     ticket_id = uuid.uuid4().hex[:6]
-    channel_name = f"{ticket_type.lower()}-report-{ticket_id}"
+    channel_name = f"{ticket_type.lower()}-request-{ticket_id}"
 
     overwrites = {
         guild.default_role: discord.PermissionOverwrite(view_channel=False),
@@ -48,20 +49,24 @@ async def create_ticket(
         topic=f"ID: {ticket_id} | Issue: {request_description} | Opened by: {user.mention} ({user.id})"
     )
     
-    cog.cursor.execute("""
-        INSERT INTO tickets (ticket_id, channel_id, opener_id, open_time)
-        VALUES (?, ?, ?, ?)
-        """, (ticket_id, channel.id, user.id, datetime.now().isoformat()))
-    cog.conn.commit()
+    try:
+        cog.cursor.execute(
+            "INSERT OR IGNORE INTO tickets (ticket_id, channel_id, opener_id, open_time, ticket_type) VALUES (?, ?, ?, ?, ?)",
+            (ticket_id, channel.id, user.id, datetime.now().isoformat(), ticket_type_request),
+        )
+        cog.conn.commit()
+    except Exception as e:
+        print(f"[Ticket Creation] DB insert failed for {ticket_id}: {e}")
 
     embed = discord.Embed(
-        title=f"📋 {ticket_type} Ticket Submitted",
-        description=f"{user.mention} submitted a ticket.",
+        title=f"📋 {ticket_type} Request Submitted",
+        description=f"{user.mention} submitted a new request. Please take a look at the details and notify appropriate staff members if necessary.",
         color=embed_color,
         timestamp=datetime.now()
     )
-    embed.add_field(name="Issue", value=request_name, inline=False)
-    embed.add_field(name="Description", value=request_description, inline=False)
+    embed.add_field(name="Request Type", value=ticket_type_request, inline=False)
+    embed.add_field(name="Request Title", value=request_title, inline=False)
+    embed.add_field(name="Request Description", value=request_description, inline=False)
 
     ping_message = f"<@&{staff_role_id}>" if (staff_ping_enabled and staff_role_id) else None
 
@@ -86,7 +91,7 @@ async def close_ticket(channel: discord.TextChannel, closer: discord.Member, clo
             """, (closer.id, datetime.now().isoformat(), log_message.id, close_reason, ticket_id))
             cog.conn.commit()
         except Exception as e:
-            print(f"Failed to update ticket {ticket_id} in database: {e}")
+            print(f"[Ticket Closing] Failed to update ticket {ticket_id} in database: {e}")
 
     await channel.delete()
 
@@ -100,12 +105,38 @@ async def create_transcript(channel: discord.TextChannel, open_reason: str, open
     
     open_time_dt = None
     open_time_ts = "N/A"
-    cog.cursor.execute("SELECT open_time FROM tickets WHERE ticket_id = ?", (ticket_id,))
-    result = cog.cursor.fetchone()
-    if result:
-        open_time_dt = datetime.fromisoformat(result[0])
-        open_time_str = open_time_dt.strftime('%Y-%m-%d %H:%M:%S UTC')
-        open_time_ts = f"<t:{int(open_time_dt.timestamp())}:f>"
+    open_time_str = "N/A"
+    ticket_type = "Unknown"
+
+    # Get info from DB
+    try:
+        cog.cursor.execute("SELECT open_time, ticket_type, opener_id FROM tickets WHERE ticket_id = ?", (ticket_id,))
+        result = cog.cursor.fetchone()
+        open_user_id = None
+        if result:
+            open_time_iso, db_ticket_type, open_user_id = result
+            open_user_id = None
+            if open_time_iso:
+                open_time_dt = datetime.fromisoformat(open_time_iso)
+                open_time_str = open_time_dt.strftime('%Y-%m-%d %H:%M:%S UTC')
+                open_time_ts = f"<t:{int(open_time_dt.timestamp())}:f>"
+            if ticket_type:
+                ticket_type = db_ticket_type
+    except Exception as e:
+        print(f"[Ticket Transcripts] DB read failed for ticket id = {ticket_id}") 
+        open_user_id = None
+
+    opener_user = "Unknown"
+    if isinstance(opener, (discord.Member, discord.User)):
+        opener_user = f"{opener} ({opener.id})"
+    elif open_user_id:
+        opener_user = f"<@{open_user_id}> ({open_user_id})"
+
+    closer_user = "Unknown"
+    closer_id = None
+    if isinstance(closer, (discord.Member, discord.User)):
+        closer_id = closer.id
+        closer_user = f"{closer} ({closer_id})"
 
     close_time_dt = datetime.now()
     close_time_str = close_time_dt.strftime('%Y-%m-%d %H:%M:%S UTC')
@@ -114,11 +145,12 @@ async def create_transcript(channel: discord.TextChannel, open_reason: str, open
     # header
     transcript = "-" * 40 + "\n"
     transcript += f"Transcript for ticket channel: {channel.name}\n"
-    transcript += f"Opened by: {opener} ({opener.id})\n"
-    transcript += f"Closed by: {closer} ({closer.id})\n"
+    transcript += f"Opened by: {opener_user}\n"
+    transcript += f"Closed by: {closer_user}\n"
     transcript += f"Opened at: {open_time_str}\n"
     transcript += f"Closed at: {close_time_str}\n"
-    transcript += f"Ticket issue: {open_reason}\n"
+    transcript += f"Request Type: {ticket_type}\n"
+    transcript += f"Request Issue: {open_reason}\n"
     transcript += f"Close Reason: {close_reason}\n"
     transcript += "-" * 40 + "\n"
 
@@ -128,29 +160,31 @@ async def create_transcript(channel: discord.TextChannel, open_reason: str, open
         transcript += f"[{time}] {msg.author}: {content}\n"
     
     user_embed = discord.Embed(
-        title=f"📫 Ticket Transcript",
+        title=f"📫 Ticket Transcript for `{channel.name}`",
         description="Thank you for opening a ticket with us. Your ticket transcript is attached.",
         color=0x00FF00,
         timestamp=close_time_dt
     )
-    user_embed.add_field(name="Opened by", value=f"{opener.mention} ({opener.id})", inline=False)
-    user_embed.add_field(name="Closed by", value=f"{closer.mention} ({closer.id})", inline=False)
+    user_embed.add_field(name="Opened by", value=opener_user, inline=False)
+    user_embed.add_field(name="Closed by", value=closer_user, inline=False)
     user_embed.add_field(name="Opened at", value=open_time_ts, inline=True)
     user_embed.add_field(name="Closed at", value=close_time_ts, inline=True)
-    user_embed.add_field(name="Ticket Issue", value=f"{open_reason}", inline=False)
+    user_embed.add_field(name="Request Type", value=ticket_type, inline=False)
+    user_embed.add_field(name="Request Issue", value=f"{open_reason}", inline=False)
     user_embed.add_field(name="Close Reason", value=close_reason, inline=False)
 
     logs_channel_embed = discord.Embed(
         title=f"📋 Ticket Transcript",
-        description=f"Ticket log for `{channel.name}`",
+        description=f"Ticket transcript for `{channel.name}`",
         color=0x00FF00,
         timestamp=close_time_dt
     )
-    logs_channel_embed.add_field(name="Opened by", value=f"{opener} ({opener.id})", inline=False)
-    logs_channel_embed.add_field(name="Closed by", value=f"{closer} ({closer.id})", inline=False)
+    logs_channel_embed.add_field(name="Opened by", value=opener_user, inline=False)
+    logs_channel_embed.add_field(name="Closed by", value=closer_user, inline=False)
     logs_channel_embed.add_field(name="Opened at", value=open_time_ts, inline=True)
     logs_channel_embed.add_field(name="Closed at", value=close_time_ts, inline=True)
-    logs_channel_embed.add_field(name="Ticket issue", value=f"{open_reason}", inline=False)
+    logs_channel_embed.add_field(name="Request Type", value=ticket_type, inline=False)
+    logs_channel_embed.add_field(name="Request Issue", value=f"{open_reason}", inline=False)
     logs_channel_embed.add_field(name="Close Reason", value=close_reason, inline=False)
 
     transcript_text = transcript
@@ -166,7 +200,7 @@ async def create_transcript(channel: discord.TextChannel, open_reason: str, open
 
     return log_message
 
-async def create_ban_appeal(interaction, banned_user: str, appeal_request: str, cog: commands.Cog):
+async def create_ban_appeal(interaction, banned_user: str, appeal_platform: str, appeal_request: str, cog: commands.Cog):
     from . import ViewsModals
     
     sconfg = cog.config.guild(interaction.guild)
@@ -182,9 +216,9 @@ async def create_ban_appeal(interaction, banned_user: str, appeal_request: str, 
     staff_ping_enabled = ticket_statuses.get("staffping", True)
 
     cog.cursor.execute("""
-        INSERT INTO appeals (appeal_id, user_id, ban_appeal_reason, appeal_status, timestamp)
-        VALUES (?, ?, ?, 'pending', ?)
-    """, (appeal_id, user.id, appeal_request, datetime.now().isoformat()))
+        INSERT INTO appeals (appeal_id, user_id, ban_platform, ban_appeal_reason, appeal_status, timestamp)
+        VALUES (?, ?, ?, ?, 'pending', ?)
+    """, (appeal_id, user.id, appeal_platform, appeal_request, datetime.now().isoformat()))
     cog.conn.commit()
 
     appeals_channel_id = await sconfg.appeal_log_channel()
@@ -192,7 +226,7 @@ async def create_ban_appeal(interaction, banned_user: str, appeal_request: str, 
     appeals_channel = guild.get_channel(appeals_channel_id)
 
     if not appeals_channel:
-        print(f"**`⚠️ Error!`** Could not find the appeals channel with ID {appeals_channel_id}")
+        print(f"[Appeals] Could not find the appeals channel with ID {appeals_channel_id}")
         await interaction.response.send_message("**`⚠️ Error!`** The appeal system is misconfigured. Please contact an administrator.", ephemeral=True)
         return
     
@@ -201,7 +235,8 @@ async def create_ban_appeal(interaction, banned_user: str, appeal_request: str, 
         description=f"Appeal request by {user.mention}. Please investigate the details and select a decision when ready.", 
         color=0xffa500
     )
-    appeals_embed.add_field(name="Platform and AccountID", value=banned_user, inline=False)
+    appeals_embed.add_field(name="Platform", value=appeal_platform, inline=False)
+    appeals_embed.add_field(name="Account ID (User ID)", value=banned_user, inline=False)
     appeals_embed.add_field(name="Appeal Description", value=appeal_request, inline=False)
     appeals_embed.add_field(name="Time Submitted", value=time_sent_ts, inline=False)
     appeals_embed.set_footer(text=f"User ID: {user.id} | Appeal ID: {appeal_id}")
@@ -211,7 +246,8 @@ async def create_ban_appeal(interaction, banned_user: str, appeal_request: str, 
         description="Thank you for submitting an appeal. Your appeal will be looked at within the next 48 hours.",
         color=0xffa500
     )
-    user_embed.add_field(name="Platform and AccountID", value=banned_user, inline=False)
+    user_embed.add_field(name="Platform", value=appeal_platform, inline=False)
+    user_embed.add_field(name="Account ID (User ID)", value=banned_user, inline=False)
     user_embed.add_field(name="Appeal Description", value=appeal_request, inline=False)
     user_embed.add_field(name="Time Submitted", value=time_sent_ts, inline=False)
     user_embed.set_footer(text=f"User ID: {user.id} | Appeal ID: {appeal_id}")
@@ -245,7 +281,7 @@ async def finalize_appeal(opener_id: int, appeal_id: str, decision: str, reason:
 
     user = await cog.bot.fetch_user(opener_id)
     if not user:
-        print(f"Could not find user {opener_id} to DM appeal result.")
+        print(f"[Direct Messages] Could not find user {opener_id} to DM appeal result.")
         return
 
     if status == "accepted":
