@@ -222,7 +222,7 @@ class DiscordModal(discord.ui.Modal):
             text="What type of request are you making today?",
             component=discord.ui.Select(
                 required=True,
-                placeholder="Select a category",
+                placeholder="Select a Category",
                 options=[
                     discord.SelectOption(label="User Report", description="Report a user in Discord server", value="User Report"),
                     discord.SelectOption(label="General Inquiry", description="General questions regarding our Discord server", value="General Inquiry")
