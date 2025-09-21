@@ -339,9 +339,7 @@ class TwilightTickets(commands.Cog):
 
 	@staff.command(name="panic", description="Enables or disables panic mode")
 	async def panic(self, interaction: discord.Interaction):
-		"""
-		This will set the status for overall ticket creation.
-		"""
+		"""This will set the status for overall ticket creation."""
 		allowed = (
 			await self.has_management(interaction)
 		)
@@ -370,9 +368,7 @@ class TwilightTickets(commands.Cog):
 		]
 	)
 	async def enable_disable_type(self, interaction: discord.Interaction, option: str, status: str):
-		"""
-		This will enable or disable specific ticket categories as an alternative to panic mode.
-		"""
+		"""This will enable or disable specific ticket categories as an alternative to panic mode."""
 		allowed = (
 			await self.has_management(interaction)
 		)
@@ -393,9 +389,7 @@ class TwilightTickets(commands.Cog):
 
 	@staff.command(name="blacklist", description="Blacklists a user")
 	async def blacklist_user(self, interaction: discord.Interaction, user: discord.Member, reason: str):
-		"""
-		Blacklists a user from the ticket system if they're misusing the system
-		"""
+		"""Blacklists a user from the ticket system if they're misusing the system"""
 		allowed = (
 			await self.has_management(interaction)
 		)
@@ -422,9 +416,7 @@ class TwilightTickets(commands.Cog):
 	
 	@staff.command(name="unblacklist", description="Removes a user from the blacklist")
 	async def unblacklist_user(self, interaction: discord.Interaction, user: discord.Member):
-		"""
-		Removes a user from the blacklist.
-		"""
+		"""Removes a user from the blacklist."""
 		allowed = (
 			await self.has_management(interaction)
 		)
@@ -443,9 +435,7 @@ class TwilightTickets(commands.Cog):
 
 	@staff.command(name="history", description="Grabs the ticket history of a user")
 	async def ticket_history(self, interaction: discord.Interaction, user: discord.Member):
-		"""
-		Get the ticket history for a user
-		"""
+		"""Get the ticket history for a user"""
 		allowed = (
 			await self.has_staff(interaction)
 			or await self.has_management(interaction)
