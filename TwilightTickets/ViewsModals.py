@@ -191,10 +191,10 @@ class CloseTicketModal(discord.ui.Modal):
 
     async def on_submit(self, interaction: discord.Interaction):
         cog = interaction.client.get_cog("TwilightTickets")
-        if not cog: return
+        if not cog: 
+            return
         
         await interaction.response.send_message("⌛ Creating transcript and closing ticket...", ephemeral=True)
-
 
         sconfg = cog.config.guild(interaction.guild)
         channel = interaction.channel
@@ -232,7 +232,7 @@ class DiscordModal(discord.ui.Modal):
 
         self.request_title = discord.ui.Label(
             text="What is your request?",
-            description="User Reports: write \"User Report: <username>\" | Other Requests: describe in a few words below",
+            description="For user reports, type \"User Report: <user>\". Any other request please describe in a few words.",
             component=discord.ui.TextInput(
                 required=True,
                 placeholder="What can we help with you today?",
@@ -243,7 +243,7 @@ class DiscordModal(discord.ui.Modal):
 
         self.request_description = discord.ui.Label(
             text="Tell us more about your request!",
-            description="Please provide us as much information so we're able to assist you better",
+            description="Please provide us as much information so we're able to assist you better.",
             component=discord.ui.TextInput(
                 required=True,
                 placeholder="Describe your request here!",
@@ -285,7 +285,7 @@ class GameModal(discord.ui.Modal):
             text="What type of request are you making today?",
             component=discord.ui.Select(
                 required=True,
-                placeholder="Select a category",
+                placeholder="Select a Category",
                 options=[
                     discord.SelectOption(label="Connection Issues", description="Cannot connect to SCP:SL servers, VPN Block, etc.", value="Connection Issues"),
                     discord.SelectOption(label="Player Report", description="Report a player in our SCP:SL servers", value="Player Report"),
@@ -296,7 +296,7 @@ class GameModal(discord.ui.Modal):
 
         self.request_title = discord.ui.Label(
             text="What is your request?",
-            description="Player Reports: write \"Player Report: <username>\" | Other Requests: describe in a few words below",
+            description="For player reports, type \"Player Report: <player>\". Any other request please describe in a few words.",
             component=discord.ui.TextInput(
                 required=True,
                 placeholder="What can we help with you today?",
@@ -307,7 +307,7 @@ class GameModal(discord.ui.Modal):
 
         self.request_description = discord.ui.Label(
             text="Tell us more about your request!",
-            description="Please provide us as much information so we're able to assist you better",
+            description="Please provide us as much information so we're able to assist you better.",
             component=discord.ui.TextInput(
                 required=True,
                 placeholder="Describe your request here!",
@@ -346,8 +346,8 @@ class AppealModal(discord.ui.Modal):
     def __init__(self):
         super().__init__(title="Appeal Request", timeout=None)
         self.appeal_platform = discord.ui.Label(
-            text="What is the platform you were banned on?",
-            description="Please select the platform you were banned on.",
+            text="What is the platform you were moderated on?",
+            description="Please select the platform you were moderated on.",
             component=discord.ui.Select(
                 required=True,
                 placeholder="Select a Platform",
@@ -364,7 +364,7 @@ class AppealModal(discord.ui.Modal):
             description="Discord: Right click account -> Copy ID | Steam: Paste profile URL in steamid.io -> Copy SteamID64",
             component=discord.ui.TextInput(
                 required=True,
-                placeholder="Discord UserID or SteamID64",
+                placeholder="ID of the account that was moderated",
                 style=discord.TextStyle.short,
                 min_length=15,
                 max_length=22
