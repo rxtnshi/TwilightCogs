@@ -76,7 +76,7 @@ class TicketSelect(discord.ui.Select):
                 for ch in category.text_channels:
                     if ch.topic and f"({interaction.user.id})" in ch.topic:
                         new_view = TicketView()
-                        await interaction.response.send_message(f"**`🚫 Prohibited!`** You already have an open ticket in this category. You may access it here {ch.mention}", ephemeral=True)
+                        await interaction.response.send_message(f"**`🚫 Prohibited!`** You already have an open ticket in this category. You may access it here: {ch.mention}", ephemeral=True)
                         await interaction.message.edit(view=new_view)
                         return
 
