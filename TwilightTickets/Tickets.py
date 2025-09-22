@@ -74,7 +74,7 @@ async def create_ticket(
 
     created_ticket_embed = discord.Embed(
         title=f"📩 New Support Request!",
-        description=f"New ticket opened by {user.mention} ({user.id}) for `{ticket_type_desc}`",
+        description=f"Request opened by {user.mention} ({user.id}) for `{ticket_type_desc}`",
         color=discord.Color.green(),
         timestamp=datetime.now()
     )
@@ -98,7 +98,6 @@ async def close_ticket(channel: discord.TextChannel, closer: discord.Member, clo
 
     if ticket_id:
         try:
-            # Add close_reason to the UPDATE query
             cog.cursor.execute("""
                 UPDATE tickets
                 SET closer_id = ?, close_time = ?, log_message_id = ?, close_reason = ?
