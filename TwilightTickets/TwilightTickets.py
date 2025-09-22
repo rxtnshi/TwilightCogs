@@ -490,7 +490,7 @@ class TwilightTickets(commands.Cog):
 			open_dt = datetime.fromisoformat(open_time_str)
 			open_ts = f"<t:{int(open_dt.timestamp())}:f>"
 
-			ticket_line = f"Ticket ID: `{ticket_id}`\n"
+			ticket_line = f"**Ticket ID:** `{ticket_id}`\n"
 			status_line = f"Status: `Open`\n"
 
 			if close_time_str:
@@ -505,7 +505,7 @@ class TwilightTickets(commands.Cog):
 
 			history_text += (
 				f"{ticket_line}"
-				f"**Opened:** {open_ts}\n"
+				f"Opened: {open_ts}\n"
 				f"{status_line}"
 				f"---\n"
 			)
