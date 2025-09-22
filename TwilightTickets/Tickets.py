@@ -26,6 +26,8 @@ async def create_ticket(
     sconfg = cog.config.guild(guild)
 
     ticket_statuses = await sconfg.ticket_statuses()
+    ticket_log_channel_id = await sconfg.ticket_log_channel()
+    ticket_log_channel = interaction.guild.get_channel(ticket_log_channel_id)
     staff_ping_enabled = ticket_statuses.get("staffping", True)
 
     category = discord.utils.get(guild.categories, id=category_id)
@@ -83,6 +85,7 @@ async def create_ticket(
     ping_message = f"<@&{staff_role_id}>" if (staff_ping_enabled and staff_role_id) else None
 
     await channel.send(ping_message, embed=embed, view=ViewsModals.CloseTicketView(), allowed_mentions=discord.AllowedMentions.all())
+    await ticket_log_channel.send(embed=created_ticket_embed)
     await interaction.response.send_message(f"**`✅ Success!`** Ticket opened! Access it at {channel.mention}", ephemeral=True)
 
 async def close_ticket(channel: discord.TextChannel, closer: discord.Member, close_reason: str, log_message: discord.Message, cog: commands.Cog):
@@ -173,7 +176,7 @@ async def create_transcript(channel: discord.TextChannel, open_reason: str, open
     user_embed = discord.Embed(
         title=f"📫 Ticket Transcript for `{channel.name}`",
         description="Thank you for opening a ticket with us. Your ticket transcript is attached.",
-        color=0x00FF00,
+        color=discord.Color.lighter_gray(),
         timestamp=close_time_dt
     )
     user_embed.add_field(name="Opened by", value=opener_user, inline=False)
@@ -187,7 +190,7 @@ async def create_transcript(channel: discord.TextChannel, open_reason: str, open
     logs_channel_embed = discord.Embed(
         title=f"📋 Ticket Transcript",
         description=f"Ticket transcript for `{channel.name}`",
-        color=0x00FF00,
+        color=discord.Color.lighter_gray(),
         timestamp=close_time_dt
     )
     logs_channel_embed.add_field(name="Opened by", value=opener_user, inline=False)
