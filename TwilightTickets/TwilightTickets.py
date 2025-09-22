@@ -491,7 +491,7 @@ class TwilightTickets(commands.Cog):
 
 				if log_message_id:
 					log_link = f"https://discord.com/channels/{interaction.guild.id}/{logs_channel_id}/{log_message_id}"
-					ticket_line = f"Ticket ID: [`{ticket_id}`]({log_link})\n"
+					ticket_line = f"**Ticket ID:** [`{ticket_id}`]({log_link})\n"
 
 			history_text += (
 				f"{ticket_line}"
