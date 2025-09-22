@@ -11,7 +11,8 @@ from redbot.core.data_manager import cog_data_path
 
 """ 
 TO-DO List:
-	-  Add comments to explain thought process
+	- Add comments to explain thought process
+	- Rewrite history command to display all tickets rather than just 5
 """
 
 class TwilightTickets(commands.Cog):
@@ -489,18 +490,18 @@ class TwilightTickets(commands.Cog):
 			open_dt = datetime.fromisoformat(open_time_str)
 			open_ts = f"<t:{int(open_dt.timestamp())}:f>"
 
-			ticket_line = f"**Ticket ID:** `{ticket_id}`\n"
-			status_line = f"**Status:** Open\n"
+			ticket_line = f"Ticket ID: `{ticket_id}`\n"
+			status_line = f"Status: `Open`\n"
 
 			if close_time_str:
 				close_dt = datetime.fromisoformat(close_time_str)
 				close_ts = f"<t:{int(close_dt.timestamp())}:f>"
 				closer = interaction.guild.get_member(closer_id) or f"ID: {closer_id}"
-				status_line = f"**Status:** Closed\n**Closed at:** {close_ts} by {closer.mention}\n"
+				status_line = f"Status: `Closed`\nClosed at: {close_ts} by {closer.mention}\n"
 
 				if log_message_id:
 					log_link = f"https://discord.com/channels/{interaction.guild.id}/{logs_channel_id}/{log_message_id}"
-					ticket_line = f"**Ticket ID:** [`{ticket_id}`]({log_link})\n"
+					ticket_line = f"Ticket ID: [`{ticket_id}`]({log_link})\n"
 
 			history_text += (
 				f"{ticket_line}"
