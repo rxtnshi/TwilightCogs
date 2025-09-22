@@ -232,7 +232,7 @@ class DiscordModal(discord.ui.Modal):
 
         self.request_title = discord.ui.Label(
             text="What is your request?",
-            description="For user reports, type \"User Report: <user>\". Any other request please describe in a few words.",
+            description="Please describe your request in a few words.",
             component=discord.ui.TextInput(
                 required=True,
                 placeholder="What can we help with you today?",
@@ -296,7 +296,7 @@ class GameModal(discord.ui.Modal):
 
         self.request_title = discord.ui.Label(
             text="What is your request?",
-            description="For player reports, type \"Player Report: <player>\". Any other request please describe in a few words.",
+            description="Please describe your request in a few words.",
             component=discord.ui.TextInput(
                 required=True,
                 placeholder="What can we help with you today?",
@@ -361,7 +361,7 @@ class AppealModal(discord.ui.Modal):
 
         self.appeal_user = discord.ui.Label(
             text="What is your Account ID (or User ID)?",
-            description="Discord: Right click account -> Copy ID | Steam: Paste profile URL in steamid.io -> Copy SteamID64",
+            description="Discord: Right click account → Copy ID | Steam: Paste profile URL in steamid.io → Copy SteamID64",
             component=discord.ui.TextInput(
                 required=True,
                 placeholder="ID of the account that was moderated",
