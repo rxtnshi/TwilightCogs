@@ -68,6 +68,18 @@ async def create_ticket(
     embed.add_field(name="Request Title", value=request_title, inline=False)
     embed.add_field(name="Request Description", value=request_description, inline=False)
 
+    ticket_type_desc = f"{ticket_type.lower()}.{ticket_type_request.replace(' ', '-').lower()}"
+
+    created_ticket_embed = discord.Embed(
+        title=f"📩 New Support Request!",
+        description=f"Request opened by {user.mention} ({user.id}) for `{ticket_type_desc}`",
+        color=discord.Color.green(),
+        timestamp=datetime.now()
+    )
+    created_ticket_embed.add_field(name="Link to channel", value=f"{channel.mention}")
+    created_ticket_embed.set_thumbnail(url="https://cdn.rxtnshi.xyz/u/8bnPxj.gif")
+    created_ticket_embed.set_footer(text=f"Ticket ID: {ticket_id}")
+
     ping_message = f"<@&{staff_role_id}>" if (staff_ping_enabled and staff_role_id) else None
 
     await channel.send(ping_message, embed=embed, view=ViewsModals.CloseTicketView(), allowed_mentions=discord.AllowedMentions.all())
@@ -83,7 +95,6 @@ async def close_ticket(channel: discord.TextChannel, closer: discord.Member, clo
 
     if ticket_id:
         try:
-            # Add close_reason to the UPDATE query
             cog.cursor.execute("""
                 UPDATE tickets
                 SET closer_id = ?, close_time = ?, log_message_id = ?, close_reason = ?
