@@ -158,7 +158,7 @@ async def create_transcript(channel: discord.TextChannel, open_reason: str, open
 
     # header
     transcript = "-" * 40 + "\n"
-    transcript += f"Transcript for ticket channel: {channel.name}\n"
+    transcript += f"Transcript for: {channel.name}\n"
     transcript += f"Opened by: {opener_user}\n"
     transcript += f"Closed by: {closer_user}\n"
     transcript += f"Opened at: {open_time_str}\n"
@@ -174,8 +174,8 @@ async def create_transcript(channel: discord.TextChannel, open_reason: str, open
         transcript += f"[{time}] {msg.author}: {content}\n"
     
     user_embed = discord.Embed(
-        title=f"📫 Ticket Transcript for `{channel.name}`",
-        description="Thank you for opening a ticket with us. Your ticket transcript is attached.",
+        title=f"📫 Transcript for `{channel.name}`",
+        description="Thank you for contacting us. Your transcript is attached.",
         color=discord.Color.lighter_gray(),
         timestamp=close_time_dt
     )
@@ -188,8 +188,8 @@ async def create_transcript(channel: discord.TextChannel, open_reason: str, open
     user_embed.add_field(name="Close Reason", value=close_reason, inline=False)
 
     logs_channel_embed = discord.Embed(
-        title=f"📋 Ticket Transcript",
-        description=f"Ticket transcript for `{channel.name}`",
+        title=f"📋 Request Transcript",
+        description=f"Transcript for `{channel.name}`",
         color=discord.Color.lighter_gray(),
         timestamp=close_time_dt
     )
@@ -214,7 +214,7 @@ async def create_transcript(channel: discord.TextChannel, open_reason: str, open
 
     return log_message
 
-async def create_ban_appeal(interaction, banned_user: str, appeal_platform: str, appeal_request: str, cog: commands.Cog):
+async def create_ban_appeal(interaction, appeal_platform: str, banned_user: str, appeal_request: str, cog: commands.Cog):
     from . import ViewsModals
     
     sconfg = cog.config.guild(interaction.guild)
@@ -257,7 +257,7 @@ async def create_ban_appeal(interaction, banned_user: str, appeal_platform: str,
 
     user_embed = discord.Embed(
         title="📥 Appeal Received",
-        description="Thank you for submitting an appeal. Your appeal will be looked at within the next 48 hours.",
+        description="Thank you for submitting an appeal. Your appeal will be reviewed within the next 48 hours.",
         color=0xffa500
     )
     user_embed.add_field(name="Platform", value=appeal_platform, inline=False)
@@ -310,7 +310,7 @@ async def finalize_appeal(opener_id: int, appeal_id: str, decision: str, reason:
     dm_embed = discord.Embed(title=title, description=description, color=embed_color)
     dm_embed.add_field(name="Reason from Staff", value=reason, inline=False)
     dm_embed.add_field(name="Decision Time", value=time_final_ts, inline=False)
-    dm_embed.set_footer(text=f"TWZ Management")
+    dm_embed.set_footer(text=f"Server Management")
 
     try:
         await user.send(embed=dm_embed)

@@ -16,9 +16,9 @@ from discord.ext import commands
 class TicketSelect(discord.ui.Select):
     def __init__(self):
         options = [
-            discord.SelectOption(label="👮 Discord Staff", description="Open a ticket for reports/inquiries", value="discord"),
-            discord.SelectOption(label="🎮 SCP:SL Staff", description="Open a ticket for reports/inquiries", value="scpsl"),
-            discord.SelectOption(label="🔨 Appeals Requests", description="Request an appeal for a punishment", value="appeals")
+            discord.SelectOption(label="👮 Discord Staff", description="Contact our Discord staff", value="discord"),
+            discord.SelectOption(label="🎮 SCP:SL Staff", description="Contact our SCP:SL staff", value="scpsl"),
+            discord.SelectOption(label="🔨 Appeals Requests", description="Request an appeal", value="appeals")
         ]
         super().__init__(placeholder="Select a Category", options=options, custom_id="persistent_ticket_select")
 

@@ -173,13 +173,13 @@ class TwilightTickets(commands.Cog):
 		def make_embed():
 			embed = discord.Embed(
 				title=f"{interaction.guild.name} Support System",
-				description="Welcome to our support system!\n\nPlease make sure to read our guidelines below before opening a help request. If you would like to open one, please interact with the dropdown menu below.\n\n Categories available for help are listed below:",
+				description="Welcome to our support system!\n\nPlease make sure to read our guidelines below before opening a help request. If you would like to open one, please interact with the dropdown menu below.\n\n Categories available for help are listed below:\n\n",
 				color=0x7a2db9
 			)
 
-			embed.add_field(name="👮 Discord Staff", value="Report users or general inquiries", inline=False)
-			embed.add_field(name="🎮 SCP:SL Staff", value="Report users or general inquiries", inline=False)
-			embed.add_field(name="🔨 Appeals Requests", value="Appeal Discord or SCP:SL moderations", inline=False)
+			embed.add_field(name="👮 Discord Staff", value="Contact our Discord staff to report users breaking our rules here. If you have a general question regarding this Discord server, you may open it under this category.", inline=False)
+			embed.add_field(name="🎮 SCP:SL Staff", value="For player reports, preferably report them via the player list by pressing `N` and the `⚠️` icon. For general inquiries regarding our SCP:SL servers, you may open it under this category.", inline=False)
+			embed.add_field(name="🔨 Appeals Requests", value="You may create an appeal request for our Discord or game servers here. Appeals will only be accepted if a moderator has made a mistake.", inline=False)
 			embed.set_thumbnail(url="https://media.tenor.com/Vn_Bm9z2-4EAAAAM/a-hat-in-time-hat-in-time.gif")
 
 			embed2 = discord.Embed(
