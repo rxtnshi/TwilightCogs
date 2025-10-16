@@ -6,7 +6,7 @@ import logging
 
 from redbot.core import commands, app_commands, Config
 from discord.ext import tasks
-from chuk_llm import OllamaClient
+from chuk_llm import ask_ollama_sync
 
 class QOTD(commands.Cog):
     def __init__(self, bot):
@@ -26,14 +26,7 @@ class QOTD(commands.Cog):
         self.qotd_time = None
         self.last_qotd_sent = None
         self.ask_qotd.start()
-
-        try:
-            self.client = OllamaClient(host="http://ollama:11434")
-            self.log.info(f"Ollama client initialized with host: {ollama_host}")
-        except Exception as e:
-            self.log.critical(f"Failed to create ollama client: {e}")
-            self.client = None
-
+    
     def cog_unload(self):
         self.ask_qotd.cancel()
         self.log.info("Task canceled since QOTD was unloaded.")
@@ -88,7 +81,7 @@ class QOTD(commands.Cog):
             try:
                 allowed_mentions = discord.AllowedMentions(roles=True)
                 question = await self.bot.loop.run_in_executor(
-                    None, self.client.ask, "Generate a random, family-friendly question of the day."
+                    None, ask_ollama_sync, "Generate a random, family-friendly question of the day."
                 )
                 await channel.send(f"{qotd_role.mention} {question}",allowed_mentions=allowed_mentions)
                 await self.config.guild(guild).last_qotd_sent.set(today_str)
@@ -116,7 +109,7 @@ class QOTD(commands.Cog):
         try:
             allowed_mentions = discord.AllowedMentions(roles=True)
             question = await self.bot.loop.run_in_executor(
-                    None, self.client.ask, "Generate a random, family-friendly question of the day."
+                    None, ask_ollama_sync, "Generate a random, family-friendly question of the day."
             )
 
             qotd_message = question
