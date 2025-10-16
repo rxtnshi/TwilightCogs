@@ -105,18 +105,20 @@ class QOTD(commands.Cog):
 
         qotd_role_id = await self.config.guild(interaction.guild).qotd_role()
         qotd_role = interaction.guild.get_role(qotd_role_id)
-
-        if not qotd_role_id:
-            self.log.warning(f"{interaction.guild} ({interaction.guild.id}) has not configured a QOTD role or channel.")
-            return
         
         try:
             allowed_mentions = discord.AllowedMentions(roles=True)
             question = await self.bot.loop.run_in_executor(
                     None, ask_ollama_sync, "Generate a random, family-friendly question of the day."
             )
+
+            qotd_message = question
+
+            if qotd_role:
+                qotd_message = f"{qotd_role.mention} {question}"
+            
             await interaction.followup.send("QOTD generated!", ephemeral=True)
-            await interaction.channel.send(f"{qotd_role.mention} {question}",allowed_mentions=allowed_mentions)
+            await interaction.channel.send(qotd_message, allowed_mentions=allowed_mentions)
         except Exception as e:
             self.log.error(f"Unable to generate QOTD. {e}")
             await interaction.channel.send(f"Unable to create a QOTD. Please contact the bot owner. Error: `{e}`")
