@@ -1,0 +1,7 @@
+{
+    "author": ["rxtnshi/Insurgent"],
+    "install_msg" : "QOTD has been successfully installed! Please make sure you have [chuk_llm](https://pypi.org/project/chuk-llm) installed as well as [Ollama](https://ollama.com/download)! This cog will not work without these installed.",
+    "name" : "QOTD",
+    "short" : "Question of the day generator using Ollama",
+    "description" : "Question of the day generator utilizing chuk_llm and ollama. Must have both installed in order to function properly."
+}
