@@ -23,7 +23,7 @@ class TicketSelect(discord.ui.Select):
         super().__init__(placeholder="Select a Category", options=options, custom_id="persistent_ticket_select")
 
     async def callback(self, interaction: discord.Interaction):
-        cog = interaction.client.get_cog("TwilightTickets")
+        cog = interaction.client.get_cog("TicketSystem")
         if not cog:
             new_view = TicketView()
             await interaction.response.send_message("**`⚠️ Error!`** Ticket system not loaded.", ephemeral=True)
@@ -116,7 +116,7 @@ class DecisionSelect(discord.ui.Select):
 
     async def callback(self, interaction: discord.Interaction):
         guild = interaction.guild
-        cog = interaction.client.get_cog("TwilightTickets")
+        cog = interaction.client.get_cog("TicketSystem")
 
         sconfg = cog.config.guild(guild)
         appeal_team_id = await sconfg.appeal_team_role()
@@ -138,7 +138,7 @@ class CloseTicket(discord.ui.Button):
         super().__init__(label="Close Ticket", style=discord.ButtonStyle.danger, custom_id="persistent_close_ticket")
 
     async def callback(self, interaction: discord.Interaction):
-        cog = interaction.client.get_cog("TwilightTickets")
+        cog = interaction.client.get_cog("TicketSystem")
         if not cog:
             await interaction.response.send_message("**`⚠️ Error!`** Ticket system not loaded.", ephemeral=True)
             return
@@ -190,7 +190,7 @@ class CloseTicketModal(discord.ui.Modal):
         self.add_item(self.close_reason)
 
     async def on_submit(self, interaction: discord.Interaction):
-        cog = interaction.client.get_cog("TwilightTickets")
+        cog = interaction.client.get_cog("TicketSystem")
         if not cog: 
             return
         
@@ -258,7 +258,7 @@ class DiscordModal(discord.ui.Modal):
         self.add_item(self.request_description)
 
     async def on_submit(self, interaction: discord.Interaction):
-        cog = interaction.client.get_cog("TwilightTickets")
+        cog = interaction.client.get_cog("TicketSystem")
         if not cog: return
 
         sconfg = cog.config.guild(interaction.guild)
@@ -322,7 +322,7 @@ class GameModal(discord.ui.Modal):
         self.add_item(self.request_description)
     
     async def on_submit(self, interaction: discord.Interaction):
-        cog = interaction.client.get_cog("TwilightTickets")
+        cog = interaction.client.get_cog("TicketSystem")
         if not cog: return
 
         sconfg = cog.config.guild(interaction.guild)
@@ -388,7 +388,7 @@ class AppealModal(discord.ui.Modal):
         self.add_item(self.appeal_info)
 
     async def on_submit(self, interaction: discord.Interaction): 
-        cog = interaction.client.get_cog("TwilightTickets")
+        cog = interaction.client.get_cog("TicketSystem")
         if not cog: return
 
         await create_ban_appeal(interaction, self.appeal_platform.component.values[0], self.appeal_user.component.value, self.appeal_info.component.value, cog)
@@ -401,7 +401,7 @@ class FinishAppealModal(discord.ui.Modal):
         self.add_item(self.finish_appeal)
 
     async def on_submit(self, interaction: discord.Interaction):
-        cog = interaction.client.get_cog("TwilightTickets")
+        cog = interaction.client.get_cog("TicketSystem")
         if not cog: return
 
         await interaction.response.send_message("⌛ Finalizing appeal and notifying user...")
