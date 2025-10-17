@@ -6,14 +6,7 @@ import logging
 
 from redbot.core import commands, app_commands, Config
 from discord.ext import tasks
-from functools import partial
-from chuk_llm import OllamaClient
-
-OLLAMA_HOST = "http://ollama:11434"
-ollama_client = OllamaClient(host=OLLAMA_HOST)
-
-def ask_question_sync(prompt: str):
-    return ollama_client.ask(prompt)
+from chuk_llm import ask_ollama_sync
 
 class QOTD(commands.Cog):
     def __init__(self, bot):
@@ -88,7 +81,7 @@ class QOTD(commands.Cog):
             try:
                 allowed_mentions = discord.AllowedMentions(roles=True)
                 question = await self.bot.loop.run_in_executor(
-                    None, partial(ask_question_sync, "Generate a random, family-friendly question of the day.")
+                    None, ask_ollama_sync, "Generate a random, family-friendly question of the day."
                 )
                 await channel.send(f"{qotd_role.mention} {question}",allowed_mentions=allowed_mentions)
                 await self.config.guild(guild).last_qotd_sent.set(today_str)
@@ -116,7 +109,7 @@ class QOTD(commands.Cog):
         try:
             allowed_mentions = discord.AllowedMentions(roles=True)
             question = await self.bot.loop.run_in_executor(
-                    None, partial(ask_question_sync, "Generate a random, family-friendly question of the day.")
+                    None, ask_ollama_sync, "Generate a random, family-friendly question of the day."
             )
 
             qotd_message = question
