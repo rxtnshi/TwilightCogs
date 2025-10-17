@@ -56,7 +56,6 @@ class QOTD(commands.Cog):
 
             # -- Check for guild settings --
             if not settings["qotd_channel"] or not settings["qotd_role"]:
-                self.log.warning(f"{guild} ({guild.id}) has not configured a QOTD role or channel.")
                 continue
 
             if settings["last_qotd_sent"] == today_str:
