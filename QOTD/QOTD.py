@@ -17,7 +17,8 @@ class QOTD(commands.Cog):
             "qotd_channel": None,
             "qotd_role": None,
             "qotd_time": None,
-            "last_qotd_sent": None
+            "last_qotd_sent": None,
+            "last_qotd_message": None
         }
         self.config.register_guild(**default_guild)
 
@@ -49,16 +50,16 @@ class QOTD(commands.Cog):
     @tasks.loop(minutes=1)
     async def ask_qotd(self):
         now_utc = datetime.datetime.now(datetime.timezone.utc)
-        today_str = now_utc.date().isoformat()
+        today = now_utc.date().isoformat()
 
         for guild in self.bot.guilds:
             settings = await self.config.guild(guild).all()
 
             # -- Check for guild settings --
-            if not settings["qotd_channel"] or not settings["qotd_role"]:
+            if not settings["qotd_channel"]:
                 continue
 
-            if settings["last_qotd_sent"] == today_str:
+            if settings["last_qotd_sent"] == today:
                 continue
 
             # -- Time Check --
@@ -71,25 +72,47 @@ class QOTD(commands.Cog):
 
             # -- QOTD post --
             channel = guild.get_channel(settings["qotd_channel"])
-            qotd_role = guild.get_role(settings["qotd_role"])
+            qotd_role = guild.get_role(settings["qotd_role"]) if settings["qotd_role"] else None
 
-            if not channel or not qotd_role:
-                self.log.warning(f"QOTD channel/role not found in {guild.name} ({guild.id}). Skipping QOTD post.")
+            if not channel:
+                self.log.warning(f"QOTD channel not found in {guild.name} ({guild.id}). Skipping QOTD post.")
                 continue
 
+            # -- Check for pinned QOTD --
+            if settings["last_qotd_message"]:
+                try:
+                    old_pin_id = await self.config.guild(guild).last_qotd_message()
+                    old_pin = await channel.fetch_message(old_pin_id)
+
+                    await old_pin.unpin()
+                    self.log.info(f"QOTD message {message.id} has been unpinned.")
+                except discord.NotFound:
+                    self.log.warning(f"QOTD message {message.id} not found. Ignoring unpin.")
+                except Exception as e:
+                    self.log.warning(f"Unable to unpin old qotd. Error: {e}")
+                    continue
+
+            # -- Post QOTD and pin --
             try:
                 allowed_mentions = discord.AllowedMentions(roles=True)
                 question = await self.bot.loop.run_in_executor(
-                    None, ask_ollama_sync, "Generate a random, family-friendly question of the day."
+                    None, ask_ollama_sync, "Generate a random, family-friendly question of the day. Don't include extra details and just ask the question!"
                 )
-                await channel.send(f"{qotd_role.mention} {question}",allowed_mentions=allowed_mentions)
-                await self.config.guild(guild).last_qotd_sent.set(today_str)
+
+                content = f"{qotd_role.mention} {question}" if settings["qotd_role"] else question
+                message = await channel.send(content, allowed_mentions=allowed_mentions)
+
+                await self.config.guild(guild).last_qotd_sent.set(today)
+                await self.config.guild(guild).last_qotd_message.set(message.id)
+                await message.pin()
+
+                self.log.info(f"QOTD successfully sent in {guild} ({guild.id})")
             except Exception as e:
                 try:
                     self.log.error(f"Unable to generate QOTD. {e}")
-                    await channel.send(f"Unable to create a QOTD. Please contact the bot owner. Error: `{e}`")
                 except Exception:
                     pass
+
 
     # -- check for status --
     @ask_qotd.before_loop
@@ -99,7 +122,7 @@ class QOTD(commands.Cog):
 
     @qotd.command(name="generate", description="Generates a QOTD in the channel this command is run")
     @app_commands.checks.has_permissions(manage_messages=True)
-    async def generate_qotd(self, interaction: discord.Interaction):
+    async def generate_qotd(self, interaction: discord.Interaction, ping: bool):
         await interaction.response.defer(ephemeral=True, thinking=True)
 
         qotd_role_id = await self.config.guild(interaction.guild).qotd_role()
@@ -108,27 +131,28 @@ class QOTD(commands.Cog):
         try:
             allowed_mentions = discord.AllowedMentions(roles=True)
             question = await self.bot.loop.run_in_executor(
-                    None, ask_ollama_sync, "Generate a random, family-friendly question of the day."
+                    None, ask_ollama_sync, "Generate a random, family-friendly question of the day. Don't include extra details and just ask the question!"
             )
 
             qotd_message = question
 
-            if qotd_role:
+            if qotd_role and ping is True:
                 qotd_message = f"{qotd_role.mention} {question}"
             
             await interaction.followup.send("QOTD generated!", ephemeral=True)
             await interaction.channel.send(qotd_message, allowed_mentions=allowed_mentions)
         except Exception as e:
             self.log.error(f"Unable to generate QOTD. {e}")
-            await interaction.channel.send(f"Unable to create a QOTD. Please contact the bot owner. Error: `{e}`")
+            await interaction.channel.send(f"Unable to create a QOTD. Please contact the cog creator at `discord.gg/gtz`. Error: `{e}`")
 
     @qotd.command(name="settings", description="Adjust QOTD settings")
     @app_commands.describe(
         channel = "The channel QOTD should be sent in",
         role = "The role that should be mentioned for QOTD",
-        time = "The time that the QOTD should be sent at in HH:MM format (24 hour UTC)"
+        time = "The time that the QOTD should be sent at in HH:MM format (24 hour UTC)",
+        clear_pin = "Clears the last set pinned message from the config. Does not actually unpin the message."
     )
-    async def qotd_settings(self, interaction: discord.Interaction, channel: discord.TextChannel = None, role: discord.Role = None, time: str = None):
+    async def qotd_settings(self, interaction: discord.Interaction, channel: discord.TextChannel = None, role: discord.Role = None, time: str = None, clear_pin: bool = False):
         await interaction.response.defer(ephemeral=False)
 
         is_updated = False
@@ -142,18 +166,30 @@ class QOTD(commands.Cog):
             is_updated = True
         if time is not None:
             try:
+                now_utc = datetime.datetime.now(datetime.timezone.utc)
+                today = now_utc.date().isoformat()
+                last = await self.config.guild(interaction.guild).last_qotd_sent()
+
+                if last == today:
+                    await self.config.guild(interaction.guild).last_qotd_sent.set(None)
                 new_time = self._parse_time_utc(time)
                 await self.config.guild(interaction.guild).qotd_time.set(new_time.strftime("%H:%M"))
-                self.ask_qotd.change_interval(time=new_time)
+
                 is_updated = True
                 self.log.info(f"Successfully changed the QOTD time in {interaction.guild} ({interaction.guild.id}) to {new_time}")
             except ValueError as e:
                 await interaction.followup.send(f"Invalid time: `{e}`")
+        if clear_pin is True:
+            await self.config.guild(interaction.guild).last_qotd_message.set(None)
+            is_updated = True
 
         # -- Gets values --
         channel_id = await self.config.guild(interaction.guild).qotd_channel()
         qotd_role_id = await self.config.guild(interaction.guild).qotd_role()
         qotd_time = await self.config.guild(interaction.guild).qotd_time()
+        qotd_message_id = await self.config.guild(interaction.guild).last_qotd_message()
+
+        qotd_message_link = f"https://discord.com/channels/{interaction.guild.id}/{channel_id}/{qotd_message_id}"
 
         cfg_channel = interaction.guild.get_channel(channel_id) if channel_id else None
         cfg_qotd_role = interaction.guild.get_role(qotd_role_id) if qotd_role_id else None
@@ -169,5 +205,6 @@ class QOTD(commands.Cog):
         embed.add_field(name="Channel", value=cfg_channel.mention if cfg_channel else "Not Set", inline=False)
         embed.add_field(name="Role", value=cfg_qotd_role.mention if cfg_qotd_role else "Not Set", inline=False)
         embed.add_field(name="QOTD Time (24 hour format)", value=f"{qotd_time} UTC" if qotd_time else "Not Set", inline=False)
+        embed.add_field(name="Last QOTD Message", value=qotd_message_link if qotd_message_id else "None Found", inline=False)
 
         await interaction.followup.send(embed=embed)
