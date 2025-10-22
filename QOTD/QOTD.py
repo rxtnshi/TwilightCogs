@@ -80,17 +80,17 @@ class QOTD(commands.Cog):
 
             # -- Check for pinned QOTD --
             if settings["last_qotd_message"]:
+                old_pin_id = settings["last_qotd_message"]
                 try:
-                    old_pin_id = await self.config.guild(guild).last_qotd_message()
                     old_pin = await channel.fetch_message(old_pin_id)
-
                     await old_pin.unpin()
                     self.log.info(f"QOTD message {message.id} has been unpinned.")
                 except discord.NotFound:
                     self.log.warning(f"QOTD message {message.id} not found. Ignoring unpin.")
+                    await self.config.guild(guild).last_qotd_message.set(None)
                 except Exception as e:
                     self.log.warning(f"Unable to unpin old qotd. Error: {e}")
-                    continue
+                    pass
 
             # -- Post QOTD and pin --
             try:
