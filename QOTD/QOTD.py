@@ -96,7 +96,7 @@ class QOTD(commands.Cog):
             try:
                 allowed_mentions = discord.AllowedMentions(roles=True)
                 question = await self.bot.loop.run_in_executor(
-                    None, ask_ollama_sync, "Generate a random, family-friendly question of the day. Don't include extra details and just ask the question!"
+                    None, ask_ollama_sync, "Generate a random, family-friendly question of the day. Don't include extra details and just ask the question! Do not repeat previous problems and do not make every question outdoor related."
                 )
 
                 content = f"{qotd_role.mention} {question}" if settings["qotd_role"] else question
