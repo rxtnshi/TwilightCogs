@@ -92,11 +92,15 @@ async def create_ticket(
 
 async def close_ticket(channel: discord.TextChannel, closer: discord.Member, close_reason: str, log_message: discord.Message, cog: commands.Cog):
     ticket_id = None
-    if channel.topic and "ID:" in channel.topic:
-        try:
-            ticket_id = channel.topic.split("ID:")[1].split("|")[0].strip()
-        except IndexError:
-            pass
+    try:
+        cog.cursor.execute("SELECT ticket_id FROM tickets WHERE channel_id = ?", (channel.id,))
+        result = cog.cursor.fetchone()
+        if result:
+            ticket_id = result[0]
+        else:
+            log.warning(f"Could not find ticket_id for channel {channel.id} in the database.")
+    except Exception as e:
+        log.error(f"Failed to get ticket_id for channel {channel.id} from the database. This may be an error with the DB.")
 
     if ticket_id:
         try:
@@ -113,11 +117,15 @@ async def close_ticket(channel: discord.TextChannel, closer: discord.Member, clo
 
 async def create_transcript(channel: discord.TextChannel, open_reason: str, opener, closer, logs_channel, close_reason: str, cog: commands.Cog):
     ticket_id = None
-    if channel.topic and "ID:" in channel.topic:
-        try:
-            ticket_id = channel.topic.split("ID:")[1].split("|")[0].strip()
-        except IndexError:
-            pass
+    try:
+        cog.cursor.execute("SELECT ticket_id FROM tickets WHERE channel_id = ?", (channel.id,))
+        result = cog.cursor.fetchone()
+        if result:
+            ticket_id = result[0]
+        else:
+            log.warning(f"Could not find ticket_id for channel {channel.id} in the database.")
+    except Exception as e:
+        log.error(f"Failed to get ticket_id for channel {channel.id} from the database. This may be an error with the DB.")
     
     open_time_dt = None
     open_time_ts = "N/A"
