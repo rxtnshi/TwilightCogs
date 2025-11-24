@@ -4,14 +4,23 @@ import datetime
 import io
 import re
 
+from redbot.core import Config
 from .Tickets import create_transcript, create_ticket, close_ticket, create_ban_appeal, finalize_appeal
 from datetime import datetime
 from discord import app_commands, utils
 from discord.ext import commands
 
-#
-# Dropdowns and Buttons
-# 
+def parse_id(value):
+    if value is None:
+        return None
+    if isinstance(value, int):
+        return value
+    try:
+        return int(str(value).strip("'\""))
+    except ValueError:
+        return None
+
+# - Dropdowns and Buttons -
 
 class TicketSelect(discord.ui.Select):
     def __init__(self):
@@ -160,9 +169,124 @@ class CloseTicket(discord.ui.Button):
         await interaction.message.edit(view=new_view)
         await interaction.response.send_modal(CloseTicketModal())
 
-#
-# Views
-# 
+class SetupChannelsButton(discord.ui.Button):
+    def __init__(self):
+        super().__init__(label="⚙️ Configure Channels", style=discord.ButtonStyle.primary, custom_id="setup_channels_button")
+
+    async def callback(self, interaction: discord.Interaction):
+        cog = interaction.client.get_cog("TicketSystem")
+        if not cog:
+            await interaction.response.send_message("**`⚠️ Error!`** Ticket system not loaded.", ephemeral=True)
+            return
+        
+        await interaction.response.send_modal(SetupChannelsModal())
+
+        message = await interaction.original_response()
+        view = discord.ui.View.from_message(message)
+        view.message = message
+
+class SetupRolesButton(discord.ui.Button):
+    def __init__(self):
+        super().__init__(label="⚙️ Configure Roles", style=discord.ButtonStyle.primary, custom_id="setup_roles_button")
+
+    async def callback(self, interaction: discord.Interaction):
+        cog = interaction.client.get_cog("TicketSystem")
+        if not cog:
+            await interaction.response.send_message("**`⚠️ Error!`** Ticket system not loaded.", ephemeral=True)
+            return
+        
+        await interaction.response.send_modal(SetupRolesModal())
+
+        message = await interaction.original_response()
+        view = discord.ui.View.from_message(message)
+        view.message = message
+
+class SetupResetButton(discord.ui.Button):
+    def __init__(self):
+        super().__init__(label="🚫 Reset Settings", style=discord.ButtonStyle.danger, custom_id="setup_reset_button")
+
+    async def callback(self, interaction: discord.Interaction):
+        cog = interaction.client.get_cog("TicketSystem")
+        if not cog:
+            await interaction.response.send_message("**`⚠️ Error!`** Ticket system not loaded.", ephemeral=True)
+            return
+        
+        await interaction.response.send_modal(SetupResetModal())
+
+        message = await interaction.original_response()
+        view = discord.ui.View.from_message(message)
+        view.message = message
+
+class SetupSendPanelButton(discord.ui.Button):
+    def __init__(self):
+        super().__init__(label="✈️ Send Panel", style=discord.ButtonStyle.success, custom_id="setup_send_panel_button")
+    
+    async def callback(self, interaction: discord.Interaction):
+        cog = interaction.client.get_cog("TicketSystem")
+        if not cog:
+            await interaction.response.send_message("**`⚠️ Error!`** Ticket system not loaded.", ephemeral=True)
+            return
+        
+        panel_ch_id = await cog.config.guild(interaction.guild).panel_channel()
+        panel_message_id = await cog.config.guild(interaction.guild).panel_message_id()
+        panel_ch = interaction.guild.get_channel(panel_ch_id)
+
+        def make_embed():
+            embed = discord.Embed(
+				title=f"{interaction.guild.name} Support System",
+				description="Welcome to our support system!\n\nPlease make sure to read our guidelines below before opening a help request. If you would like to open one, please interact with the dropdown menu below.\n\n Categories available for help are listed below:\n\n",
+				color=0x7a2db9
+			)
+            
+            embed.add_field(name="👮 Discord Staff", value="Contact our Discord staff to report users breaking our rules here. If you have a general question regarding this Discord server, you may open it under this category.", inline=False)
+            embed.add_field(name="🎮 SCP:SL Staff", value="For player reports, preferably report them via the player list by pressing `N` and the `⚠️` icon. For general inquiries regarding our SCP:SL servers, you may open it under this category.", inline=False)
+            embed.add_field(name="🔨 Appeals Requests", value="You may create an appeal request for our Discord or game servers here. Appeals will only be accepted if a moderator has made a mistake.", inline=False)
+            embed.set_thumbnail(url="https://media.tenor.com/Vn_Bm9z2-4EAAAAM/a-hat-in-time-hat-in-time.gif")
+
+            embed2 = discord.Embed(
+                title="🚨 Help Request Guidelines",
+                description="Before opening a support request, please make sure to **read** the guidelines below. These guidelines may change at any given time without notice.",
+                timestamp=datetime.now(),
+                color=discord.Color.red()
+            )
+            embed2.add_field(name="Duplicate Requests", value="Duplicate requests under the same user will be rejected automatically. Bypassing this with another account will result in that account getting blacklisted.", inline=False)
+            embed2.add_field(name="Violations of our Rules or the Discord Terms of Service", value="Help requests will still fall under our server rules with some exceptions. We are obligated to report Discord ToS violations as well.", inline=False)
+            embed2.add_field(name="Joke Requests", value="Opening a joke request will result in your request being closed and/or you being blacklisted from the request system indefinitely. Bypassing this would result in moderation of your account.", inline=False)
+            embed2.add_field(name="Non-related Requests", value="Requests that are not related to our servers in any way may be closed based on staff discretion.", inline=False)
+            embed2.set_footer(text="🎩 Hat Kid")
+            embed2.set_thumbnail(url="https://media.tenor.com/HSPuoBtwg8UAAAAM/hat-in-time-run.gif")
+
+            return [embed, embed2]
+        
+        panel_embeds = make_embed()
+
+        if panel_message_id:
+            try:
+                panel_msg = await panel_ch.fetch_message(panel_message_id)
+                await panel_msg.delete()
+            except discord.NotFound:
+                new_panel_message = await panel_ch.send(embeds=panel_embeds, view=TicketView())
+                await cog.config.guild(interaction.guild).panel_message_id.set(new_panel_message.id)
+
+                await interaction.response.send_message("**`⚠️ Error!`** The previous panel was not found. A new one has been sent.")
+            except discord.Forbidden:
+                await interaction.response.send_message("**`⚠️ Error!`** Unable to delete the panel due to missing permissions.")
+            except Exception as e:
+                cog.log.warning(f"**`⚠️ Error!`** Failed to delete old panel: {e}")
+
+        try:
+            new_panel_message = await panel_ch.send(embeds=panel_embeds, view=TicketView())
+
+            await cog.config.guild(interaction.guild).panel_message_id.set(new_panel_message.id)
+            await interaction.response.send_message(f"✅ The panel has been successfully sent!")
+        except discord.Forbidden:
+            await interaction.response.send_message(f"**`⚠️ Error!`** Unable to send the panel to the configured channel.")
+
+        message = await interaction.original_response()
+        view = discord.ui.View.from_message(message)
+        view.message = message
+
+# - Views -
 
 class TicketView(discord.ui.View):
     def __init__(self):
@@ -179,9 +303,33 @@ class AppealView(discord.ui.View):
         super().__init__(timeout=None)
         self.add_item(DecisionSelect())
 
-#
-# Modals
-# 
+class SetupView(discord.ui.View):
+    def __init__(self, author: discord.User | discord.Member):
+        super().__init__(timeout=30)
+        self.message = None
+        self.author_id = author.id
+        self.add_item(SetupChannelsButton())
+        self.add_item(SetupRolesButton())
+        self.add_item(SetupSendPanelButton())
+        self.add_item(SetupResetButton())
+
+    async def interaction_check(self, interaction: discord.Interaction):
+        if interaction.user and interaction.user.id == self.author_id:
+            return True
+        else:
+            await interaction.response.send_message("❌ Only the person who initiated the setup command can interact.")
+
+    async def on_timeout(self):
+        for item in self.children:
+            item.disabled = True
+
+        if self.message:
+            try:
+                await self.message.edit(view=self)
+            except (discord.NotFound, discord.HTTPException):
+                pass
+
+# - Modals -
 
 class CloseTicketModal(discord.ui.Modal):
     def __init__(self):
@@ -443,3 +591,202 @@ class FinishAppealModal(discord.ui.Modal):
             await original_message.edit(embed=new_embed)
 
         await interaction.edit_original_response(content=f"**`✅ Success!`** Appeal `{appeal_id}` has been finalized.")
+
+class SetupChannelsModal(discord.ui.Modal):
+    def __init__(self):
+        super().__init__(title="Ticket System Channels Setup", timeout=None)
+
+        self.panel_channel = discord.ui.Label(
+            text="Where should the ticket panel go?",
+            description="Tickets will be created by users in this channel.",
+            component= discord.ui.ChannelSelect(
+                placeholder="Select a channel",
+                min_values=1,
+                max_values=1,
+                channel_types=[discord.ChannelType.text]
+            )
+        )
+        
+        self.transcript_channel = discord.ui.Label(
+            text="Where should the log channel be?",
+            description="All transcripts and system logs will be sent here.",
+            component= discord.ui.ChannelSelect(
+                placeholder="Select a channel",
+                min_values=1,
+                max_values=1,
+                channel_types=[discord.ChannelType.text]
+            )
+        )
+
+        self.appeal_channel = discord.ui.Label(
+            text="Where should appeals go?",
+            description="All appeals will be sent here for staff to make a decision.",
+            component= discord.ui.ChannelSelect(
+                placeholder="Select a channel",
+                min_values=1,
+                max_values=1,
+                channel_types=[discord.ChannelType.text]
+            )
+        )
+
+        self.discord_ticket_category = discord.ui.Label(
+            text="What category should Discord tickets be made?",
+            description="New Discord tickets will open under this category.",
+            component= discord.ui.ChannelSelect(
+                placeholder="Select a category",
+                min_values=1,
+                max_values=1,
+                channel_types=[discord.ChannelType.category]
+            )
+        )
+
+        self.scpsl_ticket_category = discord.ui.Label(
+            text="What category should SCP:SL tickets be made?",
+            description="New SCP:SL tickets will open under this category.",
+            component= discord.ui.ChannelSelect(
+                placeholder="Select a category",
+                min_values=1,
+                max_values=1,
+                channel_types=[discord.ChannelType.category]
+            )
+        )
+
+        self.add_item(self.panel_channel)
+        self.add_item(self.transcript_channel)
+        self.add_item(self.appeal_channel)
+        self.add_item(self.discord_ticket_category)
+        self.add_item(self.scpsl_ticket_category)
+
+    async def on_submit(self, interaction: discord.Interaction): 
+        cog = interaction.client.get_cog("TicketSystem")
+        if not cog: return
+
+        sconfg = cog.config.guild(interaction.guild)
+        transcript_channel = parse_id(self.transcript_channel.component.values[0])
+        appeal_channel = parse_id(self.appeal_channel.component.values[0])
+        panel_channel = parse_id(self.panel_channel.component.values[0])
+        discord_cat = parse_id(self.discord_ticket_category.component.values[0])
+        game_cat = parse_id(self.scpsl_ticket_category.component.values[0])
+
+        try:
+            await sconfg.ticket_log_channel.set(transcript_channel)
+            await sconfg.appeal_log_channel.set(appeal_channel)
+            await sconfg.panel_channel.set(panel_channel)
+            await sconfg.ticket_categories.set({"discord": discord_cat, "scpsl": game_cat})
+
+            message = "✅ Successfully set up channels!"
+        except Exception as e:
+            message = f"⚠️ Failed to set up channels: `{e}`"
+
+        await interaction.response.send_message(message)
+
+class SetupRolesModal(discord.ui.Modal):
+    def __init__(self):
+        super().__init__(title="Ticket System Roles Setup", timeout=None)
+
+        self.modmail_access_role = discord.ui.Label(
+            text="What role should have standard access?",
+            description="This role will give basic permissions.",
+            component= discord.ui.RoleSelect(
+                placeholder="Select a role",
+                min_values=1,
+                max_values=1
+            )
+        )
+
+        self.modmail_mgmt_access_role = discord.ui.Label(
+            text="What role should have management access?",
+            description="This role will be given advanced permissions.",
+            component= discord.ui.RoleSelect(
+                placeholder="Select a role",
+                min_values=1,
+                max_values=1
+            )
+        )
+
+        self.discord_ping_role = discord.ui.Label(
+            text="Who is responsible for Discord Tickets?",
+            description="This role will be notified for these tickets.",
+            component= discord.ui.RoleSelect(
+                placeholder="Select a role",
+                min_values=1,
+                max_values=1
+            )
+        )
+
+        self.scpsl_ping_role = discord.ui.Label(
+            text="Who is responsible for SCP:SL Tickets?",
+            description="This role will be notified for these tickets.",
+            component= discord.ui.RoleSelect(
+                placeholder="Select a role",
+                min_values=1,
+                max_values=1
+            )
+        )
+
+        self.appeal_team_role = discord.ui.Label(
+            text="Who is responsible for appeals?",
+            description="This role will be notified as well as decide.",
+            component= discord.ui.RoleSelect(
+                placeholder="Select a role",
+                min_values=1,
+                max_values=1
+            )
+        )
+
+        self.add_item(self.modmail_access_role)
+        self.add_item(self.modmail_mgmt_access_role)
+        self.add_item(self.discord_ping_role)
+        self.add_item(self.scpsl_ping_role)
+        self.add_item(self.appeal_team_role)
+
+    async def on_submit(self, interaction: discord.Interaction): 
+        cog = interaction.client.get_cog("TicketSystem")
+        if not cog: return
+
+        sconfg = cog.config.guild(interaction.guild)
+        modmail_role = parse_id(self.modmail_access_role.component.values[0])
+        mgmt_role = parse_id(self.modmail_mgmt_access_role.component.values[0])
+        discord_role = parse_id(self.discord_ping_role.component.values[0])
+        scpsl_role = parse_id(self.scpsl_ping_role.component.values[0])
+        appeal_role = parse_id(self.appeal_team_role.component.values[0])
+
+        try:
+            await sconfg.modmail_access_role.set(modmail_role)
+            await sconfg.management_access_role.set(mgmt_role)
+            await sconfg.discord_staff_role.set(discord_role)
+            await sconfg.scpsl_staff_role.set(scpsl_role)
+            await sconfg.appeal_team_role.set(appeal_role)
+
+            message = "✅ Successfully set up roles!"
+        except Exception as e:
+            message = f"⚠️ Failed to set up roles: `{e}`"
+
+        await interaction.response.send_message(message)
+
+class SetupResetModal(discord.ui.Modal):
+    def __init__(self):
+        super().__init__(title="Resetting Config", timeout=None)
+
+        self.question = discord.ui.Label(
+            text="Are you sure you want to reset?",
+            description="Choose either yes or no.",
+            component=discord.ui.Select(
+                required=True,
+                placeholder="Select an option",
+                options=[
+                    discord.SelectOption(label="✅ Yes", value="yes"),
+                    discord.SelectOption(label="❌ No", value="no"),
+                ]
+            )
+        )
+        self.add_item(self.question)
+
+    async def on_submit(self, interaction):
+        cog = interaction.client.get_cog("TicketSystem")
+
+        if self.question.component.values[0] == "yes":
+            await cog.config.guild(interaction.guild).clear()
+            await interaction.response.send_message("✅ Successfully reset all settings")
+        else:
+            await interaction.response.send_message("❌ Reset aborted.")
