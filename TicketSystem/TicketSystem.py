@@ -6,6 +6,7 @@ import re
 import logging
 
 from . import ViewsModals
+from .Handling import send_blocked, send_error, send_success, send_warning
 from datetime import datetime
 from redbot.core import commands, app_commands, Config
 from redbot.core.data_manager import cog_data_path
@@ -31,21 +32,36 @@ class TicketSystem(commands.Cog):
 				"discord": True,
 				"scpsl": True,
 				"appeals": True,
-				"staffping": True
+				"staffping": True,
 			},
-			"modmail_access_role": None,
-			"management_access_role": None,
-			"appeal_team_role": None,
-			"ticket_log_channel": None,
-			"appeal_log_channel": None,
-			"panel_channel": None,
-			"panel_message_id": None,
+			"ticket_roles": {
+				"modmail_access": None,
+				"modmail_mgmt": None,
+				"appeal_team": None,
+				"discord_staff": None,
+				"game_staff": None
+			},
 			"ticket_categories": {
 				"discord": None,
 				"scpsl": None,
 			},
-			"discord_staff_role": None,
-			"scpsl_staff_role": None
+			"ticket_channels": {
+				"log_channel": None,
+				"appeal_logs": None,
+			},
+			"panel_cfg": {
+				"channel": None,
+				"message_id": None,
+			}
+			#"modmail_access_role": None,
+			#"management_access_role": None,
+			#"appeal_team_role": None,
+			#"ticket_log_channel": None,
+			#"appeal_log_channel": None,
+			#"panel_channel": None,
+			#"panel_message_id": None,
+			# "discord_staff_role": None,
+			# "scpsl_staff_role": None
 		}
 		self.config.register_guild(**default_guild)
 
@@ -55,21 +71,33 @@ class TicketSystem(commands.Cog):
 			"discord": True,
 			"scpsl": True,
 			"appeals": True,
-			"staffping": True
+			"staffping": True,
 		}
-		self.modmail_access_role = None
-		self.management_access_role = None
-		self.appeal_team_role = None
-		self.discord_staff_team_role = None
-		self.scpsl_staff_team_role = None
-		self.ticket_log_channel = None
-		self.appeal_log_channel = None
-		self.panel_channel = None
-		self.panel_message_id = None
 		self.ticket_categories = {
 			"discord": None,
 			"scpsl": None,
 		}
+		self.ticket_roles = {
+			"modmail_access": None,
+			"modmail_mgmt": None,
+			"appeal_team": None,
+			"discord_staff": None,
+			"game_staff": None,
+		}
+
+		self.panel_cfg = {
+			"channel": None,
+			"message_id": None,
+		}
+		# self.modmail_access_role = None
+		# self.management_access_role = None
+		# self.appeal_team_role = None
+		# self.discord_staff_team_role = None
+		# self.scpsl_staff_team_role = None
+		# self.ticket_log_channel = None
+		# self.appeal_log_channel = None
+		# self.panel_channel = None
+		# self.panel_message_id = None
 
 		# DB setup
 		db_path = cog_data_path(self) / "tickets.db"
@@ -123,23 +151,23 @@ class TicketSystem(commands.Cog):
 	async def has_staff(self, interaction: discord.Interaction):
 		sconfg = self.config.guild(interaction.guild)
 
-		staff_role = await sconfg.modmail_access_role()
-		mgmt_role = await sconfg.management_access_role()
+		roles = await sconfg.ticket_roles()
+		staff_role = roles.get("modmail_access")
+		mgmt_role = roles.get("modmail_mgmt")
 
 		check = {rid for rid in (staff_role, mgmt_role) if rid}
-		self.log.info(f"has staff: required = {check}")
-		
 		if not check:
-			return False # No access roles are configured.
+			return False
 
-        # Check if the user has any of the required roles
 		user_role_ids = {r.id for r in interaction.user.roles}
 		return not user_role_ids.isdisjoint(check)
 	
 	# Bool function to check for elevated level access to the system
 	async def has_management(self, interaction: discord.Interaction):
-		role_id = await self.config.guild(interaction.guild).management_access_role()
-		self.log.info(f"has mgmt: required = {role_id}")
+		sconfg = self.config.guild(interaction.guild)
+		
+		roles = await sconfg.ticket_roles()
+		role_id = roles.get("modmail_mgmt")
 
 		if interaction.user.guild_permissions.administrator:
 			return True
@@ -151,27 +179,17 @@ class TicketSystem(commands.Cog):
 		if member.guild_permissions.administrator:
 			return True
 		sconfg = self.config.guild(guild)
+		roles = await sconfg.ticket_roles()
 		protected_role_ids =[
-			await sconfg.modmail_access_role(),
-			await sconfg.management_access_role(),
-			await sconfg.discord_staff_role(),
-			await sconfg.scpsl_staff_role()
+			roles.get("modmail_access"),
+			roles.get("modmail_mgmt"),
+			roles.get("discord_staff"),
+			roles.get("game_staff")
 		]
 		role_ids = [rid for rid in protected_role_ids if rid]
 		return any(r.id in role_ids for r in member.roles)
-
-
-	# Assign the command groups so I don't have to make several disorganized commands
-	staff = app_commands.Group(name="staff", description="Staff commands", guild_only=True)
-	appeals = app_commands.Group(name="appeals", description="Appeal commands", guild_only=True)
-		
-	@staff.command(name="setup", description="Starts the setup process for the ticketing system. Sends the panel if setup has been done.")
-	async def setup_tool(self, interaction: discord.Interaction):
-		# Permission check
-		if not await self.has_management(interaction):
-			await interaction.response.send_message("**`🚫 Prohibited!`** You need Administrator or the configured management role.", ephemeral=True)
-			return
-		
+	
+	async def get_setup_embed(self, guild: discord.Guild):
 		# Helper for channels/roles
 		def format_mention(item_id, item_type):
 			if not item_id: return "`Not Set`"
@@ -180,20 +198,28 @@ class TicketSystem(commands.Cog):
 			return f"`{item_id}`"
 		
 		# Get the server config and assign the necessary values
-		sconfg = self.config.guild(interaction.guild)
-		modmail_access_role = await sconfg.modmail_access_role()
-		management_role_id = await sconfg.management_access_role()
-		appeal_team_role_id = await sconfg.appeal_team_role()
-		discord_staff_role_id = await sconfg.discord_staff_role()
-		scpsl_staff_role_id = await sconfg.scpsl_staff_role()
-		ticket_log_channel_id = await sconfg.ticket_log_channel()
-		appeal_log_channel_id = await sconfg.appeal_log_channel()
-		panel_channel_id = await sconfg.panel_channel()
-		ticket_categories = await sconfg.ticket_categories()
+		sconfg = self.config.guild(guild)
+		roles = await sconfg.ticket_roles()
+		channels = await sconfg.ticket_channels()
+		panel = await sconfg.panel_cfg()
+		categories = await sconfg.ticket_categories()
 
+		# Get IDs
+		modmail_access_role = roles.get("modmail_access")
+		management_role_id = roles.get("modmail_mgmt")
+		appeal_team_role_id = roles.get("appeal_team")
+		discord_staff_role_id = roles.get("discord_staff")
+		game_staff_role_id = roles.get("game_staff")
+
+		panel_channel_id = panel.get("channel")
+		ticket_log_channel_id = channels.get("log_channel")
+		appeal_log_channel_id = channels.get("appeal_logs")
+
+		# Gather into list!
 		channel_list = [panel_channel_id, ticket_log_channel_id, appeal_log_channel_id]		
-		role_list = [modmail_access_role, management_role_id, appeal_team_role_id, discord_staff_role_id, scpsl_staff_role_id]
+		role_list = [modmail_access_role, management_role_id, appeal_team_role_id, discord_staff_role_id, game_staff_role_id]
 		
+		# Embeds and whatnot
 		setup_embed = discord.Embed(
 			title="⚙️ Ticket System Setup",
 			description="You are currently setting up your panel. To see your current settings, please run `/staff settings`.",
@@ -215,12 +241,12 @@ class TicketSystem(commands.Cog):
 			f"Management Access: {format_mention(management_role_id, 'role')}\n"
 			f"Appeals: {format_mention(appeal_team_role_id, 'role')}\n"
 			f"Discord Staff: {format_mention(discord_staff_role_id, 'role')}\n"
-			f"SCP:SL Staff: {format_mention(scpsl_staff_role_id, 'role')}"
+			f"SCP:SL Staff: {format_mention(game_staff_role_id, 'role')}"
 		)
 		setup_embed.add_field(name="Role Configuration", value=roles_text, inline=False)
 
-		discord_cat_id = ticket_categories.get("discord")
-		scpsl_cat_id = ticket_categories.get("scpsl")
+		discord_cat_id = categories.get("discord")
+		scpsl_cat_id = categories.get("scpsl")
 		channels_text = (
 			f"Ticket Logs: {format_mention(ticket_log_channel_id, 'channel')}\n"
 			f"Appeal Logs: {format_mention(appeal_log_channel_id, 'channel')}\n"
@@ -229,8 +255,23 @@ class TicketSystem(commands.Cog):
 			f"SCP:SL Ticket Category: {format_mention(scpsl_cat_id, 'channel')}"
 		)
 		setup_embed.add_field(name="Channel & Category Configuration", value=channels_text, inline=False)
-		view = ViewsModals.SetupView(interaction.user)
 
+		return setup_embed
+
+	# Assign the command groups so I don't have to make several disorganized commands
+	staff = app_commands.Group(name="staff", description="Staff commands", guild_only=True)
+	appeals = app_commands.Group(name="appeals", description="Appeal commands", guild_only=True)
+		
+	@staff.command(name="setup", description="Starts the setup process for the ticketing system. Sends the panel if setup has been done.")
+	async def setup_tool(self, interaction: discord.Interaction):
+		# Permission check
+		if not await self.has_management(interaction):
+			await send_blocked(interaction, "You need Administrator or the configured management role.", True)
+			return
+		
+		setup_embed = await self.get_setup_embed(interaction.guild)
+
+		view = ViewsModals.SetupView(interaction.user)
 		await interaction.response.send_message(view=view, embed=setup_embed)
 		view.message = await interaction.original_response()
 
@@ -240,14 +281,14 @@ class TicketSystem(commands.Cog):
 		allowed = await self.has_management(interaction)
 
 		if not allowed:
-			await interaction.response.send_message("**`🚫 Prohibited!`** You don't have permission to run this command.", ephemeral=True)
+			await send_blocked(interaction, "You do not have permission to run this command.", True)
 			return
 		 
 		sconfg = self.config.guild(interaction.guild)
 		current = await sconfg.tickets_enabled()
 		new = not current
 		await sconfg.tickets_enabled.set(new)
-		await interaction.response.send_message(f"**`✅ Success!`** Ticket creation is now {'enabled' if new else 'disabled'}.")
+		await send_success(interaction, f"Ticket creation is now {'enabled' if new else 'disabled'}.")
 
 	@staff.command(name="set", description="Enable/disable a specific ticket type or ticket pings")
 	@app_commands.choices(
@@ -267,7 +308,7 @@ class TicketSystem(commands.Cog):
 		allowed = await self.has_management(interaction)
 
 		if not allowed:
-			await interaction.response.send_message("**`🚫 Prohibited!`** You don't have permission to run this command.", ephemeral=True)
+			await send_blocked(interaction, "You do not have permission to run this command.", True)
 			return
 		 
 		sconfg = self.config.guild(interaction.guild)
@@ -276,9 +317,9 @@ class TicketSystem(commands.Cog):
 
 		await sconfg.ticket_statuses.set(ticket_statuses)
 		if option == "staffping":
-			await interaction.response.send_message(f"**`✅ Success!`** Staff pings have been {status}d.")
+			await send_success(interaction, f"Staff pings have been {status}d.")
 		else:
-			await interaction.response.send_message(f"**`✅ Success!`** {option.capitalize()} tickets have been {status}d.")
+			await send_success(interaction, f"{option.capitalize()} tickets have been {status}d.")
 
 	@staff.command(name="blacklist", description="Blacklists a user")
 	async def blacklist_user(self, interaction: discord.Interaction, user: discord.Member, reason: str):
@@ -286,12 +327,12 @@ class TicketSystem(commands.Cog):
 		allowed = await self.has_management(interaction)
 
 		if not allowed:
-			await interaction.response.send_message("**`🚫 Prohibited!`** You don't have permission to run this command.", ephemeral=True)
+			await send_blocked(interaction, "You do not have permission to run this command.", True)
 			return
 		 
 
 		if await self.check_protected_status(interaction.guild, user):
-			await interaction.response.send_message("**`🚫 Prohibited!`** This is a protected user. You cannot blacklist them.")
+			await send_blocked(interaction, "This is a protected user.", True)
 			return
 		
 		try:
@@ -300,10 +341,9 @@ class TicketSystem(commands.Cog):
 				VALUES(?, ?, ?, ?)
 			""", (user.id, reason, interaction.user.id, datetime.now().isoformat()))
 			self.conn.commit()
-			await interaction.response.send_message(f"**`✅ Success!`** {user.mention} has been successfully blacklisted. **Reason:** {reason}")
+			await send_success(interaction, f"{user.mention} has been successfully blacklisted. **Reason:** {reason}")
 		except sqlite3.IntegrityError:
-			await interaction.response.send_message(f"**`⚠️ Error!`** {user.mention} has already been blacklisted.")
-			return
+			await send_error(interaction, f"{user.mention} has already been blacklisted.")
 	
 	@staff.command(name="unblacklist", description="Removes a user from the blacklist")
 	async def unblacklist_user(self, interaction: discord.Interaction, user: discord.Member):
@@ -311,24 +351,25 @@ class TicketSystem(commands.Cog):
 		allowed = await self.has_management(interaction)
 
 		if not allowed:
-			await interaction.response.send_message("**`🚫 Prohibited!`** You don't have permission to run this command.", ephemeral=True)
+			await send_blocked(interaction, "You do not have permission to run this command.", True)
 			return
 		 
 		
 		self.cursor.execute("DELETE FROM blacklist WHERE user_id = ?", (user.id,))
 		if self.cursor.rowcount > 0:
 			self.conn.commit()
-			await interaction.response.send_message(f"**`✅ Success!`** {user.mention} has been successfully removed from the blacklist!")
+			await send_success(interaction, f"{user.mention} has been successfully removed from the blacklist!")
 		else:
-			await interaction.response.send_message(f"**`⚠️ Error!`** {user.mention} was not found in the blacklist.")
+			await send_error(interaction, f"{user.mention} was not found in the blacklist.")
 
 	@staff.command(name="history", description="Grabs the ticket history of a user")
 	async def ticket_history(self, interaction: discord.Interaction, user: discord.Member):
 		"""Get the ticket history for a user"""
 		allowed = await self.has_staff(interaction)
+		sconfg = self.config.guild(interaction.guild)
 
 		if not allowed:
-			await interaction.response.send_message("**`🚫 Prohibited!`** You don't have permission to run this command.", ephemeral=True)
+			await send_blocked(interaction, "You do not have permission to run this command.", True)
 			return
 		 
 		# Get the history for local DB
@@ -349,7 +390,8 @@ class TicketSystem(commands.Cog):
 			await interaction.response.send_message(embed=no_history_embed)
 			return
 		
-		logs_channel_id = await self.config.guild(interaction.guild).ticket_log_channel()
+		channels = await sconfg.ticket_channels()
+		logs_channel_id = channels.get("log_channel")
 
 		history_embed = discord.Embed(
 				title=f"📋 Ticket History for {user.display_name}",
@@ -398,11 +440,10 @@ class TicketSystem(commands.Cog):
 		allowed = self.has_staff(interaction)
 
 		if not allowed:
-			await interaction.response.send_message("**`🚫 Prohibited!`** You don't have permission to run this command.", ephemeral=True)
+			await send_blocked(interaction, "You do not have permission to run this command.", True)
 			return
 		
 		embed = discord.Embed(
-			title="Ticket System Command List",
 			description="Here is a list of all commands used for the ticket system! Keep in mind these are all slash commands.",
 			timestamp=datetime.now(),
 			color=discord.Color.orange()
@@ -415,7 +456,7 @@ class TicketSystem(commands.Cog):
 			"`unblacklist <user> <reason>`: Removes a user the blacklist.\n\n"
 			"`panic`: Enables or disables ticket creation.\n\n"
 			"`set <ticket_type_or_pings> <status>`: Enables or disables a specific ticket type or staff pings in tickets.\n\n"
-			"`settings`: Displays all ticket statuses."
+			"`settings`: Displays all ticket statuses.\n\n"
 			"`history <user>`: Gets the ticket history for a user. Currently, the last 5 tickets are displayed.\n\n"
 			"`list`: Gets the list of all ticket staff\n\n"
 		)
@@ -437,7 +478,7 @@ class TicketSystem(commands.Cog):
 		allowed = await self.has_management(interaction)
 
 		if not allowed:
-			await interaction.response.send_message("**`🚫 Prohibited!`** You don't have permission to run this command.", ephemeral=True)
+			await send_blocked(interaction, "You do not have permission to run this command.", True)
 			return
 		
 		sconfg = self.config.guild(interaction.guild)
@@ -479,11 +520,12 @@ class TicketSystem(commands.Cog):
 		"""
 		sconfg = self.config.guild(interaction.guild)
 		user = interaction.user
+		roles = await sconfg.ticket_roles()
 
-		discord_staff_id = await sconfg.discord_staff_role()
-		scpsl_staff_id = await sconfg.scpsl_staff_role()
-		modmail_access_id = await sconfg.modmail_access_role()
-		mgmt_access_id = await sconfg.management_access_role()
+		discord_staff_id = roles.get("discord_staff")
+		scpsl_staff_id = roles.get("game_staff")
+		modmail_access_id = roles.get("modmail_access")
+		mgmt_access_id = roles.get("modmail_mgmt")
 
 		modmail_access_role = interaction.guild.get_role(modmail_access_id)
 		mgmt_access_role = interaction.guild.get_role(mgmt_access_id)
@@ -494,45 +536,46 @@ class TicketSystem(commands.Cog):
 		check_staff = bool(staff_role_ids and any(r.id in staff_role_ids for r in user.roles))
 		check_modmail = bool(access_roles and any(r.id in access_roles for r in user.roles))
 
+
 		if not check_staff:
-			await interaction.response.send_message("**`🚫 Prohibited!`** You do not have permission to register access.", ephemeral=True)
+			await send_blocked(interaction, "You do not have permission to run this command.", True)
 			return
 		
 		if check_modmail:
-			await interaction.response.send_message("**`⚠️ Error!`** You already have access to the ticket system.", ephemeral=True)
+			await send_blocked(interaction, "You already have access to the ticket system.", True)
 			return
 		
-		if user.guild_permissions.administrator:
-			if check_modmail:
-				await interaction.response.send_message("**`⚠️ Error!`** You already have access to the ticket system.", ephemeral=True)
+		try:
+			if user.guild_permissions.administrator:
+				if check_modmail:
+					await send_blocked(interaction, "You already have access to the ticket system.", True)
+					return
+				await user.add_roles(mgmt_access_role, reason="Registered user to ticket staff team")
+				await send_success(interaction, f"You were successfully registered. Assigned {mgmt_access_role.mention} to you since you have Administrator privileges in this server.", True)
 				return
-			await user.add_roles(mgmt_access_role, reason="Registered user to ticket staff team")
-			await interaction.response.send_message(f"**`✅ Success!`** Assigned {mgmt_access_role.mention} to you since you have Administrator privileges in this server.", ephemeral=True)
-			return
-		
-		await user.add_roles(modmail_access_role, reason="Registered user to ticket staff team")
-		await interaction.response.send_message(f"**`✅ Success!`** Assigned {modmail_access_role.mention} to you. If you are a server administrator that needs management level access, you may add {mgmt_access_role.mention} manually.", ephemeral=True)
-		return
+			
+			await user.add_roles(modmail_access_role, reason="Registered user to ticket staff team")
+			await send_success(interaction, f"You were successfully registered. Assigned {modmail_access_role.mention} to you. If you are a server administrator that needs management level access, you may add {mgmt_access_role.mention} manually.", True)
+		except Exception as e:
+			await send_error(interaction, f"Unable to register properly: `{e}`")
 	
 	@staff.command(name="list", description="Gets a list of all ticket system staff that are registered")
 	async def get_ticket_staff_list(self, interaction: discord.Interaction):
 		"""
 		Get list of all staff registered to the ticket system
 		"""
-		allowed = (
-			await self.has_staff(interaction)
-			or await self.has_management(interaction)
-		)
-
+		allowed = await self.has_management(interaction)
 		if not allowed:
-			await interaction.response.send_message("**`🚫 Prohibited!`** You don't have permission to run this command.", ephemeral=True)
+			await send_blocked(interaction, "You do not have permission to run this command.", True)
 			return
 
 		guild = interaction.guild
 		sconfg = self.config.guild(guild)
+		roles = await sconfg.ticket_roles()
+		allowed = await self.has_staff(interaction) or await self.has_management(interaction)
 
-		mgmt_id = await sconfg.management_access_role()
-		modmail_id = await sconfg.modmail_access_role()
+		modmail_id = roles.get("modmail_access")
+		mgmt_id = roles.get("modmail_mgmt")
 
 		mgmt_role = guild.get_role(mgmt_id) if mgmt_id else None
 		modmail_role = guild.get_role(modmail_id) if modmail_id else None
@@ -564,7 +607,7 @@ class TicketSystem(commands.Cog):
 		result = self.cursor.fetchone()
 
 		if not result:
-			await interaction.response.send_message(f"**`⚠️ Error!`** There was no appeal matching ID: `{appeal_id}`. Please try again with a valid AID.", ephemeral=True)
+			await send_error(interaction, f"There was no appeal matching ID: `{appeal_id}`. Please try again with a valid appeal ID.", True)
 			return
 		
 		# Hopefully it assigns the correct values if I'm doing it correctly
