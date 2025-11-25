@@ -5,6 +5,7 @@ import uuid
 import io
 import logging
 
+from .Handling import send_blocked, send_error, send_success, send_warning
 from datetime import datetime
 from discord import app_commands, utils
 from discord.ext import commands
@@ -28,13 +29,14 @@ async def create_ticket(
     sconfg = cog.config.guild(guild)
 
     ticket_statuses = await sconfg.ticket_statuses()
-    ticket_log_channel_id = await sconfg.ticket_log_channel()
+    channels = await sconfg.ticket_channels()
+    ticket_log_channel_id = channels.get("log_channel")
     ticket_log_channel = interaction.guild.get_channel(ticket_log_channel_id)
     staff_ping_enabled = ticket_statuses.get("staffping", True)
 
     category = discord.utils.get(guild.categories, id=category_id)
     if category is None:
-        await interaction.response.send_message("**`⚠️ Error!`** Cannot open a request right now.", ephemeral=True)
+        await send_error(interaction, "Cannot open a request right now since the ticket category was not set. Contact server staff.", True)
         return
 
     ticket_id = uuid.uuid4().hex[:6]
@@ -88,7 +90,7 @@ async def create_ticket(
 
     await channel.send(ping_message, embed=embed, view=ViewsModals.CloseTicketView(), allowed_mentions=discord.AllowedMentions.all())
     await ticket_log_channel.send(embed=created_ticket_embed)
-    await interaction.response.send_message(f"**`✅ Success!`** Ticket opened! Access it at {channel.mention}", ephemeral=True)
+    await send_success(interaction, f"Ticket opened! Access it at {channel.mention}", True)
 
 async def close_ticket(channel: discord.TextChannel, closer: discord.Member, close_reason: str, log_message: discord.Message, cog: commands.Cog):
     ticket_id = None
@@ -220,7 +222,7 @@ async def create_transcript(channel: discord.TextChannel, open_reason: str, open
     try:
         await opener.send(embed=user_embed, file=file_user)
     except (discord.Forbidden, AttributeError):
-        await log_message.reply(f"**`⚠️ Error!`** Unable to send transcript to {opener.mention} (DMs may be closed).")
+        await log_message.reply(f"**`⚠️ Error`**: Unable to send transcript to {opener.mention} (DMs may be closed).")
 
     return log_message
 
@@ -237,6 +239,8 @@ async def create_ban_appeal(interaction, appeal_platform: str, banned_user: str,
     time_sent_ts = f"<t:{int(time_sent.timestamp())}:f>"
 
     ticket_statuses = await sconfg.ticket_statuses()
+    channels = await sconfg.ticket_channels()
+    roles = await sconfg.ticket_roles()
     staff_ping_enabled = ticket_statuses.get("staffping", True)
 
     cog.cursor.execute("""
@@ -245,13 +249,13 @@ async def create_ban_appeal(interaction, appeal_platform: str, banned_user: str,
     """, (appeal_id, user.id, appeal_platform, appeal_request, datetime.now().isoformat()))
     cog.conn.commit()
 
-    appeals_channel_id = await sconfg.appeal_log_channel()
-    appeal_team_id = await sconfg.appeal_team_role()
+    appeals_channel_id = channels.get("appeal_logs")
+    appeal_team_id = roles.get("appeal_team")
     appeals_channel = guild.get_channel(appeals_channel_id)
 
     if not appeals_channel:
         log.warning(f"Could not find the appeals channel with ID {appeals_channel_id}")
-        await interaction.response.send_message("**`⚠️ Error!`** The appeal system is misconfigured. Please contact an administrator.", ephemeral=True)
+        await send_error(interaction, "The appeal system is misconfigured. Please contact server staff.", True)
         return
     
     appeals_embed = discord.Embed(
@@ -282,11 +286,11 @@ async def create_ban_appeal(interaction, appeal_platform: str, banned_user: str,
     try:
         await user.send(embed=user_embed)
     except discord.Forbidden:
-        await appeals_message.reply(f"**`⚠️ Error!`** Unable to send appeal confirmation to {user.mention} (DMs may be closed).")
-        await interaction.response.send_message(f"**`⚠️ Success!`** However, your message requests were turned off so I was unable to send you a confirmation. You may check your appeal status by using `/appeal status {appeal_id}`.", ephemeral=True)
+        await appeals_message.reply(f"**`⚠️ Error`**: Unable to send appeal confirmation to {user.mention} (DMs may be closed).")
+        await send_warning(interaction, f"Appeal sent but your message requests were turned off so I was unable to send you a confirmation. You may check your appeal status by using `/appeal status {appeal_id}`.", True)
         return
     
-    await interaction.response.send_message(f"**`✅ Success!`** Your appeal has been submitted for review and a receipt has been sent to you. Appeal ID: `{appeal_id}`", ephemeral=True)
+    await send_success(interaction, f"Your appeal has been submitted for review and a receipt has been sent to you. Appeal ID: `{appeal_id}`", True)
 
 async def finalize_appeal(opener_id: int, appeal_id: str, decision: str, reason: str, staff_member: discord.Member, cog: commands.Cog):
     status = "accepted" if decision == "accept" else "denied"
@@ -300,7 +304,9 @@ async def finalize_appeal(opener_id: int, appeal_id: str, decision: str, reason:
 
     guild = staff_member.guild
     sconfg = cog.config.guild(guild)
-    appeals_channel_id = await sconfg.appeal_log_channel()
+    channels = await sconfg.ticket_channels()
+
+    appeals_channel_id = channels.get("appeal_logs")
     appeals_channel = guild.get_channel(appeals_channel_id)
 
     user = await cog.bot.fetch_user(opener_id)
@@ -325,4 +331,4 @@ async def finalize_appeal(opener_id: int, appeal_id: str, decision: str, reason:
     try:
         await user.send(embed=dm_embed)
     except discord.Forbidden:
-        await appeals_channel.send(f"**`⚠️ Error!`** Unable to send the decision to {user.mention}. This may be due to their message requests turned off. (AID: `{appeal_id}`)")
+        await appeals_channel.send(f"**`⚠️ Error`**: Unable to send the decision to {user.mention}. This may be due to their message requests turned off. (AID: `{appeal_id}`)")

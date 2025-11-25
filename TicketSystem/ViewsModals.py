@@ -5,6 +5,7 @@ import io
 import re
 
 from redbot.core import Config
+from .Handling import send_blocked, send_error, send_success, send_warning
 from .Tickets import create_transcript, create_ticket, close_ticket, create_ban_appeal, finalize_appeal
 from datetime import datetime
 from discord import app_commands, utils
@@ -35,7 +36,7 @@ class TicketSelect(discord.ui.Select):
         cog = interaction.client.get_cog("TicketSystem")
         if not cog:
             new_view = TicketView()
-            await interaction.response.send_message("**`⚠️ Error!`** Ticket system not loaded.", ephemeral=True)
+            await send_error(interaction, "TicketSystem not loaded.", True)
             await interaction.message.edit(view=new_view)
             return
 
@@ -43,13 +44,14 @@ class TicketSelect(discord.ui.Select):
 
         # Check for panic mode
         tickets_enabled = await sconfg.tickets_enabled()
+        channels = await sconfg.ticket_channels()
         if not tickets_enabled:
-            log_ch_id = await sconfg.ticket_log_channel()
+            log_ch_id = channels.get("log_channel")
             log_ch = interaction.guild.get_channel(log_ch_id) if log_ch_id else None
             if log_ch:
                 await log_ch.send(f"{interaction.user} ({interaction.user.id}) attempted to open ticket type `{self.values[0]}` during panic mode.")
             new_view = TicketView()
-            await interaction.response.send_message("**`⚠️ Error!`** Tickets are currently disabled.", ephemeral=True)
+            await send_error(interaction, "Tickets are currently disabled.", True)
             await interaction.message.edit(view=new_view)
             return
         
@@ -57,7 +59,7 @@ class TicketSelect(discord.ui.Select):
         cog.cursor.execute("SELECT reason FROM blacklist WHERE user_id = ?", (interaction.user.id,))
         if result := cog.cursor.fetchone():
             new_view = TicketView()
-            await interaction.response.send_message(f"**`🚫 Prohibited!`** You are blacklisted from creating tickets.", ephemeral=True)
+            await send_blocked(interaction, "You are blacklisted from making tickets.", True)
             await interaction.message.edit(view=new_view)
             return
 
@@ -85,7 +87,7 @@ class TicketSelect(discord.ui.Select):
                 for ch in category.text_channels:
                     if ch.topic and f"({interaction.user.id})" in ch.topic:
                         new_view = TicketView()
-                        await interaction.response.send_message(f"**`🚫 Prohibited!`** You already have an open ticket in this category. You may access it here: {ch.mention}", ephemeral=True)
+                        await send_blocked(interaction, f"You already have an open ticket in this category. You may access it here: {ch.mention}", True)
                         await interaction.message.edit(view=new_view)
                         return
 
@@ -101,13 +103,13 @@ class TicketSelect(discord.ui.Select):
             if result:
                 existing_appeal_id = result[0]
                 new_view = TicketView()
-                await interaction.response.send_message(f"**`🚫 Prohibited!`** You already have an appeal open. Please wait for staff to review it. (Reference AID: `{existing_appeal_id}`)", ephemeral=True)
+                await send_blocked(interaction, f"You already have an appeal open. Please wait for staff to review it. (Reference AID: `{existing_appeal_id}`)", True)
                 await interaction.message.edit(view=new_view)
                 return
             modal = AppealModal()
         else:
             new_view = TicketView()
-            await interaction.response.send_message("**`⚠️ Error!`** An unexpected error occurred.", ephemeral=True)
+            await send_error(interaction, "An unexpected error occurred. Please contact server staff.", True)
             await interaction.message.edit(view=new_view)
             return
 
@@ -128,11 +130,13 @@ class DecisionSelect(discord.ui.Select):
         cog = interaction.client.get_cog("TicketSystem")
 
         sconfg = cog.config.guild(guild)
-        appeal_team_id = await sconfg.appeal_team_role()
+        roles = await sconfg.ticket_roles()
+        appeal_team_id = roles.get("appeal_team")
+
         appeal_team_role = guild.get_role(appeal_team_id)
 
         if not appeal_team_role or appeal_team_role not in interaction.user.roles:
-            await interaction.response.send_message("**`🚫 Prohibited!`** You do not have permission to make appeal decisions.", ephemeral=True)
+            await send_blocked(interaction, "You are unable to make appeal decisions.", True)
             new_view = AppealView()
             await interaction.message.edit(view=new_view)
             return
@@ -149,19 +153,20 @@ class CloseTicket(discord.ui.Button):
     async def callback(self, interaction: discord.Interaction):
         cog = interaction.client.get_cog("TicketSystem")
         if not cog:
-            await interaction.response.send_message("**`⚠️ Error!`** Ticket system not loaded.", ephemeral=True)
+            await send_error(interaction, "TicketSystem not loaded.", True)
             return
 
         sconfg = cog.config.guild(interaction.guild)
-        mod_role_id = await sconfg.modmail_access_role()
-        mgmt_role_id = await sconfg.management_access_role()
+        roles = await sconfg.ticket_roles()
+        mod_role_id = roles.get("modmail_access")
+        mgmt_role_id = roles.get("modmail_mgmt")
         
         access_roles = {rid for rid in(mod_role_id, mgmt_role_id) if rid}
         is_allowed = bool(access_roles and any(r.id in access_roles for r in interaction.user.roles))
 
         if not is_allowed:
             new_view = CloseTicketView()
-            await interaction.response.send_message("**`🚫 Prohibited!`** You do not have permission to close this ticket.", ephemeral=True)
+            await send_blocked(interaction, "Only the staff team can close tickets.", True)
             await interaction.message.edit(view=new_view)
             return
 
@@ -176,10 +181,10 @@ class SetupChannelsButton(discord.ui.Button):
     async def callback(self, interaction: discord.Interaction):
         cog = interaction.client.get_cog("TicketSystem")
         if not cog:
-            await interaction.response.send_message("**`⚠️ Error!`** Ticket system not loaded.", ephemeral=True)
+            await send_error(interaction, "TicketSystem not loaded.", True)
             return
         
-        await interaction.response.send_modal(SetupChannelsModal())
+        await interaction.response.send_modal(SetupChannelsModal(interaction.message))
 
         message = await interaction.original_response()
         view = discord.ui.View.from_message(message)
@@ -192,10 +197,10 @@ class SetupRolesButton(discord.ui.Button):
     async def callback(self, interaction: discord.Interaction):
         cog = interaction.client.get_cog("TicketSystem")
         if not cog:
-            await interaction.response.send_message("**`⚠️ Error!`** Ticket system not loaded.", ephemeral=True)
+            await send_error(interaction, "TicketSystem not loaded.", True)
             return
         
-        await interaction.response.send_modal(SetupRolesModal())
+        await interaction.response.send_modal(SetupRolesModal(interaction.message))
 
         message = await interaction.original_response()
         view = discord.ui.View.from_message(message)
@@ -208,10 +213,10 @@ class SetupResetButton(discord.ui.Button):
     async def callback(self, interaction: discord.Interaction):
         cog = interaction.client.get_cog("TicketSystem")
         if not cog:
-            await interaction.response.send_message("**`⚠️ Error!`** Ticket system not loaded.", ephemeral=True)
+            await send_error(interaction, "TicketSystem not loaded.", True)
             return
         
-        await interaction.response.send_modal(SetupResetModal())
+        await interaction.response.send_modal(SetupResetModal(interaction.message))
 
         message = await interaction.original_response()
         view = discord.ui.View.from_message(message)
@@ -224,11 +229,14 @@ class SetupSendPanelButton(discord.ui.Button):
     async def callback(self, interaction: discord.Interaction):
         cog = interaction.client.get_cog("TicketSystem")
         if not cog:
-            await interaction.response.send_message("**`⚠️ Error!`** Ticket system not loaded.", ephemeral=True)
+            await send_error(interaction, "TicketSystem not loaded.", True)
             return
         
-        panel_ch_id = await cog.config.guild(interaction.guild).panel_channel()
-        panel_message_id = await cog.config.guild(interaction.guild).panel_message_id()
+        sconfg = cog.config.guild(interaction.guild)
+        panel_cfg = await sconfg.panel_cfg()
+
+        panel_ch_id = panel_cfg.get("channel")
+        panel_message_id = panel_cfg.get("message_id")
         panel_ch = interaction.guild.get_channel(panel_ch_id)
 
         def make_embed():
@@ -266,21 +274,25 @@ class SetupSendPanelButton(discord.ui.Button):
                 await panel_msg.delete()
             except discord.NotFound:
                 new_panel_message = await panel_ch.send(embeds=panel_embeds, view=TicketView())
-                await cog.config.guild(interaction.guild).panel_message_id.set(new_panel_message.id)
+                
+                async with sconfg.panel_cfg() as panel:
+                    panel["message_id"] = new_panel_message.id
 
-                await interaction.response.send_message("**`⚠️ Error!`** The previous panel was not found. A new one has been sent.")
+                await send_error(interaction, "The previous panel was not found. A new one has been sent.")
             except discord.Forbidden:
-                await interaction.response.send_message("**`⚠️ Error!`** Unable to delete the panel due to missing permissions.")
+                await send_error(interaction, "Unable to delete the panel due to missing permissions.")
             except Exception as e:
-                cog.log.warning(f"**`⚠️ Error!`** Failed to delete old panel: {e}")
+                cog.log.warning(f"**`⚠️ Error`**: Failed to delete old panel: {e}")
 
         try:
             new_panel_message = await panel_ch.send(embeds=panel_embeds, view=TicketView())
 
-            await cog.config.guild(interaction.guild).panel_message_id.set(new_panel_message.id)
-            await interaction.response.send_message(f"✅ The panel has been successfully sent!")
-        except discord.Forbidden:
-            await interaction.response.send_message(f"**`⚠️ Error!`** Unable to send the panel to the configured channel.")
+            async with sconfg.panel_cfg() as panel:
+                panel["message_id"] = new_panel_message.id
+                
+            await send_success(interaction, "The panel has been successfully sent!")
+        except Exception as e:
+            await send_error(interaction, f"Unable to send the panel: `{e}`")
 
         message = await interaction.original_response()
         view = discord.ui.View.from_message(message)
@@ -305,7 +317,7 @@ class AppealView(discord.ui.View):
 
 class SetupView(discord.ui.View):
     def __init__(self, author: discord.User | discord.Member):
-        super().__init__(timeout=30)
+        super().__init__(timeout=60)
         self.message = None
         self.author_id = author.id
         self.add_item(SetupChannelsButton())
@@ -317,7 +329,7 @@ class SetupView(discord.ui.View):
         if interaction.user and interaction.user.id == self.author_id:
             return True
         else:
-            await interaction.response.send_message("❌ Only the person who initiated the setup command can interact.")
+            await send_blocked(interaction, "Only the person who initiated this command can change the settings.", True)
 
     async def on_timeout(self):
         for item in self.children:
@@ -346,9 +358,10 @@ class CloseTicketModal(discord.ui.Modal):
 
         sconfg = cog.config.guild(interaction.guild)
         channel = interaction.channel
+        channels = await sconfg.ticket_channels()
         closer = interaction.user
 
-        logs_channel_id = await sconfg.ticket_log_channel()
+        logs_channel_id = channels.get("log_channel")
         logs_channel = interaction.guild.get_channel(logs_channel_id)
         topic = interaction.channel.topic
         open_reason = "N/A"
@@ -411,8 +424,9 @@ class DiscordModal(discord.ui.Modal):
 
         sconfg = cog.config.guild(interaction.guild)
         categories = await sconfg.ticket_categories()
+        roles = await sconfg.ticket_roles()
         category_id = categories.get("discord")
-        staff_role_id = await sconfg.discord_staff_role()
+        staff_role_id = roles.get("discord_staff")
 
         await create_ticket(
             interaction, 
@@ -475,8 +489,9 @@ class GameModal(discord.ui.Modal):
 
         sconfg = cog.config.guild(interaction.guild)
         categories = await sconfg.ticket_categories()
+        roles = await sconfg.ticket_roles()
         category_id = categories.get("scpsl")
-        staff_role_id = await sconfg.scpsl_staff_role()
+        staff_role_id = roles.get("game_staff")
 
         await create_ticket(
             interaction, 
@@ -590,11 +605,12 @@ class FinishAppealModal(discord.ui.Modal):
         else:
             await original_message.edit(embed=new_embed)
 
-        await interaction.edit_original_response(content=f"**`✅ Success!`** Appeal `{appeal_id}` has been finalized.")
+        await interaction.edit_original_response(content=f"**`✅ Success`**: Appeal `{appeal_id}` has been finalized.")
 
 class SetupChannelsModal(discord.ui.Modal):
-    def __init__(self):
+    def __init__(self, setup_msg: discord.Message):
         super().__init__(title="Ticket System Channels Setup", timeout=None)
+        self.setup_msg = setup_msg
 
         self.panel_channel = discord.ui.Label(
             text="Where should the ticket panel go?",
@@ -669,20 +685,29 @@ class SetupChannelsModal(discord.ui.Modal):
         game_cat = parse_id(self.scpsl_ticket_category.component.values[0])
 
         try:
-            await sconfg.ticket_log_channel.set(transcript_channel)
-            await sconfg.appeal_log_channel.set(appeal_channel)
-            await sconfg.panel_channel.set(panel_channel)
-            await sconfg.ticket_categories.set({"discord": discord_cat, "scpsl": game_cat})
+            async with sconfg.ticket_channels() as channels:
+                channels["log_channel"] = transcript_channel
+                channels["appeal_logs"] = appeal_channel
+            
+            async with sconfg.panel_cfg() as panel:
+                panel["channel"] = panel_channel
 
-            message = "✅ Successfully set up channels!"
+            async with sconfg.ticket_categories() as categories:
+                categories["discord"] = discord_cat
+                categories["scpsl"] = game_cat
+
+            cog.log.info("Channels were successfully set!")
+            new_embed = await cog.get_setup_embed(interaction.guild)
+            await self.setup_msg.edit(embed=new_embed)
+            await send_success(interaction, "Channels configured successfully!")
         except Exception as e:
-            message = f"⚠️ Failed to set up channels: `{e}`"
-
-        await interaction.response.send_message(message)
-
+            cog.log.warning(f"Failed to set channels: {e}")
+            await send_warning(interaction, f"Channels configured successfully but the setup embed wasn't updated: `{e}`")
+            
 class SetupRolesModal(discord.ui.Modal):
-    def __init__(self):
+    def __init__(self, setup_msg: discord.Message):
         super().__init__(title="Ticket System Roles Setup", timeout=None)
+        self.setup_msg = setup_msg
 
         self.modmail_access_role = discord.ui.Label(
             text="What role should have standard access?",
@@ -752,21 +777,26 @@ class SetupRolesModal(discord.ui.Modal):
         appeal_role = parse_id(self.appeal_team_role.component.values[0])
 
         try:
-            await sconfg.modmail_access_role.set(modmail_role)
-            await sconfg.management_access_role.set(mgmt_role)
-            await sconfg.discord_staff_role.set(discord_role)
-            await sconfg.scpsl_staff_role.set(scpsl_role)
-            await sconfg.appeal_team_role.set(appeal_role)
+            async with sconfg.ticket_roles() as roles:
+                roles["modmail_access"] = modmail_role
+                roles["modmail_mgmt"] = mgmt_role
+                roles["discord_staff"] = discord_role
+                roles["game_staff"] = scpsl_role
+                roles["appeal_team"] = appeal_role
 
-            message = "✅ Successfully set up roles!"
+            cog.log.info("Roles were successfully set!")
+            
+            new_embed = await cog.get_setup_embed(interaction.guild)
+            await self.setup_msg.edit(embed=new_embed)
+            await send_success(interaction, "Roles configured successfully!")
         except Exception as e:
-            message = f"⚠️ Failed to set up roles: `{e}`"
-
-        await interaction.response.send_message(message)
+            cog.log.warning(f"Failed to set up roles: {e}")
+            await send_warning(interaction, f"Roles configured successfully but the setup embed wasn't updated: `{e}`")
 
 class SetupResetModal(discord.ui.Modal):
-    def __init__(self):
+    def __init__(self, setup_msg: discord.Message):
         super().__init__(title="Resetting Config", timeout=None)
+        self.setup_msg = setup_msg
 
         self.question = discord.ui.Label(
             text="Are you sure you want to reset?",
@@ -787,6 +817,13 @@ class SetupResetModal(discord.ui.Modal):
 
         if self.question.component.values[0] == "yes":
             await cog.config.guild(interaction.guild).clear()
-            await interaction.response.send_message("✅ Successfully reset all settings")
+            cog.log.info("TicketSystem settings (config) was reset.")
         else:
             await interaction.response.send_message("❌ Reset aborted.")
+
+        try:
+            new_embed = await cog.get_setup_embed(interaction.guild)
+            await self.setup_msg.edit(embed=new_embed)
+            await send_success(interaction, "Settings reset successfully!")
+        except Exception as e:
+            await send_warning(interaction, f"Settings reset successfully but the setup embed wasn't updated: `{e}`")
