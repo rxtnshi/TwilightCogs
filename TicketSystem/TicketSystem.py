@@ -53,6 +53,15 @@ class TicketSystem(commands.Cog):
 				"channel": None,
 				"message_id": None,
 			}
+			#"modmail_access_role": None,
+			#"management_access_role": None,
+			#"appeal_team_role": None,
+			#"ticket_log_channel": None,
+			#"appeal_log_channel": None,
+			#"panel_channel": None,
+			#"panel_message_id": None,
+			# "discord_staff_role": None,
+			# "scpsl_staff_role": None
 		}
 		self.config.register_guild(**default_guild)
 
@@ -80,6 +89,15 @@ class TicketSystem(commands.Cog):
 			"channel": None,
 			"message_id": None,
 		}
+		# self.modmail_access_role = None
+		# self.management_access_role = None
+		# self.appeal_team_role = None
+		# self.discord_staff_team_role = None
+		# self.scpsl_staff_team_role = None
+		# self.ticket_log_channel = None
+		# self.appeal_log_channel = None
+		# self.panel_channel = None
+		# self.panel_message_id = None
 
 		# DB setup
 		db_path = cog_data_path(self) / "tickets.db"
