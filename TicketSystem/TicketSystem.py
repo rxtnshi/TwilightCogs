@@ -470,10 +470,10 @@ class TicketSystem(commands.Cog):
 
 		await interaction.response.send_message(embed=embed)
 
-	@staff.command(name="settings", description="Display ticket statuses")
+	@staff.command(name="statuses", description="Display ticket statuses")
 	async def get_type_status(self, interaction: discord.Interaction):
 		"""
-		Used to be called the status command, but I merged it to include the set roles and channels
+		Renamed to statuses command. Settings moved to setup command.
 		"""
 		allowed = await self.has_management(interaction)
 
@@ -487,8 +487,8 @@ class TicketSystem(commands.Cog):
 		ticket_statuses = await sconfg.ticket_statuses()
 
 		embed = discord.Embed(
-			title="⚙️ Current Settings",
-			description="Showing all ticket statuses and settings for this cog",
+			title="⚙️ Current Ticket Statuses",
+			description="Showing all ticket statuses.",
 			timestamp=datetime.now(),
 			color=discord.Color.blue()
 		)
