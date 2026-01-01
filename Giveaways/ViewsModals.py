@@ -90,7 +90,7 @@ class GiveawaySettingsView(discord.ui.View):
     def __init__(self, author: discord.User | discord.Member):
         super().__init__(timeout=60)
         self.message = None
-        self.author = author.id
+        self.author_id = author.id
         self.add_item(SetRolesButton())
 
     async def interaction_check(self, interaction: discord.Interaction):
@@ -98,6 +98,7 @@ class GiveawaySettingsView(discord.ui.View):
             return True
         else:
             await send_blocked(interaction, "Only the person who initiated this command can change the settings.", True)
+            return False
 
     async def on_timeout(self):
         for item in self.children:
