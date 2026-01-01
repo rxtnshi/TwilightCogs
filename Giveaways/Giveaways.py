@@ -319,7 +319,7 @@ class Giveaways(commands.Cog):
         
         for ga_id, prize, channel_id, message_id, end_time in result:
             msg_link = f"https://discord.com/channels/{interaction.guild.id}/{channel_id}/{message_id}"
-            text += f"[{prize} ({ga_id})]({msg_link})\nEnds: <t:{end_time}:R> • <t:{end_time}:f>\n\n"
+            text += f"[{prize} ({ga_id})]({msg_link})\nEnds <t:{int(end_time)}:R> • <t:{int(end_time)}:f>\n\n"
 
         embed = discord.Embed(
             title="🎉 Active Giveaways",
