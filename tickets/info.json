@@ -1,0 +1,7 @@
+{
+    "author": ["rxtnshi/Insurgent"],
+    "install_msg" : "Thank you for installing `tickets`! Please make sure you have [aiosqlite](https://pypi.org/project/aiosqlite/) installed otherwise this cog will not function properly. For documentation, please run `/tickets help`.",
+    "name" : "tickets",
+    "short" : "Customizable ticket system using slash commands.",
+    "description" : "Rewrite of TicketSystem v1. Please reach out to me at `hello@rxtnshi.xyz` for help."
+}
