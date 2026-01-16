@@ -97,10 +97,12 @@ class Ticket:
 
         await log_ch.send(view=log_view)
 
-    async def create_appeal(self, interaction: discord.Interaction):
+    # async def create_appeal(self, interaction, moderated_account_id, platform, appeal_info):
+    async def create_appeal(self, interaction: discord.Interaction, moderated_account_id: int, platform: str, appeal_info: str):
         pass
 
-    async def close_appeal(self, interaction: discord.Interaction):
+    # async def create_appeal(self, interaction, moderated_account_id, platform, appeal_info):
+    async def close_appeal(self, interaction: discord.Interaction, decision: str, ):
         pass
 
 class TicketCategory:
@@ -114,14 +116,14 @@ class TicketCategory:
     async def create_category(category_name, description, team_role_id):
         count = await TicketDB.return_category_count()
 
-        if count <= 25:
+        if count <= 24:
             try:
                 await TicketDB.save_category(category_name, description, team_role_id)
                 await send_success(f"Successfully created a category!\n__**{category_name}**__\n`Description:` {description}\n`Responsible Team:` <@&{team_role_id}>")
             except Exception as e:
                 await send_error(f"Unable to create that category: {e}")
         else:
-            await send_blocked("You currently reached the max amount of categories (25). Please remove one or more to create a new one.")
+            await send_blocked("You currently reached the max amount of categories (24). Please remove one or more to create a new one.")
 
     @staticmethod
     async def get_category(category_name):

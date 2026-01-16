@@ -65,7 +65,16 @@ class LogInfo(ui.LayoutView):
         self.add_item(container)
 
 class AppealPanel(ui.LayoutView):
-    def __init__(self, user: discord.Member):
+    def __init__(self, user: discord.Member, moderated_account: str):
+        self.user = user
+        
+        container = ui.Container(
+
+        )
+
+        self.add_item(container)
+
+    async def update_status(decision: str):
         pass
 
 class SupportPanel(ui.LayoutView):
@@ -255,6 +264,31 @@ class CloseTicketQuestionaire(ui.Modal):
     async def on_submit(self, interaction: discord.Interaction):
         reason = self.reason.component.value
         await Ticket.close_ticket(self, interaction, reason)
+
+class OpenAppeal(ui.Modal):
+    def __init__(self):
+        super().__init__(title="Opening Appeal")
+
+class AppealDecision(ui.Modal):
+    def __init__(self, decision: str, appeal_id: str):
+        super().__init__(title=f"{self.decision}ing Appeal {self.appeal_id}", timeout=None)
+        self.decision = decision
+        self.appeal_id = appeal_id
+
+        self.reason = ui.Label(
+            text="Reason for Decision",
+            description=f"Please give a reason why this appeal is being {"accepted" if self.decision.lower() == "accept" else "denied"}.",
+            component=ui.TextInput(
+                style=discord.TextStyle.paragraph(),
+                min_length=10,
+                required=True
+            )
+        )
+
+        self.add_item(self.reason)
+
+    async def on_submit(self, interaction: discord.Interaction):
+        pass
 
 # -- Buttons -- #
 class UploadFile(ui.Button):

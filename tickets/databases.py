@@ -37,7 +37,7 @@ class TicketDB:
             await db.execute("""
                 CREATE TABLE IF NOT EXISTS appeal_history (
                     appeal_user_id INTEGER PRIMARY KEY,
-                    moderated_account_id INTEGER,
+                    moderated_account TEXT,
                     platform TEXT,
                     appeal_status TEXT DEFAULT 'PENDING',
                     appeal_info TEXT,
@@ -58,7 +58,7 @@ class TicketDB:
             """)
             await db.commit()
 
-    async def create_ticket(self, interaction, ticket_id, channel_id, ticket_type, open_time, open_reason):
+    async def create_ticket(self, interaction: discord.Interaction, ticket_id, channel_id, ticket_type, open_time, open_reason):
         async with aiosqlite.connect(self.db_path) as db:
             try:
                 await db.execute("INSERT INTO ticket_history (opener_id, ticket_id, channel_id, ticket_type, open_time, open_reason) VALUES (?, ?, ?, ?, ?, ?)", (interaction.user.id, ticket_id, channel_id, ticket_type, open_time, open_reason))
@@ -89,7 +89,7 @@ class TicketDB:
             except Exception as e:
                 log.error(f"Encountered an error while trying to perform a DB query: {e}")
 
-    async def get_ticket_opener(self, interaction):
+    async def get_ticket_opener(self, interaction: discord.Interaction):
         async with aiosqlite.connect(self.db_path) as db:
             try:
                 cursor = await db.execute("SELECT opener_id FROM ticket_history WHERE channel_id = ?", interaction.channel.id)
@@ -102,7 +102,7 @@ class TicketDB:
             except Exception as e:
                 log.error(f"Unable to get ticket opener for channel id {interaction.channel.id}: {e}")
 
-    async def existing_ticket_check(self, interaction, ticket_type):
+    async def existing_ticket_check(self, interaction: discord.Interaction, ticket_type: str):
         async with aiosqlite.connect(self.db_path) as db:
             try:
                 cursor = await db.execute("SELECT channel_id FROM ticket_history WHERE opener_id = ?, ticket_type = ?", (interaction.user.id, ticket_type))
@@ -117,7 +117,7 @@ class TicketDB:
             except Exception as e:
                 log.error(f"Encountered an error while checking for existing tickets in DB: {e}")
     
-    async def create_appeal(self, interaction, moderated_account_id, platform, appeal_info):
+    async def create_appeal(self, interaction: discord.Interaction, moderated_account_id: int, platform: str, appeal_info: str):
         async with aiosqlite.connect(self.db_path) as db:
             try:
                 appeal_id = uuid.uuid4().hex[:8]
@@ -130,25 +130,25 @@ class TicketDB:
             except Exception as e:
                 log.error(f"Unable to create DB entry for appeal {appeal_id} for {interaction.user} ({interaction.user.id}). Error: {e}")
 
-    async def close_appeal(self, interaction, appeal_user_id):
+    async def close_appeal(self, interaction: discord.Interaction, appeal_user: discord.User | discord.Member, accepted: bool):
         async with aiosqlite.connect(self.db_path) as db:
             try:
-                cursor = await db.execute("SELECT appeal_id FROM appeal_history WHERE appeal_status = 'PENDING', appeal_user_id = ?", (appeal_user_id))
+                cursor = await db.execute("SELECT appeal_id FROM appeal_history WHERE appeal_status = 'PENDING', appeal_user_id = ?", (appeal_user.id))
                 result = await cursor.fetchone()
 
                 if result:
-                    await db.execute("UPDATE appeal_history SET appeal_status = 'CLOSED', decision_staff_id = ? WHERE appeal_id = ?", (interaction.user.id, result[0]))
+                    await db.execute(f"UPDATE appeal_history SET appeal_status = {'ACCEPTED' if accepted is True else 'DENIED'}, decision_staff_id = ? WHERE appeal_id = ?", (interaction.user.id, result[0]))
                     await db.commit()
 
                     log.info(f"Updated appeal status in DB for appeal {result[0]}")
                 else:
-                    log.error(f"No appeal DB entry was found for user id {appeal_user_id}.")
+                    log.error(f"No appeal DB entry was found for user id {appeal_user.id}.")
                 
                 await cursor.close()
             except Exception as e:
                 log.error(f"Encountered an error for DB while closing appeal: {e}")
 
-    async def existing_appeal_check(self, interaction):
+    async def existing_appeal_check(self, interaction: discord.Interaction):
         async with aiosqlite.connect(self.db_path) as db:
             try:
                 cursor = await db.execute("SELECT appeal_id FROM appeal_history WHERE appeal_user_id = ?, appeal_status = 'PENDING'", (interaction.user.id))
@@ -164,34 +164,34 @@ class TicketDB:
             except Exception as e:
                 log.error(f"Encountered an error while checking for existing tickets in DB: {e}")
 
-    async def create_blacklist(self, interaction, target_user_id, reason):
+    async def create_blacklist(self, interaction: discord.Interaction, target_user: discord.User | discord.Member, reason: str):
         async with aiosqlite.connect(self.db_path) as db:
             try:
-                await db.execute("INSERT INTO blacklist (user_id, staff_member_id, reason) VALUES (?, ?, ?)", (target_user_id, interaction.user.id, reason))
+                await db.execute("INSERT INTO blacklist (user_id, staff_member_id, reason) VALUES (?, ?, ?)", (target_user.id, interaction.user.id, reason))
                 await db.commit()
 
-                log.info(f"Created blacklist DB entry for user id {target_user_id}")
+                log.info(f"Created blacklist DB entry for user id {target_user.id}")
             except Exception as e:
                 log.error(f"Encountered an error creating a blacklist DB entry: {e}")
 
-    async def remove_blacklist(self, target_user_id):
+    async def remove_blacklist(self, target_user: discord.User):
         async with aiosqlite.connect(self.db_path) as db:
             try:
-                cursor = await db.execute("SELECT 1 FROM blacklist WHERE user_id = ?", (target_user_id))
+                cursor = await db.execute("SELECT 1 FROM blacklist WHERE user_id = ?", (target_user.id))
                 result = await cursor.fetchone()
                 await cursor.close()
 
                 if result:
-                    await db.execute("DELETE FROM blacklist WHERE user_id = ?", (target_user_id))
+                    await db.execute("DELETE FROM blacklist WHERE user_id = ?", (target_user.id))
                     await db.commit()
 
-                    log.info(f"Deleted blacklist DB entry for user id {target_user_id}")
+                    log.info(f"Deleted blacklist DB entry for user id {target_user.id}")
                 else:
-                    log.info(f"No blacklist DB entry matching user id {target_user_id}. Aborting deletion")
+                    log.info(f"No blacklist DB entry matching user id {target_user.id}. Aborting deletion")
             except Exception as e:
                 log.error(f"Encountered an error while removing a blacklist DB entry: {e}")
 
-    async def existing_blacklist_check(self, target_user_id) -> bool:
+    async def existing_blacklist_check(self, target_user: discord.User | discord.Member) -> bool:
         async with aiosqlite.connect(self.db_path) as db:
             try:
                 cursor = await db.execute("SELECT 1 FROM blacklist WHERE user_id = ?", (target_user_id))
@@ -206,7 +206,7 @@ class TicketDB:
             except Exception as e:
                 log.error(f"Encountered an error while checking for existing blacklists in DB: {e}")
 
-    async def save_category(self, category_name, description, team_role_id):
+    async def save_category(self, category_name: str, description: str, team_role_id: int):
         async with aiosqlite.connect(self.db_path) as db:
             try:
                 await db.execute("INSERT INTO ticket_categories (category_name, description, team_role_id)", (category_name, description, team_role_id))
@@ -216,7 +216,7 @@ class TicketDB:
             except Exception as e:
                 log.error(f"Was unable to create a DB entry for a new ticket category ({category_name}) due to: {e}")
 
-    async def delete_category(self, category_name):
+    async def delete_category(self, category_name: str):
         async with aiosqlite.connect(self.db_path) as db:
             try:
                 cursor = await db.execute("SELECT 1 FROM ticket_categories WHERE category_name = ?", (category_name))
@@ -233,7 +233,7 @@ class TicketDB:
             except Exception as e:
                 log.error(f"Encountered an error while trying to delete a ticket category: {e}")
 
-    async def get_category(self, category_name):
+    async def get_category(self, category_name: str):
         async with aiosqlite.connect(self.db_path) as db:
             try:
                 cursor = await db.execute("SELECT category_id FROM ticket_categories WHERE category_name = ?", (category_name))
@@ -248,7 +248,7 @@ class TicketDB:
             except Exception as e:
                 pass
 
-    async def modify_category_status(self, category_name, status: bool):
+    async def modify_category_status(self, category_name: str, status: bool):
         async with aiosqlite.connect(self.db_path) as db:
             try:
                 cursor = await db.execute("SELECT 1 FROM ticket_categories WHERE category_name = ?", (category_name))

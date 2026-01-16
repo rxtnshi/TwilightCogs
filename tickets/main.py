@@ -20,6 +20,7 @@ class tickets(commands.Cog):
         self.config = Config.get_conf(self, identifier=1, force_registration=True)
         default_guild = {
 			"tickets_enabled": True,
+            "appeals_enabled": True,
 			"ticket_roles": {
 				"modmail_access": None,
 				"modmail_mgmt": None,
