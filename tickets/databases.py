@@ -68,23 +68,24 @@ class TicketDB:
             except Exception as e:
                 log.error(f"Unable to create a DB entry for {interaction.user} ({interaction.user.id}): {e}")
 
-    async def close_ticket(self, interaction):
+    async def close_ticket(self, target_id: int, close_reason: str):
         async with aiosqlite.connect(self.db_path) as db:
             try:
-                cursor = await db.execute("SELECT ticket_id FROM ticket_history WHERE channel_id = ?, is_open = TRUE", (interaction.channel.id))
+                cursor = await db.execute("SELECT ticket_id FROM ticket_history WHERE channel_id = ?, is_open = TRUE", (target_id))
                 result = await cursor.fetchone()
+                await cursor.close()
 
                 close_time = int(datetime.now().timestamp())
 
                 if result:
-                    await db.execute("UPDATE ticket_history SET is_open = FALSE, close_time = ? WHERE channel_id = ?", (close_time, interaction.channel.id))
+                    await db.execute("UPDATE ticket_history SET is_open = FALSE, close_time = ?, close_reason = ? WHERE channel_id = ?", (close_time, close_reason, target_id))
                     await db.commit()
 
                     log.info(f"Updated open status to closed for ticket {result}")
+                    return True
                 else:
-                    log.error(f"Unable to find a ticket in the database for channel ID {interaction.channel.id}")
-
-                await cursor.close()
+                    log.error(f"Unable to find a ticket in the database for channel ID {target_id}")
+                    return False
             except Exception as e:
                 log.error(f"Encountered an error while trying to perform a DB query: {e}")
 
@@ -99,7 +100,7 @@ class TicketDB:
                     log.info(f"Existing ticket channel {result[0]} found for {interaction.user} ({interaction.user.id}) under {ticket_type} in DB")
                     return result[0]
                 else:
-                    return None
+                    return False
             except Exception as e:
                 log.error(f"Encountered an error while checking for existing tickets in DB: {e}")
     
@@ -219,6 +220,21 @@ class TicketDB:
             except Exception as e:
                 log.error(f"Encountered an error while trying to delete a ticket category: {e}")
 
+    async def get_category(self, category_name):
+        async with aiosqlite.connect(self.db_path) as db:
+            try:
+                cursor = await db.execute("SELECT category_name FROM ticket_categories WHERE category_name = ?", (category_name))
+                result = cursor.fetchone()
+
+                if result:
+                    return result[0]
+                else:
+                    log.info(f"No category name found for {category_name}")
+                    return None
+
+            except Exception as e:
+                pass
+
     async def modify_category_status(self, category_name, status: bool):
         async with aiosqlite.connect(self.db_path) as db:
             try:
@@ -233,3 +249,34 @@ class TicketDB:
                     log.info(f"Successfully set category '{category_name}' status to '{status}'")
             except Exception as e:
                 log.warning(f"Unable to update category status for {category_name} due to: {e}")
+
+    async def return_category_count(self):
+        async with aiosqlite.connect(self.db_path) as db:
+            try:
+                cursor = await db.execute("SELECT COUNT(*) FROM ticket_categories")
+                result = await cursor.fetchone()[0]
+                await cursor.close()
+
+                log.info(f"Returned category count: {result}")
+                return int(result)
+            except Exception as e:
+                log.warning(f"Unable to return category count due to: {e}")
+
+    async def fetch_categories(self):
+        async with aiosqlite.connect(self.db_path) as db:
+            try:
+                cursor = await db.execute("SELECT category_name, description, is_active FROM ticket_categories")
+                results = await cursor.fetchall()
+                await cursor.close()
+
+                log.info(f"Fetched categories successfully.")
+                return [
+                    {
+                        "name": result[0],
+                        "description": result[1],
+                        "status": result[2]
+                    }
+                    for result in results
+                ]
+            except Exception as e:
+                log.warning(f"Unable to fetch categories due to: {e}")
