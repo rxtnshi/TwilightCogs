@@ -89,6 +89,19 @@ class TicketDB:
             except Exception as e:
                 log.error(f"Encountered an error while trying to perform a DB query: {e}")
 
+    async def get_ticket_opener(self, interaction):
+        async with aiosqlite.connect(self.db_path) as db:
+            try:
+                cursor = await db.execute("SELECT opener_id FROM ticket_history WHERE channel_id = ?", interaction.channel.id)
+                result = await cursor.fetchone()
+
+                if result:
+                    return result[0]
+                else:
+                    return None
+            except Exception as e:
+                log.error(f"Unable to get ticket opener for channel id {interaction.channel.id}: {e}")
+
     async def existing_ticket_check(self, interaction, ticket_type):
         async with aiosqlite.connect(self.db_path) as db:
             try:
@@ -223,11 +236,11 @@ class TicketDB:
     async def get_category(self, category_name):
         async with aiosqlite.connect(self.db_path) as db:
             try:
-                cursor = await db.execute("SELECT category_name FROM ticket_categories WHERE category_name = ?", (category_name))
+                cursor = await db.execute("SELECT category_id FROM ticket_categories WHERE category_name = ?", (category_name))
                 result = cursor.fetchone()
 
                 if result:
-                    return result[0]
+                    return int(result[0])
                 else:
                     log.info(f"No category name found for {category_name}")
                     return None

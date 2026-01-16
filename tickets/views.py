@@ -93,11 +93,39 @@ class SettingsPanel(ui.LayoutView):
 
 class Receipt(ui.LayoutView):
     def __init__(self, file: discord.File):
-        pass
+        self.file = file
 
 class LogsReceipt(ui.LayoutView):
-    def __init__(self, file: discord.File):
-        pass
+    def __init__(self, file: discord.File, title: str, requester: discord.Member, closer: discord.Member, open_reason: str, close_reason: str, open_time: int, close_time: int):
+        self.file = file
+        self.title = title
+        self.requester = requester
+        self.closer = closer
+        self.open_reason = open_reason
+        self.close_reason = close_reason
+        self.open_time = open_time
+        self.close_time = close_time
+
+        container = ui.Container(
+            ui.Section(
+                ui.TextDisplay(content=f"## 🗒️ Transcript for {self.title}"),
+                ui.TextDisplay(content=f"Here is the transcript for `{self.title}`. The ticket information can be found below."),
+                accessory=ui.Thumbnail(media="https://cdn.rxtnshi.xyz/u/559950-clipboard.png"),
+            ),
+            ui.Separator(visible=True, spacing=discord.SeparatorSpacing.small),
+            ui.TextDisplay(content="# Ticket Information"),
+            ui.TextDisplay(content=f"**Requester**: {self.requester.mention} ({self.requester.id})"),
+            ui.TextDisplay(content=f"**Closed By**: {self.closer.mention} ({self.closer.id})\n\n"),
+            ui.TextDisplay(content=f"**Opened at**: <t:{self.open_reason}:F>"),
+            ui.TextDisplay(content=f"**Closed at**: <t:{self.open_reason}:F>\n\n"),
+            ui.TextDisplay(content=f"**Request Description**: {self.open_reason}"),
+            ui.TextDisplay(content=f"**Close Reason**: {self.close_reason}"),
+            ui.Separator(visible=True, spacing=discord.SeparatorSpacing.small),
+            ui.TextDisplay("# View Transcript"),
+            ui.MediaGallery(ui.MediaGalleryItem(file=self.file))
+        )
+
+        self.add_item(container)
 
 # -- Modals -- #
 class TicketQuestionaire(ui.Modal):
@@ -165,22 +193,23 @@ class TicketSelectMenu(ui.Select):
             options=options,
         )
 
-    async def callback(self, interaction):
+    async def callback(self, interaction: discord.Interaction):
         result = self.map.get(self.values[0])
         modal = TicketQuestionaire(result)
 
-        await interaction.send_modal(modal)
+        await interaction.response.send_modal(modal)
 
 class FileUploadAnalysisModal(ui.Modal):
     def __init__(self, scans_enabled: bool):
         super().__init__(title="File Uploads", timeout=None)
+        self.scans_enabled = scans_enabled
 
-        if scans_enabled:
+        if self.scans_enabled:
             self.file_upload = ui.Label(
                 text = "Upload Your File",
                 description = "This file will be analyzed by VirusTotal before being uploaded to the ticket.",
                 component= ui.FileUpload(
-                    max_values = 1,
+                    min_values = 1,
                     custom_id = "file-upload-object",
                     required = False
                 )
@@ -190,7 +219,7 @@ class FileUploadAnalysisModal(ui.Modal):
                 text = "Upload Your File",
                 description = "Your file will be uploaded to this channel.",
                 component= ui.FileUpload(
-                    max_values = 1,
+                    min_values = 1,
                     custom_id = "file-upload-object",
                     required = False
                 )
@@ -198,10 +227,12 @@ class FileUploadAnalysisModal(ui.Modal):
 
         self.add_item(self.file_upload)
 
-    async def on_submit(self, interaction):
+    async def on_submit(self, interaction: discord.Interaction):
         file = self.file_upload.component.values
 
-        if file:
+        if self.scans_enabled:
+            pass
+        else:
             pass
 
 class CloseTicketQuestionaire(ui.Modal):
@@ -214,14 +245,14 @@ class CloseTicketQuestionaire(ui.Modal):
             description=f"You are closing {self.channel.name}. Please give a reason why otherwise no reason will be given.",
             component=ui.TextInput(
                 label="Enter a reason",
-                style=discord.TextStyle.paragraph,
-                required=True
+                default="No reason given.",
+                style=discord.TextStyle.paragraph
             )
         )
 
         self.add_item(self.reason)
 
-    async def on_submit(self, interaction):
+    async def on_submit(self, interaction: discord.Interaction):
         reason = self.reason.component.value
         await Ticket.close_ticket(self, interaction, reason)
 
@@ -230,14 +261,14 @@ class UploadFile(ui.Button):
     def __init__(self):
         super().__init__(label="📂 Upload a File", style=discord.ButtonStyle.green, custom_id="upload-file-button")
 
-    async def callback(self, interaction):
+    async def callback(self, interaction: discord.Interaction):
         await interaction.send_modal(FileUploadAnalysisModal())
 
 class CloseTicket(ui.Button):
     def __init__(self):
         super().__init__(label="🔒 Close Ticket", style=discord.ButtonStyle.danger, custom_id="close-ticket-button")
 
-    async def callback(self, interaction):
+    async def callback(self, interaction: discord.Interaction):
         await interaction.send_modal(FileUploadAnalysisModal())
         
 class ConfigRoles(ui.Button):
@@ -247,14 +278,10 @@ class ConfigRoles(ui.Button):
     async def callback(self, interaction: discord.Interaction):
         cog = interaction.client.get_cog("tickets")
         if not cog:
-            await send_error(interaction, "TicketSystem not loaded.", True)
+            await send_error(interaction, "It seems like this cog (`tickets`) is offline.", True)
             return
         
-        await interaction.response.send_modal(SetupChannelsModal(interaction.message))
-
-        message = await interaction.original_response()
-        view = discord.ui.View.from_message(message)
-        view.message = message
+        pass
 
 class ConfigChannels(ui.Button):
     def __init__(self):
@@ -263,11 +290,7 @@ class ConfigChannels(ui.Button):
     async def callback(self, interaction: discord.Interaction):
         cog = interaction.client.get_cog("tickets")
         if not cog:
-            await send_error(interaction, "TicketSystem not loaded.", True)
+            await send_error(interaction, "It seems like this cog (`tickets`) is offline.", True)
             return
         
-        await interaction.response.send_modal(SetupChannelsModal(interaction.message))
-
-        message = await interaction.original_response()
-        view = discord.ui.View.from_message(message)
-        view.message = message
+        pass

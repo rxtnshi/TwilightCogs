@@ -1,8 +1,10 @@
 import uuid
 import discord
 import asyncio
+import chat_exporter
+import io
 
-from .views import TicketInfo, LogInfo
+from .views import TicketInfo, LogInfo, Receipt, LogsReceipt
 from .databases import TicketDB
 from .error_handling import send_blocked, send_error, send_success
 from datetime import datetime
@@ -16,9 +18,15 @@ class Ticket:
         self.open_description = open_description
         self.team = team_id
 
-    async def create_ticket(self, interaction, category):
+    async def create_ticket(self, interaction: discord.Interaction, category: discord.CategoryChannel):
         check_dup = await TicketDB.check_existing_db_ticket(interaction, self.ticket_type)
         allowed_mentions = discord.AllowedMentions.all()
+        cog = interaction.guild.get_cog("tickets")
+        confg = cog.config.guild(interaction.guild)
+
+        ticket_channels = await confg.ticket_channels()
+        log_ch_id = ticket_channels["log_channel"]
+        log_ch = interaction.guild.get_channel(log_ch_id)
 
         if check_dup:
             channel = interaction.guild.get_channel(check_dup)
@@ -37,10 +45,14 @@ class Ticket:
             overwrites=overwrites
         )
 
-        view = TicketInfo(interaction.user, self.open_title, self.open_description)
-        await channel.send(view=view, allowed_mentions=allowed_mentions)
+        ticket_view = TicketInfo(interaction.user, self.open_title, self.open_description)
+        log_view = LogInfo(interaction.user, self.open_title, self.open_description, interaction.guild, channel)
 
-    async def close_ticket(self, interaction, reason: str):
+        await channel.send(view=ticket_view, allowed_mentions=allowed_mentions)
+        await log_ch.send(view=log_view)
+
+
+    async def close_ticket(self, interaction: discord.Interaction, reason: str):
         target_id = interaction.channel.id
         closed = await TicketDB.close_ticket(target_id, reason)
 
@@ -56,13 +68,39 @@ class Ticket:
         except Exception as e:
             return await send_error(interaction, f"Failed to delete the ticket channel: `{e}`")
         
-    async def create_transcript(self, interaction):
+    async def create_transcript(self, interaction: discord.Interaction):
+        cog = interaction.guild.get_cog("tickets")
+
+        confg = cog.config.guild(interaction.guild)
+        ticket_channels = await confg.ticket_channels()
+        log_ch_id = ticket_channels["log_channel"]
+        log_ch = interaction.guild.get_channel(log_ch_id)
+        user = await TicketDB.get_ticket_opener(interaction)
+
+        transcript = await chat_exporter.export(
+            channel = interaction.channel,
+            tz_info = "US/Central",
+            bot = cog.bot
+        )
+
+        if transcript is None:
+            return await send_error(interaction, "Unable to generate transcript.")
+        
+        user_receipt = discord.File(io.BytesIO(transcript.encode()), filename=f"transcript-{interaction.channel}.html")
+        log_receipt = discord.File(io.BytesIO(transcript.encode()), filename=f"transcript-{interaction.channel}.html")
+
+        user_view = Receipt(user_receipt)
+        log_view = LogsReceipt(log_receipt)
+
+        if user:
+            await user.send(view=user_view)
+
+        await log_ch.send(view=log_view)
+
+    async def create_appeal(self, interaction: discord.Interaction):
         pass
 
-    async def create_appeal(self, interaction):
-        pass
-
-    async def close_appeal(self, interaction):
+    async def close_appeal(self, interaction: discord.Interaction):
         pass
 
 class TicketCategory:
