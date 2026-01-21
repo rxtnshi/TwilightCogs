@@ -44,7 +44,8 @@ class TicketDB:
                     appeal_id TEXT,
                     appeal_time REAL,
                     decision_time REAL,
-                    decision_staff_id INTEGER
+                    decision_staff_id INTEGER,
+                    log_message_id INTEGER
                 )
             """)
             await db.execute("""
@@ -117,23 +118,23 @@ class TicketDB:
             except Exception as e:
                 log.error(f"Encountered an error while checking for existing tickets in DB: {e}")
     
-    async def create_appeal(self, interaction: discord.Interaction, moderated_account_id: int, platform: str, appeal_info: str):
+    async def create_appeal(self, interaction: discord.Interaction, moderated_account_id: int, platform: str, appeal_info: str, log_message_id: int):
         async with aiosqlite.connect(self.db_path) as db:
             try:
                 appeal_id = uuid.uuid4().hex[:8]
                 appeal_time = int(datetime.now().timestamp())
 
-                await db.execute("INSERT INTO appeal_history (appeal_user_id, moderated_account_id, platform, appeal_info, appeal_id, appeal_time) VALUES (?, ?, ?, ?, ?, ?)", (interaction.user.id, moderated_account_id, platform, appeal_info, appeal_id, appeal_time))
+                await db.execute("INSERT INTO appeal_history (appeal_user_id, moderated_account_id, platform, appeal_info, appeal_id, appeal_time, log_message_id) VALUES (?, ?, ?, ?, ?, ?, ?)", (interaction.user.id, moderated_account_id, platform, appeal_info, appeal_id, appeal_time, log_message_id))
                 await db.commit()
 
                 log.info(f"Created DB entry for appeal {appeal_id} for {interaction.user} ({interaction.user.id})")
             except Exception as e:
                 log.error(f"Unable to create DB entry for appeal {appeal_id} for {interaction.user} ({interaction.user.id}). Error: {e}")
 
-    async def close_appeal(self, interaction: discord.Interaction, appeal_user: discord.User | discord.Member, accepted: bool):
+    async def close_appeal(self, interaction: discord.Interaction, appeal_user: discord.User | discord.Member, log_message_id: int, accepted: bool):
         async with aiosqlite.connect(self.db_path) as db:
             try:
-                cursor = await db.execute("SELECT appeal_id FROM appeal_history WHERE appeal_status = 'PENDING', appeal_user_id = ?", (appeal_user.id))
+                cursor = await db.execute("SELECT appeal_id FROM appeal_history WHERE appeal_status = 'PENDING', appeal_user_id = ?, log_message_id = ?", (appeal_user.id, log_message_id))
                 result = await cursor.fetchone()
 
                 if result:
@@ -194,7 +195,7 @@ class TicketDB:
     async def existing_blacklist_check(self, target_user: discord.User | discord.Member) -> bool:
         async with aiosqlite.connect(self.db_path) as db:
             try:
-                cursor = await db.execute("SELECT 1 FROM blacklist WHERE user_id = ?", (target_user_id))
+                cursor = await db.execute("SELECT 1 FROM blacklist WHERE user_id = ?", (target_user.id))
                 result = await cursor.fetchone()
                 await cursor.close()
 

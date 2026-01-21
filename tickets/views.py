@@ -50,7 +50,7 @@ class LogInfo(ui.LayoutView):
                 ui.TextDisplay(f"## 🚨 New Support Request!"),
                 ui.TextDisplay(content=f"{self.title}\n\n"),
                 ui.TextDisplay(content=f"{self.description}"),
-                accessory=discord.ui.Thumbnail(media="https://cdn.rxtnshi.xyz/u/5775-applicationpending-ids.png")
+                accessory=discord.ui.Thumbnail(media="https://cdn.rxtnshi.xyz/u/clipboard.png")
             ),
             ui.Separator(visible=True, spacing=discord.SeparatorSpacing.small),
             ui.ActionRow(
@@ -69,12 +69,14 @@ class AppealPanel(ui.LayoutView):
         self.user = user
         
         container = ui.Container(
-
+            ui.Section(
+                ui.TextDisplay("## 🚨 New Support Request!")
+            ),
         )
 
         self.add_item(container)
 
-    async def update_status(decision: str):
+    async def update_status(accepted: bool):
         pass
 
 class SupportPanel(ui.LayoutView):
@@ -86,7 +88,7 @@ class SupportPanel(ui.LayoutView):
             ui.Section(
                 ui.TextDisplay(content=f"### ❓ {self.guild}'s Support Center"),
                 ui.TextDisplay(content=f"# Guidelines\n{self.guidelines}"),
-                accessory=ui.Thumbnail(media="https://cdn.rxtnshi.xyz/u/559950-clipboard.png"),
+                accessory=ui.Thumbnail(media="https://cdn.rxtnshi.xyz/u/clipboard.png"),
             ),
             ui.Separator(visible=True, spacing=discord.SeparatorSpacing.small),
             ui.TextDisplay("# Open a Support Request Here!"),
@@ -97,12 +99,47 @@ class SupportPanel(ui.LayoutView):
         self.add_item(container)
 
 class SettingsPanel(ui.LayoutView):
-    def __init__(self):
-        pass
+    def __init__(self, cog, interaction: discord.Ineraction):
+        self.cog = cog
+        confg = self.cog.config.guild(interaction.guild)
+        
+        container = ui.Container(
+
+        )
+        
+        self.add_item(container)
 
 class Receipt(ui.LayoutView):
-    def __init__(self, file: discord.File):
+    def __init__(self, file: discord.File, title: str, requester: discord.Member, closer: discord.Member, open_reason: str, close_reason: str, open_time: int, close_time: int):
         self.file = file
+        self.title = title
+        self.requester = requester
+        self.closer = closer
+        self.open_reason = open_reason
+        self.close_reason = close_reason
+        self.open_time = open_time
+        self.close_time = close_time
+
+        container = ui.Container(
+            ui.Section(
+                ui.TextDisplay(content=f"## 🗒️ Transcript for {self.title}"),
+                ui.TextDisplay(content=f"Here is the transcript for `{self.title}`. The ticket information can be found below."),
+                accessory=ui.Thumbnail(media="https://cdn.rxtnshi.xyz/u/clipboard.png"),
+            ),
+            ui.Separator(visible=True, spacing=discord.SeparatorSpacing.small),
+            ui.TextDisplay(content="# Ticket Information"),
+            ui.TextDisplay(content=f"**Requester**: {self.requester.mention} ({self.requester.id})"),
+            ui.TextDisplay(content=f"**Closed By**: {self.closer.mention} ({self.closer.id})\n\n"),
+            ui.TextDisplay(content=f"**Opened at**: <t:{self.open_reason}:F>"),
+            ui.TextDisplay(content=f"**Closed at**: <t:{self.open_reason}:F>\n\n"),
+            ui.TextDisplay(content=f"**Request Description**: {self.open_reason}"),
+            ui.TextDisplay(content=f"**Close Reason**: {self.close_reason}"),
+            ui.Separator(visible=True, spacing=discord.SeparatorSpacing.small),
+            ui.TextDisplay("# View Transcript"),
+            ui.MediaGallery(ui.MediaGalleryItem(file=self.file))
+        )
+
+        self.add_item(container)
 
 class LogsReceipt(ui.LayoutView):
     def __init__(self, file: discord.File, title: str, requester: discord.Member, closer: discord.Member, open_reason: str, close_reason: str, open_time: int, close_time: int):
@@ -119,7 +156,7 @@ class LogsReceipt(ui.LayoutView):
             ui.Section(
                 ui.TextDisplay(content=f"## 🗒️ Transcript for {self.title}"),
                 ui.TextDisplay(content=f"Here is the transcript for `{self.title}`. The ticket information can be found below."),
-                accessory=ui.Thumbnail(media="https://cdn.rxtnshi.xyz/u/559950-clipboard.png"),
+                accessory=ui.Thumbnail(media="https://cdn.rxtnshi.xyz/u/clipboard.png"),
             ),
             ui.Separator(visible=True, spacing=discord.SeparatorSpacing.small),
             ui.TextDisplay(content="# Ticket Information"),
@@ -183,7 +220,7 @@ class TicketQuestionaire(ui.Modal):
         await ticket.create_ticket(interaction)
 
 class TicketSelectMenu(ui.Select):
-    def __init__(self, categories: list[dict]):
+    def __init__(self, categories: list[dict], appeals_enabled: bool):
         self.map = {c["name"].replace(" ", "-").lower(): c for c in categories}
 
         options = [
@@ -194,6 +231,16 @@ class TicketSelectMenu(ui.Select):
             )
             for c in categories
         ]
+
+        if appeals_enabled:
+            options.append(
+                discord.SelectOption(
+                    label="🔨 Appeals",
+                    value="appeals",
+                    description="Appeal a moderation here."
+                )
+            )
+            self.map["appeal"] = {"name": "🔨 Appeals"}
 
         super().__init__(
             placeholder="Select a Category",
@@ -275,16 +322,48 @@ class AppealDecision(ui.Modal):
         self.decision = decision
         self.appeal_id = appeal_id
 
-        self.reason = ui.Label(
-            text="Reason for Decision",
-            description=f"Please give a reason why this appeal is being {"accepted" if self.decision.lower() == "accept" else "denied"}.",
-            component=ui.TextInput(
-                style=discord.TextStyle.paragraph(),
-                min_length=10,
-                required=True
+        self.prefined_reasons = ui.Label(
+            text="Predefined Reasons",
+            description="You can select a predefined reason or choose 'Custom Reason' for your own.",
+            component=ui.Select(
+                max_values=1,
+                required=True,
+                options=[
+                    discord.SelectOption(
+                        label="Evidence Supports Decision",
+                        description="The evidence provided by the appealer supports this decision. - accept",
+                        value="evidence-supports-decision"
+                    ),
+                    discord.SelectOption(
+                        label="Lack of Evidence",
+                        description="The evidence provided is not sufficient to make a decision - denial",
+                        value="lack-of-evidence"
+                    ),
+                    discord.SelectOption(
+                        label="Non-appealable Offense",
+                        description="This offense is non-appealable - denial",
+                        value="non-appealable"
+                    ),
+                    discord.SelectOption(
+                        label="Custom Reason",
+                        description="The evidence provided by the appealer supports this decision.",
+                        value="custom-reason"
+                    )
+                ]
             )
         )
 
+        self.reason = ui.Label(
+            text="Custom Reason",
+            description="Please provide any addition info or your own reason for this decision.",
+            component=ui.TextInput(
+                style=discord.TextStyle.paragraph(),
+                min_length=10,
+                required=False
+            )
+        )
+        
+        self.add_item(self.prefined_reasons)
         self.add_item(self.reason)
 
     async def on_submit(self, interaction: discord.Interaction):
@@ -328,3 +407,9 @@ class ConfigChannels(ui.Button):
             return
         
         pass
+
+class AcceptAppeal(ui.Button):
+    def __init__(self):
+        super().__init__(label="✅ Accept Appeal", style=discord.ButtonStyle.green, custom_id="accept-appeal-button")
+
+    
