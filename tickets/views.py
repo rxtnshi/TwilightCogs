@@ -1,5 +1,6 @@
 import discord
 
+from .db import db
 from discord import ui
 from .helpers import Ticket
 from .error_handling import send_blocked, send_error, send_success
@@ -56,7 +57,7 @@ class LogInfo(ui.LayoutView):
                 ui.Button(
                     label="Access Ticket",
                     style=discord.ButtonStyle.link(),
-                    url=f"https://discord.com/channels/{self.guild}/{self.channel}/",
+                    url=f"https://discord.com/channels/{self.guild.id}/{self.channel.id}/",
                 )
             )
         )
@@ -264,17 +265,13 @@ class TicketQuestionaire(ui.Modal):
         self.add_item(self.description)
 
     async def on_submit(self, interaction):
-        cog = interaction.client.get_cog("tickets")
-        confg = cog.config.guild(interaction.guild)
-        channels = await confg.ticket_channels()
-        log_channel_id = channels.get("log_channel")
-        log_channel = interaction.guild.get_channel(log_channel_id)
+        category_id = await db.get_category(category_name=self.category)
 
         title = self.title.component.value
         description = self.description.component.value
 
         ticket = Ticket(self.ticket_type, title, description, self.team_id)
-        await ticket.create_ticket(interaction)
+        await ticket.create_ticket(interaction, category=category_id)
 
 class TicketSelectMenu(ui.Select):
     def __init__(self, categories: list[dict], appeals_enabled: bool):
