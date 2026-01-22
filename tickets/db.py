@@ -131,10 +131,10 @@ class db:
             except Exception as e:
                 log.error(f"Unable to create DB entry for appeal {appeal_id} for {interaction.user} ({interaction.user.id}). Error: {e}")
 
-    async def close_appeal(self, interaction: discord.Interaction, appeal_user: discord.User | discord.Member, log_message_id: int, accepted: bool):
+    async def close_appeal(self, interaction: discord.Interaction, log_message_id: int, accepted: bool):
         async with aiosqlite.connect(self.db_path) as db:
             try:
-                cursor = await db.execute("SELECT appeal_id FROM appeal_history WHERE appeal_status = 'PENDING', appeal_user_id = ?, log_message_id = ?", (appeal_user.id, log_message_id))
+                cursor = await db.execute("SELECT appeal_id FROM appeal_history WHERE appeal_status = 'PENDING', log_message_id = ?", (log_message_id))
                 result = await cursor.fetchone()
 
                 if result:
@@ -143,7 +143,7 @@ class db:
 
                     log.info(f"Updated appeal status in DB for appeal {result[0]}")
                 else:
-                    log.error(f"No appeal DB entry was found for user id {appeal_user.id}.")
+                    log.error(f"No appeal DB entry was found for the log id {log_message_id}.")
                 
                 await cursor.close()
             except Exception as e:

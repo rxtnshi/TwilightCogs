@@ -46,8 +46,8 @@ class tickets(commands.Cog):
     async def staff_check(self, interaction: discord.Interaction):
         confg = self.config.guild(interaction.guild)
         ticket_roles = await confg.ticket_roles()
-        modmail_access = ticket_roles["modmail_access"]
-        modmail_mgmt = ticket_roles["modmail_mgmt"]
+        modmail_access = ticket_roles['modmail_access']
+        modmail_mgmt = ticket_roles['modmail_mgmt']
 
         check = {rid for rid in (modmail_access, modmail_mgmt) if rid}
         if not check:
@@ -58,7 +58,7 @@ class tickets(commands.Cog):
     async def elevated_check(self, interaction: discord.Interaction):
         confg = self.config.guild(interaction.guild)
         ticket_roles = await confg.ticket_roles()
-        modmail_mgmt = ticket_roles["modmail_mgmt"]
+        modmail_mgmt = ticket_roles['modmail_mgmt']
 
         if interaction.user.guild_permissions.administrator:
             return True
@@ -88,8 +88,8 @@ class tickets(commands.Cog):
         confg = self.config.guild(interaction.guild)
         ticket_roles = await confg.ticket_roles()
         staff_roles = ticket_roles["staff_roles"]
-        access_id = ticket_roles["modmail_access"]
-        mgmt_id = ticket_roles["modmail_mgmt"]
+        access_id = ticket_roles['modmail_access']
+        mgmt_id = ticket_roles['modmail_mgmt']
 
         access_role = interaction.guild.get_role(access_id)
         access_roles = {rid for rid in (access_id, mgmt_id) if rid}

@@ -104,8 +104,8 @@ class Ticket:
     async def create_appeal(self, interaction: discord.Interaction, moderated_account_id: int, platform: str, appeal_info: str):
         pass
 
-    # async def create_appeal(self, interaction, moderated_account_id, platform, appeal_info):
-    async def close_appeal(self, interaction: discord.Interaction, decision: str, ):
+    # async def close_appeal(self, interaction: discord.Interaction, log_message_id: int, accepted: bool):
+    async def close_appeal(self, interaction: discord.Interaction, log_message_id: int, decision: str, reason: str):
         pass
 
 class TicketCategory:

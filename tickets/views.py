@@ -65,12 +65,15 @@ class LogInfo(ui.LayoutView):
         self.add_item(container)
 
 class AppealPanel(ui.LayoutView):
-    def __init__(self, user: discord.Member, moderated_account: str):
+    def __init__(self, user: discord.Member, moderated_account: str, platform: str, appeal_info: str):
         self.user = user
+        self.moderated_account = moderated_account
+        self.platform = platform
+        self.appeal_info = appeal_info
         
         container = ui.Container(
             ui.Section(
-                ui.TextDisplay("## 🚨 New Support Request!")
+                ui.TextDisplay("## 🚨 New Appeal Submitted")
             ),
         )
 
@@ -124,7 +127,7 @@ class SettingsPanel(ui.LayoutView):
         panel_cfg = data.get("panel_cfg")
         staff_roles = {}
         for role in roles["staff_roles"]:
-            staff_roles.append(f"<@&{role}>")
+            staff_roles.append(f"<@&{role}>\n")
 
         is_setup = False
         if all(not item for item in roles and channels and panel_cfg):
@@ -138,29 +141,29 @@ class SettingsPanel(ui.LayoutView):
                 ui.TextDisplay("## ⚙️ Settings"),
                 ui.TextDisplay("Here are your current settings for your server."),
                 ui.TextDisplay("# Configuration Status"),
-                ui.TextDisplay(f"`{"✅ Configured" if is_setup else "❌ Not fully configured"}`"),
+                ui.TextDisplay(f"`{'✅ Configured' if is_setup else '❌ Not fully configured'}`"),
                 accessory="https://cdn.rxtnshi.xyz/raw/settings_cog.png"
             ),
             ui.TextDisplay("# __Ticket Statuses__"),
             ui.TextDisplay(
-                f"`Tickets Creation`:\n{"✅ Enabled" if tickets_enabled is True else "❌ Disabled"}"
-                f"`Appeals Enabled`:\n{"✅ Enabled" if appeals_enabled is True else "❌ Disabled"}"
+                f"`Tickets Creation`:\n{'✅ Enabled' if tickets_enabled is True else '❌ Disabled'}"
+                f"`Appeals Enabled`:\n{'✅ Enabled' if appeals_enabled is True else '❌ Disabled'}"
             ),
             ui.TextDisplay("# __Configured Roles__"),
             ui.TextDisplay(
-                f"`Standard access`:\n<@&{roles["modmail_access"] if roles["modmail_access"] else "None set"}>"
-                f"`Management access`:\n<@&{roles["modmail_mgmt"] if roles["modmail_mgmt"] else "None set"}>"
-                f"`Appeals access`:\n<@&{roles["appeals_access"] if roles["appeals_access"] else "None set"}>"
+                f"`Standard access`:\n<@&{roles['modmail_access'] if roles['modmail_access'] else 'None set'}>"
+                f"`Management access`:\n<@&{roles['modmail_mgmt'] if roles['modmail_mgmt'] else 'None set'}>"
+                f"`Appeals access`:\n<@&{roles['appeals_access'] if roles['appeals_access'] else 'None set'}>"
                 f"`Staff Roles`:\n{staff_roles}"
             ),
-            ui.TextDisplay("# __Configured Channels__"),
+            ui.TextDisplay("# __Configured Channels__"), 
             ui.TextDisplay(
                 f"`Ticket Logs`:\n<#{channels['log_channel']}>"
-                f"`Appeals`:\n<#{channels["appeal_logs"]}>"
+                f"`Appeals`:\n<#{channels['appeal_logs']}>"
             ),
             ui.TextDisplay("# __Panel Channels__"),
-            ui.TextDisplay(f"`Panel Channel`:\n<#{panel_cfg["channel"]}>"),
-            ui.TextDisplay(f"`[Link to panel](https://discord.com/channels/{interaction.guild.id}/{panel_cfg["channel"]}/{panel_cfg["message_id"]}`" if panel_cfg["message_id"] else "No panel message set"),
+            ui.TextDisplay(f"`Panel Channel`:\n<#{panel_cfg['channel']}>"),
+            ui.TextDisplay(f"`[Link to panel](https://discord.com/channels/{interaction.guild.id}/{panel_cfg['channel']}/{panel_cfg['message_id']}`" if panel_cfg['message_id'] and panel_cfg['channel'] else "No panel message set"),
             ui.Separator(visible=True, spacing=discord.SeparatorSpacing.small),
             ui.ActionRow(ConfigChannels(), ConfigRoles(), ConfigFileCheck(), AddCategories(), DelCategories())
         )
@@ -347,7 +350,7 @@ class FileUploadAnalysisModal(ui.Modal):
             pass
 
 class CloseTicketQuestionaire(ui.Modal):
-    def __init__(self, channel: discord.Channel):
+    def __init__(self, channel: discord.TextChannel):
         super().__init__(title=f"🔒 Closing Ticket")
 
         self.channel = channel
@@ -372,10 +375,9 @@ class OpenAppeal(ui.Modal):
         super().__init__(title="Opening Appeal")
 
 class AppealDecision(ui.Modal):
-    def __init__(self, decision: str, appeal_id: str):
-        super().__init__(title=f"{self.decision}ing Appeal {self.appeal_id}", timeout=None)
+    def __init__(self, decision: str):
+        super().__init__(title=f"{self.decision}ing Appeal", timeout=None)
         self.decision = decision
-        self.appeal_id = appeal_id
 
         self.prefined_reasons = ui.Label(
             text="Predefined Reasons",
@@ -387,21 +389,21 @@ class AppealDecision(ui.Modal):
                     discord.SelectOption(
                         label="Evidence Supports Decision",
                         description="The evidence provided by the appealer supports this decision. - accept",
-                        value="evidence-supports-decision"
+                        value="The evidence provided by the appealer supports this decision."
                     ),
                     discord.SelectOption(
                         label="Lack of Evidence",
                         description="The evidence provided is not sufficient to make a decision - denial",
-                        value="lack-of-evidence"
+                        value="The evidence provided is not sufficient to make a decision"
                     ),
                     discord.SelectOption(
                         label="Non-appealable Offense",
                         description="This offense is non-appealable - denial",
-                        value="non-appealable"
+                        value="This offense is non-appealable"
                     ),
                     discord.SelectOption(
                         label="Custom Reason",
-                        description="The evidence provided by the appealer supports this decision.",
+                        description="Provide a reason of your own for this decision",
                         value="custom-reason"
                     )
                 ]
@@ -422,7 +424,17 @@ class AppealDecision(ui.Modal):
         self.add_item(self.reason)
 
     async def on_submit(self, interaction: discord.Interaction):
-        pass
+        decision = self.decision.lower()
+        log_msg = interaction.message
+        reason_text = None
+
+        if self.prefined_reasons.component.values[0] == "custom-reason":
+            pass
+
+        if decision == "accept":
+            await Ticket.close_appeal(self, interaction, log_msg.id, 'ACCEPTED', f"{reason_text}")
+        else:
+            await Ticket.close_appeal(self, interaction, log_msg.id, 'DENIED', f"{reason_text}")
 
 class ConfigChannelsModal(ui.Modal):
     pass
@@ -492,3 +504,13 @@ class DelCategories(ui.Button):
 class AcceptAppeal(ui.Button):
     def __init__(self):
         super().__init__(label="✅ Accept Appeal", style=discord.ButtonStyle.green, custom_id="accept-appeal-button")
+
+    async def callback(self, interaction):
+        await interaction.send_modal(AppealDecision(decision="Accept"))
+
+class DenyAppeal(ui.Button):
+    def __init__(self):
+        super().__init__(label="❌ Deny Appeal", style=discord.ButtonStyle.green, custom_id="accept-appeal-button")
+
+    async def callback(self, interaction):
+        await interaction.send_modal(AppealDecision(decision="Deny"))
