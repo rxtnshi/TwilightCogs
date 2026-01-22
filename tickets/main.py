@@ -3,8 +3,9 @@ import aiosqlite
 import re
 import logging
 
+from . import views
 from .error_handling import send_blocked, send_success, send_error
-from .databases import TicketDB
+from .helpers import db
 from datetime import datetime
 from redbot.core import commands, app_commands, Config
 from redbot.core.data_manager import cog_data_path
@@ -15,7 +16,7 @@ class tickets(commands.Cog):
 
         self.log = logging.getLogger("twilightcogs.tickets_rewrite")
         self.path = cog_data_path(self)
-        self.db = TicketDB(self.path) # in case if need to make db entries/searches
+        self.db = db(self.path) # in case if need to make db entries/searches
 
         self.config = Config.get_conf(self, identifier=1, force_registration=True)
         default_guild = {
@@ -68,7 +69,7 @@ class tickets(commands.Cog):
         return any(role.id == modmail_mgmt for role in interaction.user.roles) 
 
     async def blacklist_check(self, user: discord.Member):
-        return await TicketDB.existing_blacklist_check(self, user.id)
+        return await db.existing_blacklist_check(self, user.id)
 
     staff = app_commands.Group(name="staff", description="Staff commands", guild_only=True)
     ticket = app_commands.Group(name="ticket", description="Ticket commands", guild_only=True)
@@ -79,7 +80,8 @@ class tickets(commands.Cog):
         if not await self.elevated_check(interaction):
             return await send_blocked("You cannot run this command!", True)
         
-        await interaction.response.send_message("hello")
+        view = views.SettingsPanel()
+        await interaction.response.send_message(view=view)
         
     @staff.command(name="register", description="Allows your staff to gain access to use the ticket system.")
     async def register_staff(self, interaction: discord.Interaction):

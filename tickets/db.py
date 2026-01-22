@@ -7,7 +7,7 @@ from datetime import datetime
 
 log = logging.getLogger("twilightcogs.tickets_rewrite")
 
-class TicketDB:
+class db:
     def __init__(self, db_path):
         self.db_path = db_path / "database.db"
 
@@ -207,10 +207,10 @@ class TicketDB:
             except Exception as e:
                 log.error(f"Encountered an error while checking for existing blacklists in DB: {e}")
 
-    async def save_category(self, category_name: str, description: str, team_role_id: int):
+    async def save_category(self, category_name: str, description: str, team_role_id: int, category_id: discord.CategoryChannel):
         async with aiosqlite.connect(self.db_path) as db:
             try:
-                await db.execute("INSERT INTO ticket_categories (category_name, description, team_role_id)", (category_name, description, team_role_id))
+                await db.execute("INSERT INTO ticket_categories (category_name, description, category_id, team_role_id)", (category_name, description, category_id, team_role_id))
                 await db.commit()
 
                 log.info(f"Successfully created DB entry for new ticket category {category_name}")

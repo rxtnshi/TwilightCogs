@@ -1,8 +1,7 @@
 import discord
-import vt
 
 from discord import ui
-from .classes import Ticket
+from .helpers import Ticket
 from .error_handling import send_blocked, send_error, send_success
 
 def parse_id(value):
@@ -99,15 +98,73 @@ class SupportPanel(ui.LayoutView):
         self.add_item(container)
 
 class SettingsPanel(ui.LayoutView):
-    def __init__(self, cog, interaction: discord.Ineraction):
-        self.cog = cog
-        confg = self.cog.config.guild(interaction.guild)
-        
-        container = ui.Container(
+    def __init__(self):
+        super().__init__(timeout=180)
 
+    async def interaction_check(self, interaction: discord.Interaction):
+        if interaction.user and interaction.user.id == self.author_id:
+            return True
+        else:
+            await send_blocked(interaction, "Only the person who initiated this command can change the settings.", True)
+   
+    @classmethod
+    async def get_settings(cls, cog, interaction: discord.Interaction):
+        self = cls.__new__(cls)
+        self.cog = cog
+        self.data = data
+
+        confg = cog.config.guild(interaction.guild)
+        data = await confg.all()
+
+        tickets_enabled = data.get("tickets_enabled")
+        appeals_enabled = data.get("appeals_enabled")
+        roles = data.get("tickets_roles")
+        channels = data.get("ticket_channels")
+        panel_cfg = data.get("panel_cfg")
+        staff_roles = {}
+        for role in roles["staff_roles"]:
+            staff_roles.append(f"<@&{role}>")
+
+        is_setup = False
+        if all(not item for item in roles and channels and panel_cfg):
+            is_setup = True
+        else:
+            is_setup = False
+
+        ui.LayoutView.__init__(self)
+        container = ui.Container(
+            ui.Section(
+                ui.TextDisplay("## ⚙️ Settings"),
+                ui.TextDisplay("Here are your current settings for your server."),
+                ui.TextDisplay("# Configuration Status"),
+                ui.TextDisplay(f"`{"✅ Configured" if is_setup else "❌ Not fully configured"}`"),
+                accessory="https://cdn.rxtnshi.xyz/raw/settings_cog.png"
+            ),
+            ui.TextDisplay("# __Ticket Statuses__"),
+            ui.TextDisplay(
+                f"`Tickets Creation`:\n{"✅ Enabled" if tickets_enabled is True else "❌ Disabled"}"
+                f"`Appeals Enabled`:\n{"✅ Enabled" if appeals_enabled is True else "❌ Disabled"}"
+            ),
+            ui.TextDisplay("# __Configured Roles__"),
+            ui.TextDisplay(
+                f"`Standard access`:\n<@&{roles["modmail_access"] if roles["modmail_access"] else "None set"}>"
+                f"`Management access`:\n<@&{roles["modmail_mgmt"] if roles["modmail_mgmt"] else "None set"}>"
+                f"`Appeals access`:\n<@&{roles["appeals_access"] if roles["appeals_access"] else "None set"}>"
+                f"`Staff Roles`:\n{staff_roles}"
+            ),
+            ui.TextDisplay("# __Configured Channels__"),
+            ui.TextDisplay(
+                f"`Ticket Logs`:\n<#{channels['log_channel']}>"
+                f"`Appeals`:\n<#{channels["appeal_logs"]}>"
+            ),
+            ui.TextDisplay("# __Panel Channels__"),
+            ui.TextDisplay(f"`Panel Channel`:\n<#{panel_cfg["channel"]}>"),
+            ui.TextDisplay(f"`[Link to panel](https://discord.com/channels/{interaction.guild.id}/{panel_cfg["channel"]}/{panel_cfg["message_id"]}`" if panel_cfg["message_id"] else "No panel message set"),
+            ui.Separator(visible=True, spacing=discord.SeparatorSpacing.small),
+            ui.ActionRow(ConfigChannels(), ConfigRoles(), ConfigFileCheck(), AddCategories(), DelCategories())
         )
-        
         self.add_item(container)
+        return self     
 
 class Receipt(ui.LayoutView):
     def __init__(self, file: discord.File, title: str, requester: discord.Member, closer: discord.Member, open_reason: str, close_reason: str, open_time: int, close_time: int):
@@ -287,6 +344,7 @@ class FileUploadAnalysisModal(ui.Modal):
         file = self.file_upload.component.values
 
         if self.scans_enabled:
+            import vt
             pass
         else:
             pass
@@ -369,6 +427,21 @@ class AppealDecision(ui.Modal):
     async def on_submit(self, interaction: discord.Interaction):
         pass
 
+class ConfigChannelsModal(ui.Modal):
+    pass
+
+class ConfigRolesModal(ui.Modal):
+    pass
+
+class AddCatModal(ui.Modal):
+    pass
+
+class DelCatModal(ui.Modal):
+    pass
+
+class ConfigFileCheckModal(ui.Modal):
+    pass
+
 # -- Buttons -- #
 class UploadFile(ui.Button):
     def __init__(self):
@@ -382,34 +455,43 @@ class CloseTicket(ui.Button):
         super().__init__(label="🔒 Close Ticket", style=discord.ButtonStyle.danger, custom_id="close-ticket-button")
 
     async def callback(self, interaction: discord.Interaction):
-        await interaction.send_modal(FileUploadAnalysisModal())
+        await interaction.send_modal(CloseTicketQuestionaire())
         
 class ConfigRoles(ui.Button):
     def __init__(self):
         super().__init__(label="⚙️ Configure Roles", style=discord.ButtonStyle.primary, custom_id="config-roles-button")
 
     async def callback(self, interaction: discord.Interaction):
-        cog = interaction.client.get_cog("tickets")
-        if not cog:
-            await send_error(interaction, "It seems like this cog (`tickets`) is offline.", True)
-            return
-        
-        pass
+        await interaction.send_modal(ConfigRolesModal())
 
 class ConfigChannels(ui.Button):
     def __init__(self):
         super().__init__(label="⚙️ Configure Channels", style=discord.ButtonStyle.primary, custom_id="config-roles-button")
 
     async def callback(self, interaction: discord.Interaction):
-        cog = interaction.client.get_cog("tickets")
-        if not cog:
-            await send_error(interaction, "It seems like this cog (`tickets`) is offline.", True)
-            return
-        
-        pass
+        await interaction.send_modal(ConfigChannelsModal())
+
+class ConfigFileCheck(ui.Button):
+    def __init__(self):
+        super().__init__(label="⚙️ Configure File Checks", style=discord.ButtonStyle.primary, custom_id="config-vt-button")
+
+    async def callback(self, interaction: discord.Interaction):
+        await interaction.send_modal(ConfigFileCheckModal())
+
+class AddCategories(ui.Button):
+    def __init__(self):
+        super().__init__(label="📲 Add Categories", style=discord.ButtonStyle.green, custom_id="add-catg-button")
+
+    async def callback(self, interaction: discord.Interaction):
+        await interaction.send_modal(AddCatModal())
+
+class DelCategories(ui.Button):
+    def __init__(self):
+        super().__init__(label="❌ Delete Categories", style=discord.ButtonStyle.danger, custom_id="del-catg-button")
+
+    async def callback(self, interaction: discord.Interaction):
+        await interaction.send_modal(DelCatModal())
 
 class AcceptAppeal(ui.Button):
     def __init__(self):
         super().__init__(label="✅ Accept Appeal", style=discord.ButtonStyle.green, custom_id="accept-appeal-button")
-
-    
