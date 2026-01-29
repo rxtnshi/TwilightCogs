@@ -53,7 +53,7 @@ class LogInfo(ui.LayoutView):
                 ui.TextDisplay(f"## 🚨 New Support Request!"),
                 ui.TextDisplay(content=f"{self.title}\n\n"),
                 ui.TextDisplay(content=f"{self.description}"),
-                accessory=discord.ui.Thumbnail(media="https://cdn.rxtnshi.xyz/u/clipboard.png")
+                accessory=discord.ui.Thumbnail(media="https://cdn.rxtnshi.xyz/raw/clipboard.png")
             ),
             ui.Separator(visible=True, spacing=discord.SeparatorSpacing.small),
             ui.ActionRow(
@@ -86,32 +86,36 @@ class AppealPanel(ui.LayoutView):
             ui.TextDisplay("### Appeal Info"),
             ui.TextDisplay(f"{self.appeal_info}"),
             ui.Separator(visible=True, spacing=discord.SeparatorSpacing.small),
-            ui.ActionRow(AcceptAppeal(), DenyAppeal())
+            ui.ActionRow(AcceptAppeal(), DenyAppeal()),
+            accent_color=discord.Color.yellow()
         )
 
         self.add_item(container)
 
 class DecisionAppeal(ui.LayoutView):
-    def __init__(self, accepted: bool, staff_member: discord.Member, reason: str):
+    def __init__(self, accepted: bool, appeal_id: str, staff_member: discord.Member, reason: str):
         self.accepted = accepted
+        self.appeal_id = appeal_id
         self.staff = staff_member
         self.reason = reason
         
-        # container = ui.Container(
-        #     ui.Section(
-        #         ui.TextDisplay(f"## Appeal `{self.appeal_id}` {'accepted' if self.accepted }"),
-        #         ui.TextDisplay(f"An appeal was submitted by {self.user.mention}. Please review the details below."),
-        #         accessory=discord.ui.Thumbnail(media="https://cdn.rxtnshi.xyz/raw/pending.png")
-        #     ),
-        #     ui.TextDisplay("### Moderated Account Info"),
-        #     ui.TextDisplay(f"`Platform`: `{self.platform}`\n`Account ID`: `{self.moderated_account}`"),
-        #     ui.TextDisplay("### Appeal Info"),
-        #     ui.TextDisplay(f"{self.appeal_info}"),
-        #     ui.Separator(visible=True, spacing=discord.SeparatorSpacing.small),
-        #     ui.ActionRow(AcceptAppeal(), DenyAppeal())
-        # )
+        decision = f"Appeal `{self.appeal_id}` Accepted" if self.accepted is True else f"Appeal `{self.appeal_id}` Denied"
+        decision_desc = "Your appeal has been accepted. Apologies for the inconvenience." if self.accepted is True else "Unfortunately, your appeal has been rejected. Please review the rejection reason below for further information."
+        accent_color = discord.Color.green() if self.accepted is True else discord.Color.red()
+        icon = ui.Thumbnail(media="https://cdn.rxtnshi.xyz/raw/approved.png") if self.accepted is True else ui.Thumbnail(media="https://cdn.rxtnshi.xyz/raw/denied.png")
 
-        # self.add_item(container)
+        container = ui.Container(
+            ui.Section(
+                ui.TextDisplay(f"{decision}"),
+                ui.TextDisplay(f"{decision_desc}"),
+                accessory=icon
+            ),
+            ui.TextDisplay(f"### Information"),
+            ui.TextDisplay(f"The staff have provided the following message: `{reason}`"),
+            accent_color=accent_color
+        )
+        
+        self.add_item(container)
 
 class SupportPanel(ui.LayoutView):
     def __init__(self, guild: discord.Guild, guidelines: str | None, categories: list[dict], appeals_enabled: bool, tickets_enabled: bool):
@@ -123,7 +127,7 @@ class SupportPanel(ui.LayoutView):
             ui.Section(
                 ui.TextDisplay(content=f"# ❓ {self.guild}'s Support Center"),
                 ui.TextDisplay(content=f"### Guidelines\n {f'{self.guidelines}' if self.guidelines else 'Please be respectful when contacting staff!'}"),
-                accessory=ui.Thumbnail(media="https://cdn.rxtnshi.xyz/u/clipboard.png"),
+                accessory=ui.Thumbnail(media="https://cdn.rxtnshi.xyz/raw/clipboard.png"),
             ),
             ui.Separator(visible=True, spacing=discord.SeparatorSpacing.small),
             ui.TextDisplay("### Open a Support Request Here!"),
@@ -138,7 +142,7 @@ class SupportPanel(ui.LayoutView):
 
 class SettingsPanel(ui.LayoutView):
     def __init__(self, interaction: discord.Interaction, author: discord.Member | discord.User | None, message: discord.Message | None):
-        super().__init__(timeout=10)
+        super().__init__(timeout=60)
         self.interaction = interaction
         self.author = author
         self.message = message or interaction.message
@@ -226,7 +230,7 @@ class SettingsPanel(ui.LayoutView):
             ui.TextDisplay("-# Channels & Categories"),
             ui.ActionRow(ConfigChannels(), ConfigRoles(), AddCategories(), DelCategories()),
             ui.TextDisplay("-# Miscellaneous"),
-            ui.ActionRow(SendPanel(), ConfigFileCheck(), ResetConfig())
+            ui.ActionRow(SendPanel(), ConfigFileCheck(), ResetConfig(), SetGuidelines())
         )
         self.add_item(container)
         return self
@@ -255,7 +259,7 @@ class Receipt(ui.LayoutView):
             ui.Section(
                 ui.TextDisplay(content=f"## 🗒️ Transcript for {self.title}"),
                 ui.TextDisplay(content=f"Here is the transcript for `{self.title}`. The ticket information can be found below."),
-                accessory=ui.Thumbnail(media="https://cdn.rxtnshi.xyz/u/clipboard.png"),
+                accessory=ui.Thumbnail(media="https://cdn.rxtnshi.xyz/raw/clipboard.png"),
             ),
             ui.Separator(visible=True, spacing=discord.SeparatorSpacing.small),
             ui.TextDisplay(content="# Ticket Information"),
@@ -835,6 +839,41 @@ class ResetModal(ui.Modal):
 
         await SettingsPanel(interaction.user, self.setup_msg).update_view(interaction, message=self.setup_msg)
 
+class SetGuidelinesModal(ui.Modal):
+    def __init__(self, default_text: str):
+        super().__init__(title=f"Setting Guidelines", timeout=None)
+
+        self.default_text = default_text
+
+        self.guidelines_text = ui.Label(
+            text="Create/Edit Guidelines",
+            description="Set rules to be displayed in the ticket panel",
+            component=ui.TextInput(
+                placeholder="f",
+                default=self.default_text,
+                style=discord.TextStyle.paragraph,
+                max_length=2000,
+                required=True
+            )
+        )
+
+        self.add_item(self.guidelines_text)
+
+    async def on_submit(self, interaction: discord.Interaction):
+        cog = interaction.client.get_cog("tickets")
+        confg = cog.config.guild(interaction.guild)
+        panel_cfg = await confg.panel_cfg()
+
+        try:
+            await confg.panel_cfg.set({
+                **panel_cfg,
+                "guidelines": self.guidelines_text.component.value
+            })
+            
+            await send_success(interaction, f"New guidelines set:\n\n ```{self.guidelines_text.component.value}```")
+        except Exception as e:
+            await send_error(interaction, f"{e}")
+
 # -- Buttons -- #
 class UploadFile(ui.Button):
     def __init__(self):
@@ -893,21 +932,21 @@ class AcceptAppeal(ui.Button):
     def __init__(self):
         super().__init__(label="✅ Accept Appeal", style=discord.ButtonStyle.green, custom_id="accept-appeal-button")
 
-    async def callback(self, interaction):
+    async def callback(self, interaction: discord.Interaction):
         await interaction.response.send_modal(AppealDecision(decision="Accept"))
 
 class DenyAppeal(ui.Button):
     def __init__(self):
         super().__init__(label="❌ Deny Appeal", style=discord.ButtonStyle.green, custom_id="deny-appeal-button")
 
-    async def callback(self, interaction):
+    async def callback(self, interaction: discord.Interaction):
         await interaction.response.send_modal(AppealDecision(decision="Deny"))
 
 class SendPanel(ui.Button):
     def __init__(self):
         super().__init__(label="✈️ Send Panel", style=discord.ButtonStyle.green, custom_id="send-panel-button")
 
-    async def callback(self, interaction):
+    async def callback(self, interaction: discord.Interaction):
         cog = interaction.client.get_cog("tickets")
         confg = cog.config.guild(interaction.guild)
         panel_cfg = await confg.panel_cfg()
@@ -916,6 +955,10 @@ class SendPanel(ui.Button):
         categories = await cog.db.list_categories()
 
         channel_id = panel_cfg.get("channel")
+        if not channel_id:
+            await send_error(interaction, "Please set a panel channel before sending the panel.", True)
+            return
+        
         channel = await interaction.guild.fetch_channel(channel_id)
         guidelines = panel_cfg.get("guidelines")
         panel_msg_id =  panel_cfg.get("message_id")
@@ -941,7 +984,27 @@ class ResetConfig(ui.Button):
     def __init__(self):
         super().__init__(label="🚫 Reset Configs", style=discord.ButtonStyle.danger, custom_id="reset-confg-button")
 
-    async def callback(self, interaction):
+    async def callback(self, interaction: discord.Interaction):
         modal = ResetModal()
         modal.setup_msg = interaction.message
+        await interaction.response.send_modal(modal)
+
+class SetGuidelines(ui.Button):
+    def __init__(self):
+        super().__init__(label="🗒️ Set Guidelines", style=discord.ButtonStyle.primary, custom_id="set-gl-button")
+
+    async def callback(self, interaction: discord.Interaction):
+        cog = interaction.client.get_cog("tickets")
+        confg = cog.config.guild(interaction.guild)
+
+        panel_cfg = await confg.panel_cfg()
+        guidelines = panel_cfg.get("guidelines")
+        text = ""
+
+        if guidelines:
+            text = guidelines
+        else:
+            text = "No guidelines have been set. Please delete this and create your own. Discord Markdown supported (for new lines please use \\n)"
+
+        modal = SetGuidelinesModal(text)
         await interaction.response.send_modal(modal)

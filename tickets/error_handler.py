@@ -19,7 +19,6 @@ async def send_error(interaction: discord.Interaction, content: str, epheremal: 
     
     embed.add_field(name="Error Details", value=content)
 
-    cog.log.error(f"{interaction.user} ran into an error: {content}")
     await parse_interaction(interaction, embed=embed, ephemeral=epheremal or False)
 
 async def send_success(interaction: discord.Interaction, content: str, epheremal: bool = False):
