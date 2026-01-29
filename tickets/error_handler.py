@@ -1,6 +1,12 @@
 import discord
 from datetime import datetime
 
+async def parse_interaction(interaction: discord.Interaction, embed: discord.Embed, ephemeral: bool):
+    if interaction.response.is_done():
+        await interaction.followup.send(embed=embed, ephemeral=ephemeral)
+    else:
+        await interaction.response.send_message(embed=embed, ephemeral=ephemeral)
+
 async def send_error(interaction: discord.Interaction, content: str, epheremal: bool = False):
     cog = interaction.client.get_cog("tickets")
 
@@ -14,11 +20,9 @@ async def send_error(interaction: discord.Interaction, content: str, epheremal: 
     embed.add_field(name="Error Details", value=content)
 
     cog.log.error(f"{interaction.user} ran into an error: {content}")
-    await interaction.response.send_message(embed=embed, ephemeral=epheremal or False)
+    await parse_interaction(interaction, embed=embed, ephemeral=epheremal or False)
 
 async def send_success(interaction: discord.Interaction, content: str, epheremal: bool = False):
-    cog = interaction.client.get_cog("tickets")
-
     embed = discord.Embed(
         title="✅ Success!",
         description="Successfully performed this action!",
@@ -27,24 +31,7 @@ async def send_success(interaction: discord.Interaction, content: str, epheremal
     )
 
     embed.add_field(name="Details", value=content)
-
-    cog.log.info(f"{interaction.user} successfully ran something: {content}")
-    await interaction.response.send_message(embed=embed, ephemeral=epheremal or False)
-
-async def send_warning(interaction: discord.Interaction, content: str, epheremal: bool = False):
-    cog = interaction.client.get_cog("tickets")
-
-    embed = discord.Embed(
-        title="⚠️ Warning!",
-        description="The action you requested was performed, but encountered a potential issue.",
-        color=discord.Color.gold(),
-        timestamp=datetime.now()
-    )
-    
-    embed.add_field(name="Details", value=content)
-
-    cog.log.warning(f"{interaction.user} tried to do something but was met with a warning: {content}")
-    await interaction.response.send_message(embed=embed, ephemeral=epheremal or False)
+    await parse_interaction(interaction, embed=embed, ephemeral=epheremal or False)
 
 async def send_blocked(interaction: discord.Interaction, content: str, epheremal: bool = False):
     cog = interaction.client.get_cog("tickets")
@@ -57,6 +44,5 @@ async def send_blocked(interaction: discord.Interaction, content: str, epheremal
     )
     
     embed.add_field(name="Details", value=content)
-
-    cog.log.warning(f"{interaction.user} tried to do something but was blocked: {content}")
-    await interaction.response.send_message(embed=embed, ephemeral=epheremal or False)
+    cog.log.warning(f"{interaction.user} tried to do something but was blocked from doing so: {content}")
+    await parse_interaction(interaction, embed=embed, ephemeral=epheremal or False)

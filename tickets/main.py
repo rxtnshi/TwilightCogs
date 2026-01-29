@@ -4,8 +4,8 @@ import re
 import logging
 
 from . import views
-from .error_handling import send_blocked, send_success, send_error
-from .helpers import db
+from .error_handler import send_blocked, send_success, send_error
+from .creation_handler import db
 from datetime import datetime
 from redbot.core import commands, app_commands, Config
 from redbot.core.data_manager import cog_data_path
@@ -14,7 +14,7 @@ class tickets(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
 
-        self.log = logging.getLogger("twilightcogs.tickets_rewrite")
+        self.log = logging.getLogger("twilightcogs.ticketsv2")
         self.path = cog_data_path(self)
         self.db = db(self.path) # in case if need to make db entries/searches
 
@@ -34,6 +34,7 @@ class tickets(commands.Cog):
 			},
 			"panel_cfg": {
 				"channel": None,
+                "guidelines": None,
 				"message_id": None,
 			},
             "file_scans": {
@@ -80,21 +81,22 @@ class tickets(commands.Cog):
         if not await self.elevated_check(interaction):
             return await send_blocked("You cannot run this command!", True)
         
-        view = views.SettingsPanel()
+        view = await views.SettingsPanel(interaction, interaction.user, interaction.message).get_settings(interaction)
         await interaction.response.send_message(view=view)
+        view.message = await interaction.original_response()
         
     @staff.command(name="register", description="Allows your staff to gain access to use the ticket system.")
     async def register_staff(self, interaction: discord.Interaction):
         confg = self.config.guild(interaction.guild)
         ticket_roles = await confg.ticket_roles()
-        staff_roles = ticket_roles["staff_roles"]
-        access_id = ticket_roles['modmail_access']
-        mgmt_id = ticket_roles['modmail_mgmt']
+        staff_roles = ticket_roles.get("staff_roles")
+        access_id = ticket_roles.get("modmail_access")
+        mgmt_id = ticket_roles.get("modmail_mgmt")
 
         access_role = interaction.guild.get_role(access_id)
         access_roles = {rid for rid in (access_id, mgmt_id) if rid}
         mgmt_role = interaction.guild.get_role(mgmt_id)
-        user_check = any(role in interaction.user.roles for role in staff_roles)
+        user_check = any(r.id in staff_roles for r in interaction.user.roles)
         existing_check = bool(access_roles and any(r.id in access_roles for r in interaction.user.roles))
 
         if not user_check:
@@ -106,13 +108,13 @@ class tickets(commands.Cog):
                     return await send_blocked(interaction, "You're already registered to the ticket system.", True)
                 
                 await interaction.user.add_roles(mgmt_role, reason="Registered user to ticket system as management")
-                await send_success(interaction, "You've been successfully registered to the system! You've been given elevated level access due to having Administrator permissions.")
+                await send_success(interaction, "You've been successfully registered to the system! You've been given elevated level access due to having Administrator permissions.", True)
             else:
                 if existing_check:
                     return await send_blocked(interaction, "You're already registered to the ticket system.", True)
                 
-                await interaction.user.add_roles(access_role, reason="Registered user to ticket system as management")
-                await send_success(interaction, "You've been successfully registered to the system! You've been given standard level access. If you are someone that needs to be registered as management, please reach out to someone with Administrator permissions.")
+                await interaction.user.add_roles(access_role, reason="Registered user to ticket system as staff")
+                await send_success(interaction, "You've been successfully registered to the system! You've been given standard level access. If you are someone that needs to be registered as management, please reach out to someone with Administrator permissions.", True)
         except Exception as e:
             await send_error(interaction, f"Unable to register to the system: `{e}`")
 
