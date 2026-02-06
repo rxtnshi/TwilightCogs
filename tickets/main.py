@@ -5,7 +5,8 @@ import logging
 
 from . import views
 from .error_handler import send_blocked, send_success, send_error
-from .creation_handler import db
+from .creation_handler import Ticket, Blacklist
+from .db_handler import db
 from datetime import datetime
 from redbot.core import commands, app_commands, Config
 from redbot.core.data_manager import cog_data_path
@@ -34,13 +35,9 @@ class tickets(commands.Cog):
 			},
 			"panel_cfg": {
 				"channel": None,
-                "guidelines": None,
+                "description": None,
 				"message_id": None,
-			},
-            "file_scans": {
-                "vt_key": None,
-                "enabled": False
-            }
+			}
 		}
         self.config.register_guild(**default_guild)
 
@@ -70,20 +67,11 @@ class tickets(commands.Cog):
         return any(role.id == modmail_mgmt for role in interaction.user.roles) 
 
     async def blacklist_check(self, user: discord.Member):
-        return await db.existing_blacklist_check(self, user.id)
+        return await self.db.fetch_blacklist(user.id)
 
     staff = app_commands.Group(name="staff", description="Staff commands", guild_only=True)
     ticket = app_commands.Group(name="ticket", description="Ticket commands", guild_only=True)
     appeal = app_commands.Group(name="appeal", description="Appeal commands", guild_only=True)
-
-    @staff.command(name="setup", description="Set up the ticket system for your server.")
-    async def setup_tickets(self, interaction: discord.Interaction):
-        if not await self.elevated_check(interaction):
-            return await send_blocked("You cannot run this command!", True)
-        
-        view = await views.SettingsPanel(interaction, interaction.user, interaction.message).get_settings(interaction)
-        await interaction.response.send_message(view=view)
-        view.message = await interaction.original_response()
         
     @staff.command(name="register", description="Allows your staff to gain access to use the ticket system.")
     async def register_staff(self, interaction: discord.Interaction):
@@ -121,33 +109,192 @@ class tickets(commands.Cog):
     @staff.command(name="deregister", description="Remove a staff member from being able to access the ticket system.")
     @app_commands.describe(member="The staff member you want to deregister from the system.")
     async def deregister_staff(self, interaction: discord.Interaction, member: discord.Member):
-        pass
+        if not await self.elevated_check(interaction):
+            return await send_blocked(interaction, "You are unable to run this command.", True)
+        
+        confg = self.config.guild(interaction.guild)
+        roles = await confg.ticket_roles()
+        standard = interaction.guild.get_role(roles.get('modmail_access')) if roles.get('modmail_access') else None
+
+        try:
+            await interaction.user.remove_roles(*standard, reason="User was deregistered from the ticket system.")
+            return await send_success(interaction, f"{member.mention} was de-registered from the ticket system.", True)
+        except Exception as e:
+            return await send_error(interaction, f"Something went wrong trying to deregister {member.mention}: `{e}`", True)
 
     @staff.command(name="blacklist", description="Blacklist server members from using the ticket system.")
-    @app_commands.describe(member="The member you want to blacklist from using the ticket system.")
-    async def blacklist_member(self, interaction: discord.Interaction, member: discord.Member):
-        pass
+    @app_commands.describe(
+        option="Add, remove, or fetch blacklist information for a user", 
+        member="The member you want to blacklist from using the ticket system.", 
+        reason="The reason you're blacklisting them for."
+    )
+    @app_commands.choices(
+        option=[
+            app_commands.Choice(name="add", value="add"),
+            app_commands.Choice(name="delete", value="delete"),
+            app_commands.Choice(name="fetch", value="fetch")
+        ]
+    )
+    async def blacklist_member(self, interaction: discord.Interaction, option: str, member: discord.Member, reason: str = None):
+        if not await self.elevated_check(interaction):
+            return await send_blocked(interaction, "You cannot run this command!", True)
+        
+        target = member
+        staff = interaction.user
+        if reason is None:
+            reason = "No reason provided."
 
-    @staff.command(name="unblacklist", description="Remove server members from the blacklist.")
-    @app_commands.describe(member="The member you want to unblacklist.")
-    async def blacklist_member(self, interaction: discord.Interaction, member: discord.Member):
-        pass
+        blacklist = Blacklist(target, staff, reason)
+        match option:
+            case "add":
+                check = await blacklist.fetch(interaction)
+                if check:
+                    text = (
+                        f"{target.mention} is already in the blacklist!\n"
+                        f"**Added by**: {interaction.guild.get_member(check.get('staff_member')).mention}"
+                        f"**Reason**: {check.get('reason')}"
+                    )
+                    return await send_error(interaction, text, True)
+                
+                return await blacklist.add(interaction)
+            case "delete":
+                check = await blacklist.fetch(interaction)
+                if check:
+                    modal = views.BlacklistInfo(False, member, check.get("reason"))
+                    await interaction.response.send_modal(modal)
+                else:
+                    return await send_error(interaction, "User was not found in blacklist!", True)
+            case "fetch":
+                check = await blacklist.fetch(interaction)
+                if check:
+                    modal = views.BlacklistInfo(True, member, check.get("reason"))
+                    return await interaction.response.send_modal(modal)
+                return await send_error(interaction, "No blacklist was found for this member.", True)
 
-    @staff.command(name="panic", description="Enables/disables panic (ticket creation)")
-    async def panic_mode(self, interaction: discord.Interaction):
-        pass
+    @staff.command(name="set", description="Enables/disables ticket creation or appeals")
+    @app_commands.describe(
+        option="Enable/disable ticket creations or appeals",
+        type="Choose either tickets or appeals to enable/disable"
+    )
+    @app_commands.choices(
+        option=[
+            app_commands.Choice(name="enable", value="enable"),
+            app_commands.Choice(name="disable", value="disable")
+        ],
+        type=[
+            app_commands.Choice(name="tickets", value="tickets"),
+            app_commands.Choice(name="appeals", value="appeals")
+        ]
+    )
+    async def panic_appeals(self, interaction: discord.Interaction, option: str, type: str):
+        confg = self.config.guild(interaction.guild)
+        tickets_status = await confg.tickets_enabled()
+        appeals_status = await confg.appeals_enabled()
+        match option:
+            case "enable":
+                match type:
+                    case "tickets":
+                        if not tickets_status:
+                            new_tickets_status = not tickets_status
+                            await confg.tickets_enabled.set(new_tickets_status)
 
-    @ticket.command(name="close", description="Close a ticket channel or a specified channel")
-    @app_commands.describe(ticket_id="The ticket you want to close.")
-    async def close_ticket(self, interaction: discord.Interaction, ticket_id: str):
-        pass
+                            return await send_success(interaction, f"The ticket system is now **`{'enabled' if new_tickets_status else 'disabled'}`**! Please resend the button using `/staff setup` to close tickets.")
+                    case "appeals":
+                        if not appeals_status:
+                            new_appeals_status = not appeals_status
+                            await confg.appeals_enabled.set(new_appeals_status)
+
+                            return await send_success(interaction, f"The appeal system is now **`{'enabled' if new_appeals_status else 'disabled'}`**! Please resend the button using `/staff setup` to close tickets.")
+            case "disable":
+                match type:
+                    case "tickets":
+                        if tickets_status:
+                            new_tickets_status = not tickets_status
+                            await confg.tickets_enabled.set(new_tickets_status)
+
+                            return await send_success(interaction, f"The ticket system is now **`{'enabled' if new_tickets_status else 'disabled'}`**! Please resend the button using `/staff setup` to close tickets.")
+                    case "appeals":
+                        if appeals_status:
+                            new_appeals_status = not appeals_status
+                            await confg.appeals_enabled.set(new_appeals_status)
+
+                            return await send_success(interaction, f"The appeal system is now **`{'enabled' if new_appeals_status else 'disabled'}`**! Please resend the button using `/staff setup` to close tickets.")
 
     @ticket.command(name="help", description="Display all commands and their usage.")
     async def commands_help(self, interaction: discord.Interaction):
-        is_staff = False
-        pass
+        embed = discord.Embed(
+            title="ⓘ Ticket Commands Help Menu",
+            description="Here is an overview of commands and functionality for the ticket system.",
+            timestamp=datetime.now(),
+            color=discord.Color.purple()
+        )
+        overview = (
+            "Most ticket functionality rests in buttons in the ticket channels and log channels. You should be able to operate using the buttons with no errors, although if there are any please contact the cog developer with your RedBot logs.\n\n"
+            "Here is a legend for each command and its level of access:\n"
+            "🛡️ - Management/Adminstrator access needed\n"
+            "🛠️ - Standard access needed\n"
+            "👥 - Regular server members have access\n"
+        )
+        cmds = (
+            "🛡️ `/ticket setup`: Interactive setup process for the ticket system. Can configure options here.\n"
+            "👥 `/ticket help`: Returns this help menu.\n"
+            "🛡️ `/staff panic`: Enables or disables ticket creation.\n"
+            "🛠️ `/staff register`: Registers server staff to the ticket system. Staff members must run this command themselves.\n"
+            "🛡️ `/staff deregister [member]`: Deregister a specified member from the ticket system and removes standard access from them.\n"
+            "🛡️ `/staff blacklist [add/remove/fetch] [member] [reason - optional but recommended]`: Blacklist feature for the ticket system.\n"
+            "👥 `/appeal status [appeal id]`: Check an appeal's status via its ID.\n"
+        )
+        embed.add_field(name="Overview", value=overview, inline=False)
+        embed.add_field(name="Commands", value=cmds, inline=False)
+
+        await interaction.response.send_message(embed=embed)
+
+    @ticket.command(name="setup", description="Set up the ticket system for your server.")
+    async def setup_tickets(self, interaction: discord.Interaction):
+        if not await self.elevated_check(interaction):
+            return await send_blocked(interaction, "You cannot run this command!", True)
+        
+        view = await views.SettingsPanel(interaction, interaction.user, interaction.message).get_settings(interaction)
+        await interaction.response.send_message(view=view)
+        view.message = await interaction.original_response()
 
     @appeal.command(name="status", description="Get the status of an appeal made with the ticket system.")
     @app_commands.describe(id="The appeal id given to you after an appeal has been made.")
-    async def commands_help(self, interaction: discord.Interaction, id: str):
-        pass
+    async def appeal_status(self, interaction: discord.Interaction, id: str):
+        info = await self.db.fetch_appeal(id)
+        if info:
+            account = info.get("account")
+            platform = info.get("platform")
+            mod_reason = info.get("reason")
+            appeal_info = info.get("appeal_info")
+            decision_time = info.get("decision_time")
+            decision_option = info.get("decision_option")
+            decision_reason = info.get("decision_reason")
+            appeal_id = info.get("appeal_id")
+
+            embed = discord.Embed(
+                title=f"Status for Appeal `{appeal_id}`",
+                description="Here is the information regarding this appeal.",
+                timestamp=datetime.now()
+            )
+
+            if decision_option == 'accepted':
+                embed.color = discord.Color.green()
+            elif decision_option == 'denied':
+                embed.color = discord.Color.red()
+            else:
+                embed.color = discord.Color.yellow()
+
+            embed.add_field(name="Moderated Account", value=str(account), inline=False)
+            embed.add_field(name="Platform", value=platform, inline=False)
+            embed.add_field(name="Reason for Moderation", value=mod_reason, inline=False)
+            embed.add_field(name="Information Provided to Staff", value=appeal_info, inline=False)
+
+            if decision_time:
+                embed.add_field(name="Decision", value=decision_option.upper(), inline=False)
+                embed.add_field(name="Decision Time", value=f"<t:{int(decision_time)}:f>", inline=False)
+                embed.add_field(name="Reason for Decision", value=decision_reason, inline=False)
+
+            await interaction.response.send_message(embed=embed, ephemeral=True)
+        else:
+            return await send_error(interaction, f"No such appeal under ID `{id}` was found! Please try again using a valid id.", True)

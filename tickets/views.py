@@ -1,48 +1,55 @@
 import discord
-import uuid
 import logging
 
+from datetime import datetime
 from .db_handler import db
 from discord import ui
-from .creation_handler import Ticket, Appeal, Category
+from .creation_handler import Ticket, Appeal, Category, Blacklist
 from .error_handler import send_blocked, send_error, send_success
 
 log = logging.getLogger("twilightcogs.ticketsv2")
-def parse_id(value):
-    if value is None:
-        return None
-    if isinstance(value, int):
-        return value
-    try:
-        return int(str(value).strip("'\""))
-    except ValueError:
-        return None
+def disable_all(item): # not my code, since idk how to disable button in containers
+            if isinstance(item, ui.ActionRow):
+                for sub in item.children:
+                    if isinstance(sub, (ui.Button)):
+                        sub.disabled = True
+            if hasattr(item, "children"):
+                for sub in item.children:
+                    disable_all(sub)
 
 # -- Views/LayoutViews -- #
 class TicketInfo(ui.LayoutView):
-    def __init__(self, author: discord.Member | discord.User, title: str, description: str):
+    def __init__(self, author: discord.Member | discord.User, title: str, description: str, team: discord.Role):
+        super().__init__(timeout=None)
         self.author = author
         self.title = title
         self.description = description
 
         container = ui.Container(
             ui.Section(
-                ui.TextDisplay(content=f"## 🛈 Request Information"),
-                ui.TextDisplay(content=f"{self.title}\n\n"),
-                ui.TextDisplay(content=f"{self.description}"),
-                ui.TextDisplay(content=f"-# Thank you for contacting us. A member of our staff team will get to you shortly."),
-                accessory=discord.ui.Thumbnail(media="https://cdn.rxtnshi.xyz/u/8bnPxj.gif")
+                ui.TextDisplay(f"## 🛈 Request Information"),
+                ui.TextDisplay(f"{team.mention} - {self.author.mention} ({self.author.id}) has created a support ticket."),
+                ui.TextDisplay(f"-# Thank you for contacting us. A member of our staff team will get to you shortly."),
+                accessory=discord.ui.Thumbnail(media="https://cdn.rxtnshi.xyz/raw/hat-kid-wave.gif")
             ),
+            ui.TextDisplay("## Title"),
+            ui.TextDisplay(f"{self.title}\n\n"),
+            ui.TextDisplay("## Description"),
+            ui.TextDisplay(f"{self.description}"),
             ui.Separator(visible=True, spacing=discord.SeparatorSpacing.small),
-            ui.TextDisplay(content=f"# Action Center"),
-            ui.ActionRow(UploadFile()),
+            ui.TextDisplay(f"### Action Center"),
+            ui.ActionRow(CloseTicket()),
         )
 
         self.add_item(container)
 
 class LogInfo(ui.LayoutView):
-    def __init__(self, author: discord.Member | discord.User, title: str, description: str, ticket_guild: discord.Guild, ticket_channel: discord.TextChannel):
+    def __init__(self):
+        super().__init__(timeout=None)
+    
+    def set_data(self, author: discord.Member | discord.User, type: str, title: str, description: str, ticket_guild: discord.Guild, ticket_channel: discord.TextChannel):
         self.author = author
+        self.type = type
         self.title = title
         self.description = description
         self.guild = ticket_guild
@@ -51,15 +58,18 @@ class LogInfo(ui.LayoutView):
         container = ui.Container(
             ui.Section(
                 ui.TextDisplay(f"## 🚨 New Support Request!"),
-                ui.TextDisplay(content=f"{self.title}\n\n"),
-                ui.TextDisplay(content=f"{self.description}"),
+                ui.TextDisplay(f"A new `{self.type}` request was opened by {self.author.mention}. Please review it as soon as possible and notify appropriate staff if needed."),
                 accessory=discord.ui.Thumbnail(media="https://cdn.rxtnshi.xyz/raw/clipboard.png")
             ),
+            ui.TextDisplay("### Request Title"),
+            ui.TextDisplay(f"{self.title}"),
+            ui.TextDisplay("### Request Description"),
+            ui.TextDisplay(f"{self.description}"),
             ui.Separator(visible=True, spacing=discord.SeparatorSpacing.small),
             ui.ActionRow(
                 ui.Button(
                     label="Access Ticket",
-                    style=discord.ButtonStyle.link(),
+                    style=discord.ButtonStyle.link,
                     url=f"https://discord.com/channels/{self.guild.id}/{self.channel.id}/",
                 )
             )
@@ -68,66 +78,114 @@ class LogInfo(ui.LayoutView):
         self.add_item(container)
 
 class AppealPanel(ui.LayoutView):
-    def __init__(self, appeal_id: str,user: discord.Member, moderated_account: str, platform: str, appeal_info: str):
+    def __init__(self):
+        super().__init__(timeout=None)
+
+    def generate(self, type: str, appeal_id: str, user: discord.Member, moderated_account: str, platform: str, moderated_reason: str, appeal_info: str, appeal_staff: discord.Role):
         self.appeal_id = appeal_id
         self.user = user
         self.platform = platform
         self.moderated_account = moderated_account
+        self.moderated_reason = moderated_reason
         self.appeal_info = appeal_info
+        self.staff = appeal_staff
         
-        container = ui.Container(
-            ui.Section(
-                ui.TextDisplay(f"## 🚨 Appeal `{self.appeal_id}`Submitted"),
-                ui.TextDisplay(f"An appeal was submitted by {self.user.mention}. Please review the details below."),
-                accessory=discord.ui.Thumbnail(media="https://cdn.rxtnshi.xyz/raw/pending.png")
-            ),
-            ui.TextDisplay("### Moderated Account Info"),
-            ui.TextDisplay(f"`Platform`: `{self.platform}`\n`Account ID`: `{self.moderated_account}`"),
-            ui.TextDisplay("### Appeal Info"),
-            ui.TextDisplay(f"{self.appeal_info}"),
-            ui.Separator(visible=True, spacing=discord.SeparatorSpacing.small),
-            ui.ActionRow(AcceptAppeal(), DenyAppeal()),
-            accent_color=discord.Color.yellow()
-        )
+        match type:
+            case 'log':
+                container = ui.Container(
+                    ui.Section(
+                        ui.TextDisplay(f"## 🚨 Appeal `{self.appeal_id}`Submitted"),
+                        ui.TextDisplay(f"{self.staff.mention}\nAn appeal was submitted by {self.user.mention}. The information below has been provided and review any available evidence to process this appeal."),
+                        accessory=discord.ui.Thumbnail(media="https://cdn.rxtnshi.xyz/raw/pending.png")
+                    ),
+                    ui.TextDisplay("### Moderated Account Info"),
+                    ui.TextDisplay(f"**Platform**: {self.platform}\n**Account ID**: {self.moderated_account}"),
+                    ui.TextDisplay("### Appeal Info"),
+                    ui.TextDisplay(f"{self.moderated_reason} - {self.appeal_info}"),
+                    ui.Separator(visible=True, spacing=discord.SeparatorSpacing.small),
+                    ui.ActionRow(AcceptAppeal(self.appeal_id, self.user), DenyAppeal(self.appeal_id, self.user)),
+                    accent_color=discord.Color.yellow()
+                )
+            case 'receipt':
+                container = ui.Container(
+                    ui.Section(
+                        ui.TextDisplay(f"## 🚨 Appeal `{self.appeal_id}`Submitted"),
+                        ui.TextDisplay(f"Your appeal has been submitted to staff and is now in review. Please allow up to **3-5 business days** for the server staff to process your appeal. Attempts to make several appeals will result in a blacklist from the system and your appeal will be rejected."),
+                        accessory=discord.ui.Thumbnail(media="https://cdn.rxtnshi.xyz/raw/pending.png")
+                    ),
+                    ui.TextDisplay("### Moderated Account Info"),
+                    ui.TextDisplay(f"**Platform**: {self.platform}\n**Account ID**: {self.moderated_account}"),
+                    ui.TextDisplay("### Appeal Info"),
+                    ui.TextDisplay(f"{self.moderated_reason} - {self.appeal_info}"),
+                    accent_color=discord.Color.yellow()
+                )
 
         self.add_item(container)
+        return self
 
 class DecisionAppeal(ui.LayoutView):
-    def __init__(self, accepted: bool, appeal_id: str, staff_member: discord.Member, reason: str):
+    def __init__(self, type: str, accepted: bool, appeal_id: str, staff_member: discord.Member, reason: str, create_time: int, appealer: discord.Member):
+        super().__init__(timeout=None)
         self.accepted = accepted
         self.appeal_id = appeal_id
         self.staff = staff_member
         self.reason = reason
-        
-        decision = f"Appeal `{self.appeal_id}` Accepted" if self.accepted is True else f"Appeal `{self.appeal_id}` Denied"
+        self.create_time = create_time
+        self.appealer = appealer
+
+        decision = f"## ✅ Appeal `{self.appeal_id}` Accepted" if self.accepted is True else f"## 🚫 Appeal `{self.appeal_id}` Rejected"
         decision_desc = "Your appeal has been accepted. Apologies for the inconvenience." if self.accepted is True else "Unfortunately, your appeal has been rejected. Please review the rejection reason below for further information."
         accent_color = discord.Color.green() if self.accepted is True else discord.Color.red()
         icon = ui.Thumbnail(media="https://cdn.rxtnshi.xyz/raw/approved.png") if self.accepted is True else ui.Thumbnail(media="https://cdn.rxtnshi.xyz/raw/denied.png")
+        decision_time = int(datetime.now().timestamp())
 
-        container = ui.Container(
-            ui.Section(
-                ui.TextDisplay(f"{decision}"),
-                ui.TextDisplay(f"{decision_desc}"),
-                accessory=icon
-            ),
-            ui.TextDisplay(f"### Information"),
-            ui.TextDisplay(f"The staff have provided the following message: `{reason}`"),
-            accent_color=accent_color
-        )
+        match type:
+            case 'receipt':
+                container = ui.Container(
+                ui.Section(
+                    ui.TextDisplay(f"{decision}"),
+                    ui.TextDisplay(f"{decision_desc}"),
+                    accessory=icon
+                ),
+                ui.TextDisplay(f"### __Information__"),
+                ui.TextDisplay(f"**Date Submitted**\n<t:{self.create_time}:F>\n\n"),
+                ui.TextDisplay(f"**Decision Time**\n<t:{decision_time}:F>\n\n"),
+                ui.TextDisplay(f"**The server staff have provided the following reason for this decision:**"),
+                ui.TextDisplay(f"{reason}\n\n"),
+                accent_color=accent_color
+                )
+            case 'log':
+                container = ui.Container(
+                ui.Section(
+                    ui.TextDisplay(f"{decision}"),
+                    ui.TextDisplay(f"This appeal has been resolved by {staff_member.mention}. The details are below."),
+                    accessory=icon
+                ),
+                ui.TextDisplay(f"### __Information__"),
+                ui.TextDisplay(f"**Appealer**\n{self.appealer.mention}\n\n"),
+                ui.TextDisplay(f"**Staff Member**\n{staff_member.mention}\n\n"),
+                ui.TextDisplay(f"**Date Submitted**\n<t:{self.create_time}:F>\n\n"),
+                ui.TextDisplay(f"**Decision Time**\n<t:{decision_time}:F>\n\n"),
+                ui.TextDisplay(f"**Reason for decision**"),
+                ui.TextDisplay(f"{reason}\n\n"),
+                accent_color=accent_color
+                )
         
         self.add_item(container)
 
 class SupportPanel(ui.LayoutView):
-    def __init__(self, guild: discord.Guild, guidelines: str | None, categories: list[dict], appeals_enabled: bool, tickets_enabled: bool):
-        super().__init__()
+    def __init__(self):
+        super().__init__(timeout=None)
+    
+    def generate(self, guild: discord.Guild, description: str | None, categories: list[dict], appeals_enabled: bool, tickets_enabled: bool):
         self.guild = guild
-        self.guidelines = guidelines
+        self.description = description
 
         container = ui.Container(
             ui.Section(
-                ui.TextDisplay(content=f"# ❓ {self.guild}'s Support Center"),
-                ui.TextDisplay(content=f"### Guidelines\n {f'{self.guidelines}' if self.guidelines else 'Please be respectful when contacting staff!'}"),
-                accessory=ui.Thumbnail(media="https://cdn.rxtnshi.xyz/raw/clipboard.png"),
+                ui.TextDisplay(f"## 📫 {self.guild}'s Support Center"),
+                ui.TextDisplay(f"{f'{self.description}' if self.description else 'Please be respectful when contacting staff!'}"),
+                accessory=ui.Thumbnail(media="https://cdn.rxtnshi.xyz/raw/hat-kid-idle.gif"),
             ),
             ui.Separator(visible=True, spacing=discord.SeparatorSpacing.small),
             ui.TextDisplay("### Open a Support Request Here!"),
@@ -139,10 +197,11 @@ class SupportPanel(ui.LayoutView):
             container.add_item(ui.TextDisplay("`🚫 Sorry, our support system is currently closed at the moment. Please check back later.`"))
 
         self.add_item(container)
+        return self
 
 class SettingsPanel(ui.LayoutView):
     def __init__(self, interaction: discord.Interaction, author: discord.Member | discord.User | None, message: discord.Message | None):
-        super().__init__(timeout=60)
+        super().__init__(timeout=90)
         self.interaction = interaction
         self.author = author
         self.message = message or interaction.message
@@ -153,11 +212,15 @@ class SettingsPanel(ui.LayoutView):
         else:
             return False, await send_blocked(interaction, "Only the person who initiated this command can change the settings.", True)
         
-    async def on_timeout(self, interaction: discord.Interaction):
-        if interaction.response.is_done():
-            await interaction.followup("This panel has expired. Please run `/staff setup` to continue editing.")
-        else:
-            await interaction.response.send_message("This panel has expired. Please run `/staff setup` to continue editing.")
+    async def on_timeout(self): 
+        for child in self.children:
+            disable_all(child)
+
+        if self.message:
+            try:
+                await self.message.edit(view=self)
+            except Exception as e:
+                log.warning(f"Failed to edit view on timeout: {e}")
 
     @staticmethod
     async def get_settings(interaction: discord.Interaction):
@@ -171,7 +234,6 @@ class SettingsPanel(ui.LayoutView):
         tickets_enabled = data.get("tickets_enabled")
         appeals_enabled = data.get("appeals_enabled")
         roles = data.get("ticket_roles") or {}
-        log.info(roles)
         channels = data.get("ticket_channels") or {}
         panel_cfg = data.get("panel_cfg") or {}
 
@@ -208,7 +270,7 @@ class SettingsPanel(ui.LayoutView):
             ui.TextDisplay("### __Ticket Statuses__"),
             ui.TextDisplay(
                 f"`Tickets Creation`: {'`✅ Enabled`' if tickets_enabled is True else '`❌ Disabled`'}\n"
-                f"`Appeals Enabled`: {'`✅ Enabled`' if appeals_enabled is True else '`❌ Disabled`'}\n"
+                f"`Appeals`: {'`✅ Enabled`' if appeals_enabled is True else '`❌ Disabled`'}\n"
             ),
             ui.TextDisplay("### __Configured Roles__"),
             ui.TextDisplay(
@@ -226,17 +288,17 @@ class SettingsPanel(ui.LayoutView):
             ui.TextDisplay(f"`Panel Channel`: {panel_channel}\n"),
             ui.TextDisplay(f"[Link to panel]({panel_link})" if panel_link else "`No panel message set`"),
             ui.Separator(visible=True, spacing=discord.SeparatorSpacing.small),
-            ui.TextDisplay("### __Action Center__"),
+            ui.TextDisplay("### 💻 Action Center"),
             ui.TextDisplay("-# Channels & Categories"),
             ui.ActionRow(ConfigChannels(), ConfigRoles(), AddCategories(), DelCategories()),
             ui.TextDisplay("-# Miscellaneous"),
-            ui.ActionRow(SendPanel(), ConfigFileCheck(), ResetConfig(), SetGuidelines())
+            ui.ActionRow(SendPanel(), ResetConfig(), SetDescription())
         )
         self.add_item(container)
         return self
     
     async def update_view(self, interaction: discord.Interaction, message: discord.Message | None):
-        view = await self.get_settings(interaction, message or self.message)
+        view = await self.get_settings(interaction)
         setup_msg = message or self.message or interaction.message
         try:
             if setup_msg:
@@ -245,8 +307,10 @@ class SettingsPanel(ui.LayoutView):
             await send_error(interaction, f"Cannot edit view: {e}")
     
 class Receipt(ui.LayoutView):
-    def __init__(self, file: discord.File, title: str, requester: discord.Member, closer: discord.Member, open_reason: str, close_reason: str, open_time: int, close_time: int):
-        self.file = discord.MediaGalleryItem(media=file)
+    def __init__(self):
+        super().__init__(timeout=None)
+
+    def set_data(self, title: str, requester: discord.Member, closer: discord.Member, open_reason: str, close_reason: str, open_time: int, close_time: int):
         self.title = title
         self.requester = requester
         self.closer = closer
@@ -257,28 +321,30 @@ class Receipt(ui.LayoutView):
 
         container = ui.Container(
             ui.Section(
-                ui.TextDisplay(content=f"## 🗒️ Transcript for {self.title}"),
-                ui.TextDisplay(content=f"Here is the transcript for `{self.title}`. The ticket information can be found below."),
+                ui.TextDisplay(f"## 🗒️ Transcript for {self.title}"),
+                ui.TextDisplay(f"Thank you for contacting us. Here is the transcript for `{self.title}`. The ticket information can be found below."),
                 accessory=ui.Thumbnail(media="https://cdn.rxtnshi.xyz/raw/clipboard.png"),
             ),
             ui.Separator(visible=True, spacing=discord.SeparatorSpacing.small),
-            ui.TextDisplay(content="# Ticket Information"),
-            ui.TextDisplay(content=f"**Requester**: {self.requester.mention} ({self.requester.id})"),
-            ui.TextDisplay(content=f"**Closed By**: {self.closer.mention} ({self.closer.id})\n\n"),
-            ui.TextDisplay(content=f"**Opened at**: <t:{self.open_reason}:F>"),
-            ui.TextDisplay(content=f"**Closed at**: <t:{self.open_reason}:F>\n\n"),
-            ui.TextDisplay(content=f"**Request Description**: {self.open_reason}"),
-            ui.TextDisplay(content=f"**Close Reason**: {self.close_reason}"),
+            ui.TextDisplay("### Ticket Information"),
+            ui.TextDisplay(f"**Requester**: {self.requester.mention} ({self.requester.id})"),
+            ui.TextDisplay(f"**Closed By**: {self.closer.mention} ({self.closer.id})\n\n"),
+            ui.TextDisplay(f"**Opened at**: <t:{self.open_time}:F>"),
+            ui.TextDisplay(f"**Closed at**: <t:{self.close_time}:F>\n\n"),
+            ui.TextDisplay(f"**Request Description**: {self.open_reason}"),
+            ui.TextDisplay(f"**Close Reason**: {self.close_reason}"),
             ui.Separator(visible=True, spacing=discord.SeparatorSpacing.small),
-            ui.TextDisplay("# View Transcript"),
-            ui.MediaGallery(self.file)
+            ui.TextDisplay("### Transcript"),
+            ui.TextDisplay("Please download the attached file to view your transcript.")
         )
-
         self.add_item(container)
+        return self
 
 class LogsReceipt(ui.LayoutView):
-    def __init__(self, file: discord.File, title: str, requester: discord.Member, closer: discord.Member, open_reason: str, close_reason: str, open_time: int, close_time: int):
-        self.file = discord.MediaGalleryItem(media=file)
+    def __init__(self):
+        super().__init__(timeout=None)
+    
+    def set_data(self, title: str, requester: discord.Member, closer: discord.Member, open_reason: str, close_reason: str, open_time: int, close_time: int):
         self.title = title
         self.requester = requester
         self.closer = closer
@@ -289,29 +355,31 @@ class LogsReceipt(ui.LayoutView):
 
         container = ui.Container(
             ui.Section(
-                ui.TextDisplay(content=f"## 🗒️ Transcript for {self.title}"),
-                ui.TextDisplay(content=f"Here is the transcript for `{self.title}`. The ticket information can be found below."),
-                accessory=ui.Thumbnail(media="https://cdn.rxtnshi.xyz/u/clipboard.png"),
+                ui.TextDisplay(f"## 🗒️ Transcript for {self.title}"),
+                ui.TextDisplay(f"Here is the transcript for `{self.title}`. The ticket information can be found below."),
+                accessory=ui.Thumbnail(media="https://cdn.rxtnshi.xyz/raw/clipboard.png"),
             ),
             ui.Separator(visible=True, spacing=discord.SeparatorSpacing.small),
-            ui.TextDisplay(content="# Ticket Information"),
-            ui.TextDisplay(content=f"**Requester**: {self.requester.mention} ({self.requester.id})"),
-            ui.TextDisplay(content=f"**Closed By**: {self.closer.mention} ({self.closer.id})\n\n"),
-            ui.TextDisplay(content=f"**Opened at**: <t:{self.open_reason}:F>"),
-            ui.TextDisplay(content=f"**Closed at**: <t:{self.open_reason}:F>\n\n"),
-            ui.TextDisplay(content=f"**Request Description**: {self.open_reason}"),
-            ui.TextDisplay(content=f"**Close Reason**: {self.close_reason}"),
+            ui.TextDisplay("### Ticket Information"),
+            ui.TextDisplay(f"**Requester**: {self.requester.mention} ({self.requester.id})"),
+            ui.TextDisplay(f"**Closed By**: {self.closer.mention} ({self.closer.id})\n\n"),
+            ui.TextDisplay(f"**Opened at**: <t:{self.open_time}:F>"),
+            ui.TextDisplay(f"**Closed at**: <t:{self.close_time}:F>\n\n"),
+            ui.TextDisplay(f"**Request Description**: {self.open_reason}"),
+            ui.TextDisplay(f"**Close Reason**: {self.close_reason}"),
             ui.Separator(visible=True, spacing=discord.SeparatorSpacing.small),
-            ui.TextDisplay("# View Transcript"),
-            ui.MediaGallery(self.file)
+            ui.TextDisplay("### Transcript"),
+            ui.TextDisplay("Please download the attached file to view the transcript.")
         )
 
         self.add_item(container)
+        return self
 
 # -- Modals -- #
 class TicketQuestionaire(ui.Modal):
-    def __init__(self, category_id: int, team_id: int):
+    def __init__(self, category_name: str, category_id: int, team_id: int):
         super().__init__(title=f"✍️ Opening a Request", timeout=None)
+        self.cat_name = category_name
         self.category = category_id
         self.team = team_id
 
@@ -345,8 +413,37 @@ class TicketQuestionaire(ui.Modal):
         title = self.ticket_title.component.value
         description = self.ticket_desc.component.value
 
-        ticket = Ticket(self.category, title, description, self.team)
+        ticket = Ticket(self.cat_name, self.category, title, description, self.team)
         await ticket.create(interaction, category)
+
+class CategorySelect(ui.Select):
+    def __init__(self, categories: list[dict]):
+        options = []
+        self.map = {}
+        for c in categories:
+            id = c.get("category_id")
+
+            title = c.get("title")
+            desc = c.get("description") or "No description"
+            id_str = str(id)
+            self.map[id_str] = c
+            options.append(
+                discord.SelectOption(
+                    label=title,
+                    value=id,
+                    description=desc
+                )
+            )
+
+        super().__init__(
+            placeholder="Select a Category",
+            min_values=1,
+            max_values=1,
+            options=options,
+        )
+
+    async def callback(self, interaction: discord.Interaction):
+        await interaction.response.defer()
 
 class TicketSelectMenu(ui.Select):
     def __init__(self, categories: list[dict], appeals_enabled: bool):
@@ -380,51 +477,53 @@ class TicketSelectMenu(ui.Select):
     async def callback(self, interaction: discord.Interaction):
         select_value = self.values[0]
         entry = self.map.get(select_value)
-        
-        if select_value == "appeals":
-            await interaction.response.send_modal(OpenAppeal())
-            return
-        
-        team_id = entry.get("team_id") if entry else None
-        modal = TicketQuestionaire(int(select_value), team_id)
-        await interaction.response.send_modal(modal)
 
-class FileUploadAnalysisModal(ui.Modal):
-    def __init__(self, scans_enabled: bool):
-        super().__init__(title="File Uploads", timeout=None)
-        self.scans_enabled = scans_enabled
+        cog = interaction.client.get_cog("tickets")
+        confg = cog.config.guild(interaction.guild)
+        status = await confg.tickets_enabled()
+        ch = await confg.ticket_channels()
+        l_ch = interaction.guild.get_channel(ch.get('logs_channel')) if ch.get('logs_channel') else None
 
-        if self.scans_enabled:
-            self.file_upload = ui.Label(
-                text = "Upload Your File",
-                description = "This file will be analyzed by VirusTotal before being uploaded to the ticket.",
-                component= ui.FileUpload(
-                    min_values = 1,
-                    custom_id = "file-upload-object",
-                    required = False
-                )
-            )
+        blacklist_check = await cog.db.fetch_blacklist(int(interaction.user.id))
+        if blacklist_check:
+            if l_ch:
+                await l_ch.send(f"{interaction.user.mention} ({interaction.user.id}) tried opening a ticket but was blocked due to being blacklisted.")
+
+            await interaction.message.edit(view=self.view)
+            return await send_blocked(interaction, "You're forbidden from using the ticket system. If you believe this is an error, please contact server management. You are unable to use the ticket system's appeal feature for this.", True)
+
+        if status:
+            check_dup = await cog.db.existing_check("ticket", interaction.user.id)
+            if check_dup:
+                channel = interaction.guild.get_channel(check_dup)
+
+                await interaction.message.edit(view=self.view)
+                return await send_blocked(interaction, f"You already have an existing ticket open! You can access it here: {channel.mention}", True)
+            
+            if select_value == "appeals":
+                check_dup = await cog.db.existing_check("appeal", interaction.user.id)
+                if check_dup:
+                    await interaction.message.edit(view=self.view)
+                    return await send_blocked(interaction, f"You already have an existing appeal open (Appeal `{check_dup}`). Please run `/appeal status {check_dup}` to check its status.", True)
+                
+                await interaction.message.edit(view=self.view)
+                return await interaction.response.send_modal(OpenAppeal())
+            else:
+                category_check = await cog.db.fetch_category(int(select_value))
+                if not category_check:
+                    return await send_error(interaction, "This category no longer exists. Please contact staff an alternative way.", True)
+                
+                team_id = entry.get("team_id") if entry else None
+                modal = TicketQuestionaire(entry["title"], int(select_value), team_id)
+
+                await interaction.message.edit(view=self.view)
+                await interaction.response.send_modal(modal)
         else:
-            self.file_upload = ui.Label(
-                text = "Upload Your File",
-                description = "Your file will be uploaded to this channel.",
-                component= ui.FileUpload(
-                    min_values = 1,
-                    custom_id = "file-upload-object",
-                    required = False
-                )
-            )
+            if l_ch:
+                await l_ch.send(f"{interaction.user.mention} ({interaction.user.id}) tried opening a ticket but was blocked due to the support system being offline.")
 
-        self.add_item(self.file_upload)
-
-    async def on_submit(self, interaction: discord.Interaction):
-        file = self.file_upload.component.values
-
-        if self.scans_enabled:
-            import vt
-            pass
-        else:
-            pass
+            await interaction.message.edit(view=self.view)
+            return await send_blocked(interaction, "Sorry, our support system is currently closed at the moment. Please check back later.", True)
 
 class CloseTicketQuestionaire(ui.Modal):
     def __init__(self, channel: discord.TextChannel):
@@ -435,7 +534,7 @@ class CloseTicketQuestionaire(ui.Modal):
             text="Why are you closing this ticket?",
             description=f"You are closing {self.channel.name}. Please give a reason why otherwise no reason will be given.",
             component=ui.TextInput(
-                label="Enter a reason",
+                placeholder="Enter a reason",
                 default="No reason given.",
                 style=discord.TextStyle.paragraph
             )
@@ -445,16 +544,19 @@ class CloseTicketQuestionaire(ui.Modal):
 
     async def on_submit(self, interaction: discord.Interaction):
         reason = self.reason.component.value
-        await Ticket.close_ticket(self, interaction, reason)
+        view = ui.LayoutView.from_message(interaction.message)
+        await Ticket.close(self, interaction, reason)
+        for child in view.children:
+            disable_all(child)
 
 class OpenAppeal(ui.Modal):
     def __init__(self):
         super().__init__(title="Opening Appeal", timeout=None)
         self.platform = ui.Label(
-            text="What platform were you moderated on?",
+            text="Provide the platform of the account",
             description="Please type in the platform you were moderated on as it will pinpoint your account info.",
             component=ui.TextInput(
-                label="Platform (e.g Discord, Minecraft, etc.)",
+                placeholder="Platform (e.g Discord, Minecraft, etc.)",
                 max_length=20,
                 style=discord.TextStyle.short,
                 required=True
@@ -462,21 +564,23 @@ class OpenAppeal(ui.Modal):
         )
 
         self.moderated_account = ui.Label(
-            text="Provide the ID of the moderated account",
+            text="Provide the ID of the account",
             description="Preferably please give us your account name and its ID. A profile link is also allowed.",
             component=ui.TextInput(
-                label="Account Details",
+                placeholder="Account Details",
+                max_length=100,
                 style=discord.TextStyle.short,
                 required=True
             )
         )
 
         self.moderated_reason = ui.Label(
-            text="What's the reason you were moderated for?",
+            text="Provide the reason for moderation",
             description="Please give us the exact reason you were moderated for - telling us makes this process easier.",
             component=ui.TextInput(
-                label="Reason for moderation",
-                style=discord.TextStyle.short,
+                placeholder="Reason for moderation",
+                max_length=100,
+                style=discord.TextStyle.paragraph,
                 required=True
             )
         )
@@ -485,26 +589,64 @@ class OpenAppeal(ui.Modal):
             text="Provide relevant evidence/information",
             description="Please provide us anything that will help us with your case.",
             component=ui.TextInput(
-                label="Platform (e.g Discord, Minecraft, etc.)",
-                max_length=20,
-                style=discord.TextStyle.short,
+                placeholder="Include info here",
+                max_length=1000,
+                style=discord.TextStyle.paragraph,
                 required=True
             )
         )
 
+        self.add_item(self.platform)
+        self.add_item(self.moderated_account)
+        self.add_item(self.moderated_reason)
+        self.add_item(self.information)
+
     async def on_submit(self, interaction: discord.Interaction):
-        cog = interaction.client.get_cog("tickets")
         platform = self.platform.component.value
         account = self.moderated_account.component.value
         reason = self.moderated_reason.component.value
         info = self.information.component.value
 
-        db.create_appeal(self, self.appeal_id, account, platform, interaction.user.id, )
+        appeal_instance = Appeal(platform, account, reason, info)
+        await appeal_instance.create(interaction)
 
 class AppealDecision(ui.Modal):
-    def __init__(self, decision: str):
-        super().__init__(title=f"{self.decision}ing Appeal", timeout=None)
+    def __init__(self, decision: str, id: str, user: discord.Member | discord.User):
+        self.a_id = id
         self.decision = decision
+        self.user = user
+        
+        super().__init__(title=f"{self.decision}ing Appeal", timeout=None)
+
+        options = [discord.SelectOption(
+                        label="Custom Reason",
+                        description="Provide a reason of your own for this decision",
+                        value="custom-reason"
+        )]
+
+        if self.decision == "Accept":
+            options.append(
+                discord.SelectOption(
+                        label="Evidence Supports Decision",
+                        description="The evidence provided by the appealer supports this decision.",
+                        value="The evidence provided by the appealer supports this decision."
+                ),
+            )
+        else:
+            options.append(
+                discord.SelectOption(
+                        label="Lack of Evidence",
+                        description="The evidence provided is not sufficient to make a decision",
+                        value="The evidence provided is not sufficient to make a decision"
+                )
+            )
+            options.append(
+                discord.SelectOption(
+                    label="Non-appealable Offense",
+                    description="This offense is non-appealable",
+                    value="This offense is non-appealable"
+                )
+            )
 
         self.prefined_reasons = ui.Label(
             text="Predefined Reasons",
@@ -512,28 +654,7 @@ class AppealDecision(ui.Modal):
             component=ui.Select(
                 max_values=1,
                 required=True,
-                options=[
-                    discord.SelectOption(
-                        label="Evidence Supports Decision",
-                        description="The evidence provided by the appealer supports this decision. - accept",
-                        value="The evidence provided by the appealer supports this decision."
-                    ),
-                    discord.SelectOption(
-                        label="Lack of Evidence",
-                        description="The evidence provided is not sufficient to make a decision - denial",
-                        value="The evidence provided is not sufficient to make a decision"
-                    ),
-                    discord.SelectOption(
-                        label="Non-appealable Offense",
-                        description="This offense is non-appealable - denial",
-                        value="This offense is non-appealable"
-                    ),
-                    discord.SelectOption(
-                        label="Custom Reason",
-                        description="Provide a reason of your own for this decision",
-                        value="custom-reason"
-                    )
-                ]
+                options=options
             )
         )
 
@@ -551,20 +672,23 @@ class AppealDecision(ui.Modal):
         self.add_item(self.reason)
 
     async def on_submit(self, interaction: discord.Interaction):
+        await interaction.response.defer()
+
         decision = self.decision.lower()
-        log_msg = interaction.message
-        reason_text = None
+        value = self.prefined_reasons.component.values[0]
+        custom_reason = self.reason.component.value
+        reason_text = f"{value} - {custom_reason}" if custom_reason else f"{value}"
 
-        if self.prefined_reasons.component.values[0] == "custom-reason":
-            pass
-
+        if value == "custom-reason":
+            reason_text = f"{custom_reason}"
+        
         if decision == "accept":
-            await Ticket.close_appeal(self, interaction, log_msg.id, 'ACCEPTED', f"{reason_text}")
+            await Appeal.close(self, interaction, True, reason_text, self.a_id, self.user)
         else:
-            await Ticket.close_appeal(self, interaction, log_msg.id, 'DENIED', f"{reason_text}")
+            await Appeal.close(self, interaction, False, reason_text, self.a_id, self.user)
 
 class ConfigChannelsModal(ui.Modal):
-    def __init__(self):
+    def __init__(self, log_channel, appeal_channel, panel_channel):
         super().__init__(title=f"Channels Setup", timeout=None)
         self.setup_msg: discord.Message
 
@@ -574,7 +698,8 @@ class ConfigChannelsModal(ui.Modal):
             component=ui.ChannelSelect(
                 channel_types=[discord.ChannelType.text],
                 min_values=1,
-                max_values=1
+                max_values=1,
+                default_values=[log_channel] if log_channel else None
             )
         )
         
@@ -584,7 +709,8 @@ class ConfigChannelsModal(ui.Modal):
             component=ui.ChannelSelect(
                 channel_types=[discord.ChannelType.text],
                 min_values=1,
-                max_values=1
+                max_values=1,
+                default_values=[appeal_channel] if appeal_channel else None
             )
         )
 
@@ -594,7 +720,8 @@ class ConfigChannelsModal(ui.Modal):
             component=ui.ChannelSelect(
                 channel_types=[discord.ChannelType.text],
                 min_values=1,
-                max_values=1
+                max_values=1,
+                default_values=[panel_channel] if appeal_channel else None
             )
         )
 
@@ -603,9 +730,9 @@ class ConfigChannelsModal(ui.Modal):
         self.add_item(self.panel_channel)
 
     async def on_submit(self, interaction: discord.Interaction):
-        log_ch = parse_id(self.log_channel.component.values[0].id)
-        appeal_ch = parse_id(self.appeal_channel.component.values[0].id)
-        panel_ch = parse_id(self.panel_channel.component.values[0].id)
+        log_ch = self.log_channel.component.values[0].id
+        appeal_ch = self.appeal_channel.component.values[0].id
+        panel_ch = self.panel_channel.component.values[0].id
 
         cog = interaction.client.get_cog("tickets")
         confg = cog.config.guild(interaction.guild)
@@ -622,7 +749,7 @@ class ConfigChannelsModal(ui.Modal):
         await SettingsPanel(interaction.user, self.setup_msg).update_view(interaction, message=self.setup_msg)
 
 class ConfigRolesModal(ui.Modal):
-    def __init__(self):
+    def __init__(self, std_acc, mgm_acc, appeals_acc, staff_roles):
         super().__init__(title=f"Roles Setup", timeout=None)
         self.setup_msg: discord.Message | None
 
@@ -631,7 +758,8 @@ class ConfigRolesModal(ui.Modal):
             description="This role will give access to basic ticket commands.",
             component=ui.RoleSelect(
                 min_values=1,
-                max_values=1
+                max_values=1,
+                default_values=[std_acc] if std_acc else None
             )
         )
         
@@ -640,7 +768,8 @@ class ConfigRolesModal(ui.Modal):
             description="This role will give access to elevated ticket commands.",
             component=ui.RoleSelect(
                 min_values=1,
-                max_values=1
+                max_values=1,
+                default_values=[mgm_acc] if mgm_acc else None
             )
         )
 
@@ -649,7 +778,8 @@ class ConfigRolesModal(ui.Modal):
             description="This role will give access to making appeal decisions and be able to see the channel.",
             component=ui.RoleSelect(
                 min_values=1,
-                max_values=1
+                max_values=1,
+                default_values=[appeals_acc] if appeals_acc else None
             )
         )
 
@@ -658,7 +788,8 @@ class ConfigRolesModal(ui.Modal):
             description="You should add roles that are for your staff, and then have them run /staff register to gain access.",
             component=ui.RoleSelect(
                 min_values=0,
-                max_values=25
+                max_values=25,
+                default_values=staff_roles if staff_roles else None
             )
         )
 
@@ -668,11 +799,10 @@ class ConfigRolesModal(ui.Modal):
         self.add_item(self.staff_roles)
 
     async def on_submit(self, interaction: discord.Interaction):
-        std_acc = parse_id(self.std_acc.component.values[0].id)
-        mgm_acc = parse_id(self.mgm_acc.component.values[0].id)
-        appeals_acc = parse_id(self.appeals_acc.component.values[0].id)
-        staff_roles = [parse_id(role.id) for role in self.staff_roles.component.values]
-        log.info(f"{staff_roles}")
+        std_acc = self.std_acc.component.values[0].id
+        mgm_acc = self.mgm_acc.component.values[0].id
+        appeals_acc = self.appeals_acc.component.values[0].id 
+        staff_roles = [role.id for role in self.staff_roles.component.values]
 
         cog = interaction.client.get_cog("tickets")
         confg = cog.config.guild(interaction.guild)
@@ -689,7 +819,6 @@ class ConfigRolesModal(ui.Modal):
 class AddCatModal(ui.Modal):
     def __init__(self):
         super().__init__(title="Add a Category", timeout=None)
-        self.setup_msg: discord.Message | None
         
         self.cat_title = ui.Label(
             text="What's the name of this category?",
@@ -726,10 +855,11 @@ class AddCatModal(ui.Modal):
 
         self.cat_team = ui.Label(
             text="Please select a staff role for this category.",
-            description="This role will be notified in tickets under this category, or you can leave empty for no mentions.",
+            description="This role will be notified in tickets under this category.",
             component=ui.RoleSelect(
                 placeholder="Select a Role",
-                max_values=1
+                min_values=1,
+                max_values=1,
             )
         )
 
@@ -741,71 +871,45 @@ class AddCatModal(ui.Modal):
     async def on_submit(self, interaction: discord.Interaction):
         title = self.cat_title.component.value
         desc = self.cat_desc.component.value
-        category_id = self.category_id.component.values[0]
-
+        category_id = self.category_id.component.values[0].id
+        team = self.cat_team.component.values[0].id
         
-        if self.cat_team.component.values[0]:
-            team = self.cat_team.component.values[0]
-            try:
-                new_category = Category(
-                    title=title,
-                    description=desc,
-                    team_role=team,
-                    category_id=category_id
-                )
-                await new_category.create(interaction)
-            except Exception as e:
-                await send_error(interaction, f"Unable to create category: {e}")
-        else:
-            try:
-                new_category = Category(
-                    title=title,
-                    description=desc,
-                    team_role=None,
-                    category_id=category_id
-                )
-                await new_category.create(interaction)
-            except Exception as e:
-                await send_error(interaction, f"Unable to create category: {e}")
+        try:
+            new_category = Category(
+                title=title,
+                description=desc,
+                team_role=team,
+                category_id=category_id
+            )
+            await new_category.create(interaction)
+        except Exception as e:
+            await send_error(interaction, f"Unable to create category: {e}")
 
         await interaction.response.defer()
-        await SettingsPanel(interaction.user, self.setup_msg).update_view(interaction, message=self.setup_msg)
+        await SettingsPanel(interaction.user, interaction.message).update_view(interaction, interaction.message)
         
 class DelCatModal(ui.Modal):
-    def __init__(self, msg: discord.Message):
-        self.setup_msg = msg
-        pass
+    def __init__(self, categories: list[dict]):
+        super().__init__(title=f"Deleting a Category", timeout=None)
 
-class ConfigFileCheckModal(ui.Modal):
-    def __init__(self):
-        super().__init__(title=f"VirusTotal Config", timeout=None)
+        self.cats = categories
 
-        self.key = ui.Label(
-            text="VirusTotal Key",
-            description="In order to enable file scans, please make sure you have an API key from VirusTotal.",
-            component=ui.TextInput(
-                placeholder="Input API Key here",
-                style=discord.TextStyle.long,
-                max_length=64,
-                required=True
-            ) 
+        self.menu = ui.Label(
+            text="Which category are you deleting?",
+            description="Once you submit, the action is permanent.",
+            component=CategorySelect(self.cats)
         )
 
-        self.add_item(self.key)
+        self.add_item(self.menu)
 
     async def on_submit(self, interaction: discord.Interaction):
-        cog = interaction.client.get_cog("tickets")
-        confg = cog.config.guild(interaction.guild)
-        key = self.key.component.value
+        await interaction.response.defer()
+        result = self.menu.component.values[0]
 
         try:
-            await confg.file_scans.set({
-                "vt_key": key,
-                "enabled": False
-            })
-            await send_success(interaction, f"Key set! Since you've set a new key, you will now have to re-enable file scans by running `/staff setup`.\n\nYour current key is: ||`{self.key}`||")
+            await Category.delete(self, interaction, result)
         except Exception as e:
-            await send_error(interaction, f"Unable to set VirusTotal key: {e}")
+            return await send_error(interaction, f"{e}", True)
 
 class ResetModal(ui.Modal):
     def __init__(self):
@@ -827,6 +931,8 @@ class ResetModal(ui.Modal):
         self.add_item(self.question)
 
     async def on_submit(self, interaction: discord.Interaction):
+        await interaction.response.defer()
+
         cog = interaction.client.get_cog("tickets")
         confg = cog.config.guild(interaction.guild)
 
@@ -839,14 +945,14 @@ class ResetModal(ui.Modal):
 
         await SettingsPanel(interaction.user, self.setup_msg).update_view(interaction, message=self.setup_msg)
 
-class SetGuidelinesModal(ui.Modal):
+class SetDescriptionModal(ui.Modal):
     def __init__(self, default_text: str):
-        super().__init__(title=f"Setting Guidelines", timeout=None)
+        super().__init__(title=f"Setting Description", timeout=None)
 
         self.default_text = default_text
 
-        self.guidelines_text = ui.Label(
-            text="Create/Edit Guidelines",
+        self.Description_text = ui.Label(
+            text="Create/Edit Description",
             description="Set rules to be displayed in the ticket panel",
             component=ui.TextInput(
                 placeholder="f",
@@ -857,9 +963,11 @@ class SetGuidelinesModal(ui.Modal):
             )
         )
 
-        self.add_item(self.guidelines_text)
+        self.add_item(self.Description_text)
 
     async def on_submit(self, interaction: discord.Interaction):
+        await interaction.response.defer()
+
         cog = interaction.client.get_cog("tickets")
         confg = cog.config.guild(interaction.guild)
         panel_cfg = await confg.panel_cfg()
@@ -867,34 +975,95 @@ class SetGuidelinesModal(ui.Modal):
         try:
             await confg.panel_cfg.set({
                 **panel_cfg,
-                "guidelines": self.guidelines_text.component.value
+                "description": self.Description_text.component.value
             })
             
-            await send_success(interaction, f"New guidelines set:\n\n ```{self.guidelines_text.component.value}```")
+            await send_success(interaction, f"New description set:\n\n ```{self.Description_text.component.value}```")
         except Exception as e:
             await send_error(interaction, f"{e}")
 
+class BlacklistInfo(ui.Modal):
+    def __init__(self, info: bool, blacklisted_user: discord.Member | discord.User, reason: str):
+        super().__init__(title="⚠️ User is blacklisted!", timeout=None)
+        self.info = info
+        self.bl_user = blacklisted_user
+
+        self.user = ui.Label(
+            text="User Found",
+            description="This user was found in the blacklist:",
+            component=ui.UserSelect(
+                default_values=[blacklisted_user]
+            )
+        )
+
+        self.bl_reason = ui.Label(
+            text="Blacklist Reason",
+            description="They were blacklisted for the following reason:",
+            component=ui.TextInput(
+                style=discord.TextStyle.paragraph,
+                default=reason,
+                required=False
+            )
+        )
+
+        self.decision = ui.Label(
+            text="Remove This User",
+            description="Are you sure you want to remove this user from the blacklist?",
+            component=ui.Select(
+                placeholder="Select an Option",
+                options=[
+                    discord.SelectOption(label="✅ Yes", value="yes"),
+                    discord.SelectOption(label="❌ No", value="no")
+                ],
+                required=True
+            )
+        )
+
+        self.add_item(self.user)
+        self.add_item(self.bl_reason)
+        if not self.info:
+            self.add_item(self.decision)
+
+    async def on_submit(self, interaction: discord.Interaction):
+        if self.info:
+            return await send_success(interaction, "No action taken as you were viewing information regarding a blacklist.", True)
+        else:
+            option = self.decision.component.values[0]
+            user = int(self.bl_user.id)
+            
+            match option:
+                case "yes":
+                    await Blacklist.delete(self, interaction, user)
+                case "no":
+                    return await send_success(interaction, "No action was taken as you chose not to remove this user from the blacklist.", True)
+
 # -- Buttons -- #
-class UploadFile(ui.Button):
-    def __init__(self):
-        super().__init__(label="📂 Upload a File", style=discord.ButtonStyle.green, custom_id="upload-file-button")
-
-    async def callback(self, interaction: discord.Interaction):
-        await interaction.response.send_modal(FileUploadAnalysisModal())
-
 class CloseTicket(ui.Button):
     def __init__(self):
         super().__init__(label="🔒 Close Ticket", style=discord.ButtonStyle.danger, custom_id="close-ticket-button")
 
     async def callback(self, interaction: discord.Interaction):
-        await interaction.response.send_modal(CloseTicketQuestionaire())
+        cog = interaction.client.get_cog("tickets")
+        check = await cog.staff_check(interaction)
+        if not check:
+            return await send_blocked(interaction, "You're not permitted to close this ticket. Please contact server staff to close your ticket.", True)
+        await interaction.response.send_modal(CloseTicketQuestionaire(interaction.channel))
         
 class ConfigRoles(ui.Button):
     def __init__(self):
         super().__init__(label="⚙️ Configure Roles", style=discord.ButtonStyle.primary, custom_id="config-roles-button")
 
     async def callback(self, interaction: discord.Interaction):
-        modal = ConfigRolesModal()
+        cog = interaction.client.get_cog("tickets")
+        confg = cog.config.guild(interaction.guild)
+        roles = await confg.ticket_roles()
+
+        stnd_role = interaction.guild.get_role(roles.get('modmail_access'))
+        mgmt_role = interaction.guild.get_role(roles.get('modmail_mgmt'))
+        appeal_role = interaction.guild.get_role(roles.get('appeals_access'))
+        staff_roles = [interaction.guild.get_role(rid) for rid in roles.get('staff_roles') if interaction.guild.get_role(rid)]
+
+        modal = ConfigRolesModal(stnd_role, mgmt_role, appeal_role, staff_roles)
         modal.setup_msg = interaction.message
         await interaction.response.send_modal(modal)
 
@@ -903,16 +1072,18 @@ class ConfigChannels(ui.Button):
         super().__init__(label="⚙️ Configure Channels", style=discord.ButtonStyle.primary, custom_id="config-channels-button")
 
     async def callback(self, interaction: discord.Interaction):
-        modal = ConfigChannelsModal()
+        cog = interaction.client.get_cog("tickets")
+        confg = cog.config.guild(interaction.guild)
+        channels = await confg.ticket_channels()
+        panel = await confg.panel_cfg()
+
+        log_channel = interaction.guild.get_channel(channels.get('log_channel'))
+        appeal_channel = interaction.guild.get_channel(channels.get('appeal_logs'))
+        panel_channel = interaction.guild.get_channel(panel.get('channel'))
+
+        modal = ConfigChannelsModal(log_channel, appeal_channel, panel_channel)
         modal.setup_msg = interaction.message
         await interaction.response.send_modal(modal)
-
-class ConfigFileCheck(ui.Button):
-    def __init__(self):
-        super().__init__(label="⚙️ Configure File Checks", style=discord.ButtonStyle.primary, custom_id="config-vt-button")
-
-    async def callback(self, interaction: discord.Interaction):
-        await interaction.response.send_modal(ConfigFileCheckModal())
 
 class AddCategories(ui.Button):
     def __init__(self):
@@ -926,21 +1097,31 @@ class DelCategories(ui.Button):
         super().__init__(label="❌ Delete Categories", style=discord.ButtonStyle.danger, custom_id="del-catg-button")
 
     async def callback(self, interaction: discord.Interaction):
-        await interaction.response.send_modal(DelCatModal())
+        cog = interaction.client.get_cog("tickets")
+        cats = await cog.db.list_categories()
+
+        if not cats:
+            return await send_error(interaction, "No categories found. Aborting.", True)
+
+        await interaction.response.send_modal(DelCatModal(cats))
 
 class AcceptAppeal(ui.Button):
-    def __init__(self):
+    def __init__(self, a_id: str, user: discord.Member | discord.User):
         super().__init__(label="✅ Accept Appeal", style=discord.ButtonStyle.green, custom_id="accept-appeal-button")
+        self.a_id = a_id
+        self.user = user
 
     async def callback(self, interaction: discord.Interaction):
-        await interaction.response.send_modal(AppealDecision(decision="Accept"))
+        await interaction.response.send_modal(AppealDecision(decision='Accept', id=self.a_id, user=self.user))
 
 class DenyAppeal(ui.Button):
-    def __init__(self):
-        super().__init__(label="❌ Deny Appeal", style=discord.ButtonStyle.green, custom_id="deny-appeal-button")
+    def __init__(self, a_id: str , user: discord.Member | discord.User):
+        super().__init__(label="❌ Deny Appeal", style=discord.ButtonStyle.danger, custom_id="deny-appeal-button")
+        self.a_id = a_id
+        self.user = user
 
     async def callback(self, interaction: discord.Interaction):
-        await interaction.response.send_modal(AppealDecision(decision="Deny"))
+        await interaction.response.send_modal(AppealDecision(decision='Deny', id=self.a_id, user=self.user))
 
 class SendPanel(ui.Button):
     def __init__(self):
@@ -952,7 +1133,7 @@ class SendPanel(ui.Button):
         panel_cfg = await confg.panel_cfg()
         tickets_enabled = await confg.tickets_enabled()
         appeals_enabled = await confg.appeals_enabled()
-        categories = await cog.db.list_categories()
+        categories = await cog.db.list_categories() or []
 
         channel_id = panel_cfg.get("channel")
         if not channel_id:
@@ -960,25 +1141,27 @@ class SendPanel(ui.Button):
             return
         
         channel = await interaction.guild.fetch_channel(channel_id)
-        guidelines = panel_cfg.get("guidelines")
+        description = panel_cfg.get("description")
         panel_msg_id =  panel_cfg.get("message_id")
+
+        view = SupportPanel()
+        view.generate(interaction.guild, description, categories, appeals_enabled, tickets_enabled)
 
         if panel_msg_id:
             try:
                 old_panel_msg = await channel.fetch_message(panel_msg_id)
-                msg = await channel.send(view=SupportPanel(interaction.guild, guidelines, categories, appeals_enabled, tickets_enabled))
                 await old_panel_msg.delete()
             except Exception as e:
-                await send_error(interaction, f"{e}")
+                pass
         
-        msg = await channel.send(view=SupportPanel(interaction.guild, guidelines, categories, appeals_enabled, tickets_enabled))
-        await confg.panel_cfg.set({
-            **panel_cfg,
-            "message_id": msg.id
-        })
-
+        try:
+            msg = await channel.send(view=view)
+        except Exception as e:
+            return await send_error(interaction, f"{e}")
+        
+        await confg.panel_cfg.set({**panel_cfg, "message_id": msg.id})
         await send_success(interaction, f"The panel has been sent to {channel.mention}!")
-        await SettingsPanel(interaction.user, interaction.message).update_view(interaction, message=interaction.message)
+        await SettingsPanel(interaction, interaction.user, interaction.message).update_view(interaction, message=interaction.message)
 
 class ResetConfig(ui.Button):
     def __init__(self):
@@ -989,22 +1172,22 @@ class ResetConfig(ui.Button):
         modal.setup_msg = interaction.message
         await interaction.response.send_modal(modal)
 
-class SetGuidelines(ui.Button):
+class SetDescription(ui.Button):
     def __init__(self):
-        super().__init__(label="🗒️ Set Guidelines", style=discord.ButtonStyle.primary, custom_id="set-gl-button")
+        super().__init__(label="🗒️ Set Description", style=discord.ButtonStyle.primary, custom_id="set-gl-button")
 
     async def callback(self, interaction: discord.Interaction):
         cog = interaction.client.get_cog("tickets")
         confg = cog.config.guild(interaction.guild)
 
         panel_cfg = await confg.panel_cfg()
-        guidelines = panel_cfg.get("guidelines")
+        description = panel_cfg.get("description")
         text = ""
 
-        if guidelines:
-            text = guidelines
+        if description:
+            text = description
         else:
-            text = "No guidelines have been set. Please delete this and create your own. Discord Markdown supported (for new lines please use \\n)"
+            text = "No panel description has been set. Please delete this and create your own. Discord Markdown is supported!)"
 
-        modal = SetGuidelinesModal(text)
+        modal = SetDescriptionModal(text)
         await interaction.response.send_modal(modal)
