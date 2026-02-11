@@ -60,6 +60,13 @@ class db:
                     reason TEXT
                 )
             """)
+            await db.execute("""
+                CREATE TABLE IF NOT EXISTS saved_views (
+                    message_id INTEGER PRIMARY KEY,
+                    channel_id INTEGER,
+                    view_type TEXT
+                )
+            """)
             await db.commit()
 
     async def create_ticket(self, unique_id: str, ticket_user_id: int, ticket_channel_id: int, category_type: str, ticket_title: str, ticket_description: str):
@@ -120,8 +127,7 @@ class db:
     async def fetch_ticket(self, channel: int):
         async with aiosqlite.connect(self.db_path) as db:
             try:
-                cursor = await db.execute(
-                    "SELECT unique_id, ticket_user, ticket_channel_id, category_type, is_open, open_time, close_time, ticket_title, ticket_description, closed_by, close_reason FROM ticket_history WHERE ticket_channel_id = ?", (channel,))
+                cursor = await db.execute("SELECT unique_id, ticket_user, ticket_channel_id, category_type, is_open, open_time, close_time, ticket_title, ticket_description, closed_by, close_reason FROM ticket_history WHERE ticket_channel_id = ?", (channel,))
                 results = await cursor.fetchone()
                 await cursor.close()
 
@@ -222,7 +228,7 @@ class db:
     async def fetch_appeal(self, target: str):
         async with aiosqlite.connect(self.db_path) as db:
             try:
-                cursor = await db.execute("SELECT moderated_account, moderated_platform, moderated_reason, appeal_info, appeal_time, decision_time, decision_option, decision_reason, unique_id FROM appeal_history WHERE unique_id = ?", (target,))
+                cursor = await db.execute("SELECT moderated_account, moderated_platform, moderated_reason, appeal_info, appeal_time, decision_time, decision_option, decision_reason, unique_id, appealer_id FROM appeal_history WHERE unique_id = ?", (target,))
                 result = await cursor.fetchone()
                 await cursor.close()
 
@@ -236,7 +242,8 @@ class db:
                         "decision_time": result[5],
                         "decision_option": result[6],
                         "decision_reason": result[7],
-                        "appeal_id": result[8]
+                        "appeal_id": result[8],
+                        "appealer_id": result[9]
                     }
                 return None
             except Exception as e:
@@ -359,3 +366,68 @@ class db:
                 return None
             except Exception as e:
                 log.error(f"Unable to fetch user {target} from blacklist: {e}")
+
+    async def save_view(self, view_type: str, channel_id: int, message_id: int, appeal_id: str = None):
+        async with aiosqlite.connect(self.db_path) as db:
+            async def check_existing(channel_id):
+                cursor = await db.execute("SELECT message_id FROM saved_views WHERE channel_id = ?", (channel_id,))
+                result = await cursor.fetchone()
+
+                if result:
+                    await db.execute("DELETE FROM saved_views WHERE channel_id = ?", (channel_id,))
+                    await db.commit()
+                    log.info(f"Deleted {view_type} view with message id {message_id} since a duplicate entry was found.")
+            
+            try:
+                match view_type:
+                    case 'support-panel':
+                        await check_existing(channel_id)    
+                        await db.execute("INSERT INTO saved_views (view_type, message_id, channel_id) VALUES (?, ?, ?)", ('support-panel', message_id, channel_id,))
+                        await db.commit()
+                    case 'appeal-panel':
+                        await check_existing(channel_id)
+                        await db.execute("INSERT INTO saved_views (view_type, message_id, channel_id, appeal_id) VALUES (?, ?, ?, ?)", ('appeal-panel', message_id, channel_id, appeal_id))
+                        await db.commit()
+                    case 'ticket-view':
+                        await check_existing(channel_id)
+                        await db.execute("INSERT INTO saved_views (view_type, message_id, channel_id) VALUES (?, ?, ?)", ('ticket-view', message_id, channel_id,))
+                        await db.commit()
+                log.info(f"Saved view type {view_type} under channel {channel_id} with message id {message_id}")
+            except Exception as e:
+                log.error(f"Unable to save view to load on cog load: {e}")
+
+    async def fetch_views(self):
+        async with aiosqlite.connect(self.db_path) as db:
+            try:
+                cursor = await db.execute("SELECT * FROM saved_views")
+                results = await cursor.fetchall()
+                await cursor.close()
+
+                if results:
+                    return [
+                        {
+                            "message_id": result[0],
+                            "channel_id": result[1],
+                            "view_type": result[2]
+                        } for result in results
+                    ]
+                
+                return False
+            except Exception as e:
+                log.error(f"Unable to fetch views: {e}")
+
+    async def delete_view(self, message_id: int):
+        async with aiosqlite.connect(self.db_path) as db:
+            try:
+                cursor = await db.execute("SELECT 1 FROM saved_views WHERE message_id = ?", (message_id,))
+                result = await cursor.fetchone()
+                await cursor.close()
+
+                if result:
+                    await db.execute("DELETE FROM saved_views WHERE message_id = ?", (message_id,))
+                    await db.commit()
+                    return True
+                
+                return False
+            except Exception as e:
+                log.error(f"Unable to delete view with message id {message_id}: {e}")

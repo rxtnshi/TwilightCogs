@@ -1,11 +1,9 @@
 import discord
-import aiosqlite
-import re
 import logging
 
 from . import views
 from .error_handler import send_blocked, send_success, send_error
-from .creation_handler import Ticket, Blacklist
+from .creation_handler import Blacklist
 from .db_handler import db
 from datetime import datetime
 from redbot.core import commands, app_commands, Config
@@ -68,6 +66,75 @@ class tickets(commands.Cog):
 
     async def blacklist_check(self, user: discord.Member):
         return await self.db.fetch_blacklist(user.id)
+    
+    async def load_views(self):
+        saved_views = await self.db.fetch_views()
+        if saved_views:
+            for view in saved_views:
+                view_type = view.get('view_type')
+                view_channel_id = view.get('channel_id')
+                view_id = int(view.get('message_id'))
+
+                match view_type:
+                    case 'support-panel':
+                        channel = await self.bot.fetch_channel(view_channel_id)
+                        confg = self.config.guild(channel.guild)
+                        panel_cfg = await confg.panel_cfg()
+                        tickets_enabled = await confg.tickets_enabled()
+                        appeals_enabled = await confg.appeals_enabled()
+                        categories = await self.db.list_categories() or []
+                        description = panel_cfg.get("description")
+
+                        vieww = views.SupportPanel().generate(
+                            channel.guild,
+                            description,
+                            categories,
+                            appeals_enabled,
+                            tickets_enabled,
+                            view_channel_id
+                        )
+                    case 'appeal-panel':
+                        appeal_id = view.get('appeal_id')
+                        if not appeal_id:
+                            continue
+                        
+                        appeal = await self.db.fetch_appeal(appeal_id)
+                        channel = await self.bot.fetch_channel(view_channel_id)
+                        appeal_user = channel.guild.get_member(appeal.get('user_id'))
+                        moderated_account = appeal.get('account')
+                        moderated_platform = appeal.get('platform')
+                        moderated_reason = appeal.get('reason')
+                        appeal_info = appeal.get('appeal_info')
+
+                        vieww = views.AppealPanel().generate(
+                            'log',
+                            appeal_id,
+                            appeal_user,
+                            moderated_account,
+                            moderated_platform,
+                            moderated_reason,
+                            appeal_info
+                        )
+                    case 'ticket-view':
+                        ticket = await self.db.fetch_ticket(view_channel_id)
+                        self.log.info(ticket)
+                        if not ticket:
+                            continue
+                        
+                        channel = await self.bot.fetch_channel(view_channel_id)
+                        ticket_user = channel.guild.get_member(ticket.get('ticket_user'))
+
+                        vieww = views.TicketInfo().set_data(
+                            ticket_user,
+                            ticket.get('title'),
+                            ticket.get('description')
+                        )
+                try:
+                    self.bot.add_view(vieww, message_id=view_id)
+                except Exception as e:
+                    await self.db.delete_view(view_id)
+                    self.log.error(f"Unable to delete view with message id {view_id}: {e}")
+                self.log.info(f"Loaded {view_type} view from message {view_id}")
 
     staff = app_commands.Group(name="staff", description="Staff commands", guild_only=True)
     ticket = app_commands.Group(name="ticket", description="Ticket commands", guild_only=True)

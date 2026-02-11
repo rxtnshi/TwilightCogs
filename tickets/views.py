@@ -19,33 +19,38 @@ def disable_all(item): # not my code, since idk how to disable button in contain
 
 # -- Views/LayoutViews -- #
 class TicketInfo(ui.LayoutView):
-    def __init__(self, author: discord.Member | discord.User, title: str, description: str, team: discord.Role):
+    def __init__(self):
         super().__init__(timeout=None)
-        self.author = author
-        self.title = title
-        self.description = description
+        self.display = ui.TextDisplay("⌛ Generating panel...")
 
+        self.add_item(self.display)
+
+    def set_data(self, author: discord.Member | discord.User, title: str, description: str):
         container = ui.Container(
             ui.Section(
                 ui.TextDisplay(f"## 🛈 Request Information"),
-                ui.TextDisplay(f"{team.mention} - {self.author.mention} ({self.author.id}) has created a support ticket."),
+                ui.TextDisplay(f"{author.mention} ({author.id}) has created a support ticket.\n\n"),
                 ui.TextDisplay(f"-# Thank you for contacting us. A member of our staff team will get to you shortly."),
                 accessory=discord.ui.Thumbnail(media="https://cdn.rxtnshi.xyz/raw/hat-kid-wave.gif")
             ),
             ui.TextDisplay("## Title"),
-            ui.TextDisplay(f"{self.title}\n\n"),
+            ui.TextDisplay(f"{title}\n\n"),
             ui.TextDisplay("## Description"),
-            ui.TextDisplay(f"{self.description}"),
+            ui.TextDisplay(f"{description}"),
             ui.Separator(visible=True, spacing=discord.SeparatorSpacing.small),
             ui.TextDisplay(f"### Action Center"),
-            ui.ActionRow(CloseTicket()),
+            ui.ActionRow(CloseTicket())
         )
-
         self.add_item(container)
+        self.remove_item(self.display)
+        return self
 
 class LogInfo(ui.LayoutView):
     def __init__(self):
         super().__init__(timeout=None)
+        self.display = ui.TextDisplay("⌛ Generating panel...")
+
+        self.add_item(self.display)
     
     def set_data(self, author: discord.Member | discord.User, type: str, title: str, description: str, ticket_guild: discord.Guild, ticket_channel: discord.TextChannel):
         self.author = author
@@ -72,30 +77,35 @@ class LogInfo(ui.LayoutView):
                     style=discord.ButtonStyle.link,
                     url=f"https://discord.com/channels/{self.guild.id}/{self.channel.id}/",
                 )
-            )
+            ),
+            id="2"
         )
 
         self.add_item(container)
+        self.remove_item(self.display)
+        return self
 
 class AppealPanel(ui.LayoutView):
     def __init__(self):
         super().__init__(timeout=None)
+        self.display = ui.TextDisplay("⌛ Generating panel...")
 
-    def generate(self, type: str, appeal_id: str, user: discord.Member, moderated_account: str, platform: str, moderated_reason: str, appeal_info: str, appeal_staff: discord.Role):
+        self.add_item(self.display)
+
+    def generate(self, type: str, appeal_id: str, user: discord.Member, moderated_account: str, platform: str, moderated_reason: str, appeal_info: str):
         self.appeal_id = appeal_id
         self.user = user
         self.platform = platform
         self.moderated_account = moderated_account
         self.moderated_reason = moderated_reason
         self.appeal_info = appeal_info
-        self.staff = appeal_staff
         
         match type:
             case 'log':
                 container = ui.Container(
                     ui.Section(
                         ui.TextDisplay(f"## 🚨 Appeal `{self.appeal_id}`Submitted"),
-                        ui.TextDisplay(f"{self.staff.mention}\nAn appeal was submitted by {self.user.mention}. The information below has been provided and review any available evidence to process this appeal."),
+                        ui.TextDisplay(f"An appeal was submitted by {self.user.mention}. The information below has been provided and review any available evidence to process this appeal."),
                         accessory=discord.ui.Thumbnail(media="https://cdn.rxtnshi.xyz/raw/pending.png")
                     ),
                     ui.TextDisplay("### Moderated Account Info"),
@@ -104,7 +114,8 @@ class AppealPanel(ui.LayoutView):
                     ui.TextDisplay(f"{self.moderated_reason} - {self.appeal_info}"),
                     ui.Separator(visible=True, spacing=discord.SeparatorSpacing.small),
                     ui.ActionRow(AcceptAppeal(self.appeal_id, self.user), DenyAppeal(self.appeal_id, self.user)),
-                    accent_color=discord.Color.yellow()
+                    accent_color=discord.Color.yellow(),
+                    id="3"
                 )
             case 'receipt':
                 container = ui.Container(
@@ -121,6 +132,7 @@ class AppealPanel(ui.LayoutView):
                 )
 
         self.add_item(container)
+        self.remove_item(self.display)
         return self
 
 class DecisionAppeal(ui.LayoutView):
@@ -176,8 +188,11 @@ class DecisionAppeal(ui.LayoutView):
 class SupportPanel(ui.LayoutView):
     def __init__(self):
         super().__init__(timeout=None)
+        self.display = ui.TextDisplay("⌛ Generating panel...")
+
+        self.add_item(self.display)
     
-    def generate(self, guild: discord.Guild, description: str | None, categories: list[dict], appeals_enabled: bool, tickets_enabled: bool):
+    def generate(self, guild: discord.Guild, description: str | None, categories: list[dict], appeals_enabled: bool, tickets_enabled: bool, panel_channel: int):
         self.guild = guild
         self.description = description
 
@@ -189,14 +204,15 @@ class SupportPanel(ui.LayoutView):
             ),
             ui.Separator(visible=True, spacing=discord.SeparatorSpacing.small),
             ui.TextDisplay("### Open a Support Request Here!"),
-            ui.TextDisplay("-# Disclaimer: Please allow some ample time for server staff to respond to your query."),
+            ui.TextDisplay("-# Disclaimer: Please allow some ample time for server staff to respond to your query.")
         )
         if tickets_enabled is True:
-            container.add_item(ui.ActionRow(TicketSelectMenu(categories, appeals_enabled)))
+            container.add_item(ui.ActionRow(TicketSelectMenu(categories, appeals_enabled, panel_channel)))
         else:
             container.add_item(ui.TextDisplay("`🚫 Sorry, our support system is currently closed at the moment. Please check back later.`"))
 
         self.add_item(container)
+        self.remove_item(self.display)
         return self
 
 class SettingsPanel(ui.LayoutView):
@@ -321,7 +337,7 @@ class Receipt(ui.LayoutView):
 
         container = ui.Container(
             ui.Section(
-                ui.TextDisplay(f"## 🗒️ Transcript for {self.title}"),
+                ui.TextDisplay(f"## 🗒️ Transcript for `{self.title}`"),
                 ui.TextDisplay(f"Thank you for contacting us. Here is the transcript for `{self.title}`. The ticket information can be found below."),
                 accessory=ui.Thumbnail(media="https://cdn.rxtnshi.xyz/raw/clipboard.png"),
             ),
@@ -335,7 +351,8 @@ class Receipt(ui.LayoutView):
             ui.TextDisplay(f"**Close Reason**: {self.close_reason}"),
             ui.Separator(visible=True, spacing=discord.SeparatorSpacing.small),
             ui.TextDisplay("### Transcript"),
-            ui.TextDisplay("Please download the attached file to view your transcript.")
+            ui.TextDisplay("Please download the attached file to view your transcript."),
+            id="5"
         )
         self.add_item(container)
         return self
@@ -369,7 +386,8 @@ class LogsReceipt(ui.LayoutView):
             ui.TextDisplay(f"**Close Reason**: {self.close_reason}"),
             ui.Separator(visible=True, spacing=discord.SeparatorSpacing.small),
             ui.TextDisplay("### Transcript"),
-            ui.TextDisplay("Please download the attached file to view the transcript.")
+            ui.TextDisplay("Please download the attached file to view the transcript."),
+            id="6"
         )
 
         self.add_item(container)
@@ -446,7 +464,7 @@ class CategorySelect(ui.Select):
         await interaction.response.defer()
 
 class TicketSelectMenu(ui.Select):
-    def __init__(self, categories: list[dict], appeals_enabled: bool):
+    def __init__(self, categories: list[dict], appeals_enabled: bool, panel_channel: int):
         self.map = {str(c["category_id"]): c for c in categories}
 
         options = [
@@ -472,6 +490,7 @@ class TicketSelectMenu(ui.Select):
             min_values=1,
             max_values=1,
             options=options,
+            custom_id=f"ticket-select-menu:{panel_channel}"
         )
 
     async def callback(self, interaction: discord.Interaction):
@@ -1145,17 +1164,19 @@ class SendPanel(ui.Button):
         panel_msg_id =  panel_cfg.get("message_id")
 
         view = SupportPanel()
-        view.generate(interaction.guild, description, categories, appeals_enabled, tickets_enabled)
 
         if panel_msg_id:
             try:
                 old_panel_msg = await channel.fetch_message(panel_msg_id)
                 await old_panel_msg.delete()
-            except Exception as e:
+            except Exception:
                 pass
         
         try:
             msg = await channel.send(view=view)
+            view.generate(interaction.guild, description, categories, appeals_enabled, tickets_enabled, channel_id)
+            await msg.edit(view=view)
+            await cog.db.save_view('support-panel', channel_id, msg.id)
         except Exception as e:
             return await send_error(interaction, f"{e}")
         
@@ -1187,7 +1208,7 @@ class SetDescription(ui.Button):
         if description:
             text = description
         else:
-            text = "No panel description has been set. Please delete this and create your own. Discord Markdown is supported!)"
+            text = "No panel description has been set. Please delete this and create your own. Discord Markdown is supported!"
 
         modal = SetDescriptionModal(text)
         await interaction.response.send_modal(modal)

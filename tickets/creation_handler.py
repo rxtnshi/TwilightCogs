@@ -3,7 +3,6 @@ import discord
 import asyncio
 import chat_exporter
 import io
-import sqlite3
 import emoji
 
 from .db_handler import db
@@ -44,12 +43,18 @@ class Ticket:
             overwrites=overwrites
         )
 
-        ticket_view = TicketInfo(interaction.user, self.open_title, self.open_description, role)
+        ticket_view = TicketInfo()
         log_view = LogInfo()
         log_view.set_data(interaction.user, self.cat_name, self.open_title, self.open_description, interaction.guild, channel)
         
         await cog.db.create_ticket(self.ticket_id, int(interaction.user.id), int(channel.id), str(category.name), self.open_title, self.open_description)
-        await channel.send(view=ticket_view, allowed_mentions=discord.AllowedMentions(roles=True, users=False))
+        await channel.send(f"{role.mention}", allowed_mentions=discord.AllowedMentions(roles=True))
+        user_msg = await channel.send(view=ticket_view, allowed_mentions=discord.AllowedMentions(users=False))
+
+        await cog.db.save_view('ticket-view', channel.id, user_msg.id)
+        ticket_view.set_data(interaction.user, self.open_title, self.open_description)
+        await user_msg.edit(view=ticket_view)
+
         await log_ch.send(view=log_view, allowed_mentions=discord.AllowedMentions(users=False))
         await send_success(interaction, f"Your ticket has been successfully created. You may access it at {channel.mention}.", True)
 
@@ -83,7 +88,6 @@ class Ticket:
 
             user_view = Receipt()
             user_view.set_data(interaction.channel.name, user, interaction.user, open_reason, close_reason, open_time, close_time)
-            
             log_view = LogsReceipt()
             log_view.set_data(interaction.channel.name, user, interaction.user, open_reason, close_reason, open_time, close_time)
 
@@ -147,12 +151,14 @@ class Appeal:
 
         try:
             log_view = AppealPanel()
-            log_view.generate('log', self.appeal_id, interaction.user, self.account, self.platform, self.reason, self.info, appeal_role)
             user_view = AppealPanel()
             user_view.generate('receipt', self.appeal_id, interaction.user, self.account, self.platform, self.reason, self.info, appeal_role)
             
-            msg = await appeal_channel.send(view=log_view, allowed_mentions=discord.AllowedMentions(users=False, roles=True))
+            msg = await appeal_channel.send(f"{appeal_role.mention}",view=log_view, allowed_mentions=discord.AllowedMentions(roles=True))
+            log_view.generate('log', self.appeal_id, interaction.user, self.account, self.platform, self.reason, self.info, appeal_role)
+            await msg.edit(view=log_view, allowed_mentions=discord.AllowedMentions(users=False))
             await interaction.user.send(view=user_view)
+            await cog.db.save_view('appeal-panel', appeal_channel_id, msg.id, self.appeal_id)
             await cog.db.create_appeal(self.appeal_id, self.account, self.platform, self.reason, int(interaction.user.id), self.info, int(msg.id))
             await send_success(interaction, f"Appeal `{self.appeal_id}` has been opened. Once a decision has been made, you will be notified via DMS. Alternatively, you may check your appeal status using `/appeal status {self.appeal_id}`.", True)
         except Exception as e:
