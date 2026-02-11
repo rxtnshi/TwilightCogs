@@ -25,7 +25,7 @@ class TicketInfo(ui.LayoutView):
 
         self.add_item(self.display)
 
-    def set_data(self, author: discord.Member | discord.User, title: str, description: str):
+    def set_data(self, author: discord.Member | discord.User, title: str, description: str, ticket_id: str):
         container = ui.Container(
             ui.Section(
                 ui.TextDisplay(f"## 🛈 Request Information"),
@@ -39,7 +39,7 @@ class TicketInfo(ui.LayoutView):
             ui.TextDisplay(f"{description}"),
             ui.Separator(visible=True, spacing=discord.SeparatorSpacing.small),
             ui.TextDisplay(f"### Action Center"),
-            ui.ActionRow(CloseTicket())
+            ui.ActionRow(CloseTicket(ticket_id))
         )
         self.add_item(container)
         self.remove_item(self.display)
@@ -1058,8 +1058,8 @@ class BlacklistInfo(ui.Modal):
 
 # -- Buttons -- #
 class CloseTicket(ui.Button):
-    def __init__(self):
-        super().__init__(label="🔒 Close Ticket", style=discord.ButtonStyle.danger, custom_id="close-ticket-button")
+    def __init__(self, ticket_id):
+        super().__init__(label="🔒 Close Ticket", style=discord.ButtonStyle.danger, custom_id=f"close-ticket-button:{ticket_id}")
 
     async def callback(self, interaction: discord.Interaction):
         cog = interaction.client.get_cog("tickets")

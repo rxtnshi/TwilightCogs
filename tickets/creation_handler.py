@@ -45,7 +45,7 @@ class Ticket:
 
         ticket_view = TicketInfo()
         log_view = LogInfo()
-        log_view.set_data(interaction.user, self.cat_name, self.open_title, self.open_description, interaction.guild, channel)
+        log_view.set_data(interaction.user, self.cat_name, self.open_title, self.open_description, interaction.guild, channel, self.ticket_id)
         
         await cog.db.create_ticket(self.ticket_id, int(interaction.user.id), int(channel.id), str(category.name), self.open_title, self.open_description)
         await channel.send(f"{role.mention}", allowed_mentions=discord.AllowedMentions(roles=True))
