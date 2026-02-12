@@ -46,6 +46,9 @@ class tickets(commands.Cog):
         modmail_access = ticket_roles['modmail_access']
         modmail_mgmt = ticket_roles['modmail_mgmt']
 
+        if interaction.user.guild_permissions.administrator:
+            return True
+
         check = {rid for rid in (modmail_access, modmail_mgmt) if rid}
         if not check:
             return False
