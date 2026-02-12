@@ -4,5 +4,5 @@
     "name" : "tickets",
     "short" : "Customizable ticket system using slash commands.",
     "description" : "Rewrite of TicketSystem v1. Please reach out to me at `hello@rxtnshi.xyz` for help.",
-    "requirements": ["aiosqlite", "emoji"]
+    "requirements": ["aiosqlite", "emoji", "chat_exporter"]
 }
