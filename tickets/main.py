@@ -21,6 +21,7 @@ class tickets(commands.Cog):
         default_guild = {
 			"tickets_enabled": True,
             "appeals_enabled": True,
+            "pings_enabled": True,
 			"ticket_roles": {
 				"modmail_access": None,
 				"modmail_mgmt": None,
@@ -68,6 +69,8 @@ class tickets(commands.Cog):
         return await self.db.fetch_blacklist(user.id)
     
     async def load_views(self):
+        self.log.info("Loading views...")
+
         saved_views = await self.db.fetch_views()
         if saved_views:
             for view in saved_views:
@@ -100,11 +103,18 @@ class tickets(commands.Cog):
                         
                         appeal = await self.db.fetch_appeal(appeal_id)
                         channel = await self.bot.fetch_channel(view_channel_id)
-                        appeal_user = channel.guild.get_member(appeal.get('user_id'))
+                        appeal_user = await self.bot.fetch_user(appeal.get('appealer_id'))
                         moderated_account = appeal.get('account')
                         moderated_platform = appeal.get('platform')
                         moderated_reason = appeal.get('reason')
                         appeal_info = appeal.get('appeal_info')
+
+                        try:
+                            await channel.fetch_message(view_id)
+                        except discord.NotFound:
+                            await self.db.delete_view(view_id)
+                            self.log.info(f"Deleted {view_type} view with message ID {view_id} as it doesn't exist anymore.")
+                            continue
 
                         vieww = views.AppealPanel().generate(
                             'log',
@@ -117,31 +127,36 @@ class tickets(commands.Cog):
                         )
                     case 'ticket-view':
                         ticket = await self.db.fetch_ticket(view_channel_id)
-                        self.log.info(ticket)
                         if not ticket:
                             continue
                         
-                        channel = await self.bot.fetch_channel(view_channel_id)
-                        ticket_user = channel.guild.get_member(ticket.get('ticket_user'))
+                        try:
+                            channel = await self.bot.fetch_channel(view_channel_id)
+                        except discord.NotFound:
+                            await self.db.delete_view(view_id)
+                            self.log.info(f"Deleted {view_type} view with message ID {view_id} as it doesn't exist anymore.")
+                            continue
+                        
+                        ticket_user = await self.bot.fetch_user(ticket.get('ticket_user'))
 
                         vieww = views.TicketInfo().set_data(
                             ticket_user,
                             ticket.get('title'),
-                            ticket.get('description')
+                            ticket.get('description'),
+                            ticket.get('ticket_id')
                         )
                 try:
                     self.bot.add_view(vieww, message_id=view_id)
+                    self.log.info(f"Loaded {view_type} view from message {view_id}")
                 except Exception as e:
-                    await self.db.delete_view(view_id)
-                    self.log.error(f"Unable to delete view with message id {view_id}: {e}")
-                self.log.info(f"Loaded {view_type} view from message {view_id}")
+                    self.log.error(f"Unable to load view with message id {view_id}: {e}")
 
     staff = app_commands.Group(name="staff", description="Staff commands", guild_only=True)
     ticket = app_commands.Group(name="ticket", description="Ticket commands", guild_only=True)
     appeal = app_commands.Group(name="appeal", description="Appeal commands", guild_only=True)
         
     @staff.command(name="register", description="Allows your staff to gain access to use the ticket system.")
-    async def register_staff(self, interaction: discord.Interaction):
+    async def register_staff(self, interaction: discord.Interaction, user: discord.Member = None):
         confg = self.config.guild(interaction.guild)
         ticket_roles = await confg.ticket_roles()
         staff_roles = ticket_roles.get("staff_roles")
@@ -157,21 +172,32 @@ class tickets(commands.Cog):
         if not user_check:
             return await send_blocked(interaction, "You're not permitted to run this command.", True)
         
+        if user:
+            if not await self.elevated_check(interaction):
+                return await send_blocked(interaction, "You're not permitted to register other users.", True)
+            
+            check = bool(access_roles and any(r.id in access_roles for r in user.roles))
+            if check:
+                return await send_blocked(interaction, f"{user.mention} is already registered to the ticket system.", True)
+            
+            await user.add_roles(access_role, reason="Registered user to ticket system as staff")
+            return await send_success(interaction, f"Successfully registered {user.mention} to the ticket system.", True)
+        
         try:
             if await self.elevated_check(interaction):
                 if existing_check:
                     return await send_blocked(interaction, "You're already registered to the ticket system.", True)
                 
                 await interaction.user.add_roles(mgmt_role, reason="Registered user to ticket system as management")
-                await send_success(interaction, "You've been successfully registered to the system! You've been given elevated level access due to having Administrator permissions.", True)
+                return await send_success(interaction, "You've been successfully registered to the system! You've been given elevated level access due to having Administrator permissions.", True)
             else:
                 if existing_check:
                     return await send_blocked(interaction, "You're already registered to the ticket system.", True)
                 
                 await interaction.user.add_roles(access_role, reason="Registered user to ticket system as staff")
-                await send_success(interaction, "You've been successfully registered to the system! You've been given standard level access. If you are someone that needs to be registered as management, please reach out to someone with Administrator permissions.", True)
+                return await send_success(interaction, "You've been successfully registered to the system! You've been given standard level access. If you are someone that needs to be registered as management, please reach out to someone with Administrator permissions.", True)
         except Exception as e:
-            await send_error(interaction, f"Unable to register to the system: `{e}`")
+            return await send_error(interaction, f"Unable to register to the system: `{e}`")
 
     @staff.command(name="deregister", description="Remove a staff member from being able to access the ticket system.")
     @app_commands.describe(member="The staff member you want to deregister from the system.")
@@ -183,8 +209,11 @@ class tickets(commands.Cog):
         roles = await confg.ticket_roles()
         standard = interaction.guild.get_role(roles.get('modmail_access')) if roles.get('modmail_access') else None
 
+        if standard not in member.roles:
+            return await send_error(interaction, f"{member.mention} is already de-registered from the system or wasn't in the first place!", True)
+
         try:
-            await interaction.user.remove_roles(*standard, reason="User was deregistered from the ticket system.")
+            await member.remove_roles(standard, reason="User was deregistered from the ticket system.")
             return await send_success(interaction, f"{member.mention} was de-registered from the ticket system.", True)
         except Exception as e:
             return await send_error(interaction, f"Something went wrong trying to deregister {member.mention}: `{e}`", True)
@@ -245,18 +274,21 @@ class tickets(commands.Cog):
     )
     @app_commands.choices(
         option=[
-            app_commands.Choice(name="enable", value="enable"),
-            app_commands.Choice(name="disable", value="disable")
+            app_commands.Choice(name="Enable", value="enable"),
+            app_commands.Choice(name="Disable", value="disable")
         ],
         type=[
-            app_commands.Choice(name="tickets", value="tickets"),
-            app_commands.Choice(name="appeals", value="appeals")
+            app_commands.Choice(name="Tickets", value="tickets"),
+            app_commands.Choice(name="Appeals", value="appeals"),
+            app_commands.Choice(name="Staff Pings", value="staff-pings")
         ]
     )
-    async def panic_appeals(self, interaction: discord.Interaction, option: str, type: str):
+    async def statuses(self, interaction: discord.Interaction, option: str, type: str):
         confg = self.config.guild(interaction.guild)
         tickets_status = await confg.tickets_enabled()
         appeals_status = await confg.appeals_enabled()
+        pings_status = await confg.pings_enabled()
+
         match option:
             case "enable":
                 match type:
@@ -265,13 +297,25 @@ class tickets(commands.Cog):
                             new_tickets_status = not tickets_status
                             await confg.tickets_enabled.set(new_tickets_status)
 
-                            return await send_success(interaction, f"The ticket system is now **`{'enabled' if new_tickets_status else 'disabled'}`**! Please resend the button using `/staff setup` to close tickets.")
+                            return await send_success(interaction, f"The ticket system is now **`enabled`**! Please resend the support panel using `/ticket setup` to close tickets.")
+                        else:
+                            return await send_blocked(interaction, "This option is already enabled!", True)
                     case "appeals":
                         if not appeals_status:
                             new_appeals_status = not appeals_status
                             await confg.appeals_enabled.set(new_appeals_status)
 
-                            return await send_success(interaction, f"The appeal system is now **`{'enabled' if new_appeals_status else 'disabled'}`**! Please resend the button using `/staff setup` to close tickets.")
+                            return await send_success(interaction, f"The appeal system is now **`enabled`**! Please resend the support panel using `/ticket setup` to close appeals.")
+                        else:
+                            return await send_blocked(interaction, "This option is already enabled!", True)
+                    case "staff-pings":
+                        if not pings_status:
+                            new_ping_status = not pings_status
+                            await confg.pings_enabled.set(new_ping_status)
+
+                            return await send_success(interaction, f"Staff pings is now **`enabled`**!.")
+                        else:
+                            return await send_blocked(interaction, "This option is already enabled!", True)
             case "disable":
                 match type:
                     case "tickets":
@@ -279,13 +323,96 @@ class tickets(commands.Cog):
                             new_tickets_status = not tickets_status
                             await confg.tickets_enabled.set(new_tickets_status)
 
-                            return await send_success(interaction, f"The ticket system is now **`{'enabled' if new_tickets_status else 'disabled'}`**! Please resend the button using `/staff setup` to close tickets.")
+                            return await send_success(interaction, f"The ticket system is now **`disabled`**! Please resend the support panel using `/ticket setup` to close tickets.")
+                        else:
+                            return await send_blocked(interaction, "This option is already disabled!", True)
                     case "appeals":
                         if appeals_status:
                             new_appeals_status = not appeals_status
                             await confg.appeals_enabled.set(new_appeals_status)
 
-                            return await send_success(interaction, f"The appeal system is now **`{'enabled' if new_appeals_status else 'disabled'}`**! Please resend the button using `/staff setup` to close tickets.")
+                            return await send_success(interaction, f"The appeal system is now **`disabled`**! Please resend the support panel using `/ticket setup` to close appeals.")
+                        else:
+                            return await send_blocked(interaction, "This option is already disabled!", True)
+                    case "staff-pings":
+                        if pings_status:
+                            new_ping_status = not pings_status
+                            await confg.pings_enabled.set(new_ping_status)
+
+                            return await send_success(interaction, f"Staff pings is now **`disabled`**!")
+                        else:
+                            return await send_blocked(interaction, "This option is already disabled!", True)
+                        
+    @staff.command(name="history", description="Fetch ticket history for a user")
+    async def ticket_history(self, interaction: discord.Interaction, user: discord.User | discord.Member):
+        confg = self.config.guild(interaction.guild)
+        channels = await confg.ticket_channels()
+        log_ch_id = channels.get('log_channel')
+        log_ch = interaction.guild.get_channel(log_ch_id)
+
+        history = await self.db.fetch_ticket_history(user.id) or None
+        history_text = ""
+
+        if history:
+            ticket_history = []
+            for ticket in history:
+                ticket_id = ticket.get('ticket_id')
+                ticket_channel_id = ticket.get('ticket_channel')
+                log_message_id = ticket.get('log_message_id')
+                status = ticket.get('is_open')
+                status_txt = 'Open' if status else 'Closed'
+
+                channel = interaction.guild.get_channel(ticket_channel_id) or None
+                ch_url = channel.jump_url if channel else None
+
+                if status:
+                    ticket_history.append(f"[`{ticket_id} - {status_txt}`]({ch_url})")
+                else:
+                    log_msg = await log_ch.fetch_message(log_message_id)
+                    msg_link = log_msg.jump_url
+                    ticket_history.append(f"[`{ticket_id} - {status_txt}`]({msg_link})")
+
+            history_text = ", ".join(ticket_history)
+        else:
+            history_text = "No ticket history was found for this user!"
+
+        embed = discord.Embed(
+            title=f"📋 Ticket History for {user}",
+            description=f"This is the list of tickets opened by {user.mention}.",
+            color=discord.Color.blue()
+        )
+
+        embed.add_field(name="List of Tickets", value=history_text)
+
+        await interaction.response.send_message(embed=embed)
+
+    @staff.command(name="list", description="Get a list of users registered to the ticket system.")
+    async def get_staff_list(self, interaction: discord.Interaction):
+        confg = self.config.guild(interaction.guild)
+        roles = await confg.ticket_roles()
+
+        mgmt_id = roles.get('modmail_mgmt')
+        stdrd_id = roles.get('modmail_access')
+
+        mgmt = interaction.guild.get_role(mgmt_id)
+        stdrd = interaction.guild.get_role(stdrd_id)
+
+        mgmt_members = mgmt.members if mgmt else []
+        stdrd_members = stdrd.members if stdrd else []
+        mgmt_team = "\n".join(m.mention for m in mgmt_members) or "`No staff`"
+        modmail_team = "\n".join(m.mention for m in stdrd_members) or "`No staff`"
+
+        embed = discord.Embed(
+			title="🛠️ Ticket System Staff",
+			description="Here is a list of all staff with ticket system access!",
+			color=discord.Color.blue(),
+			timestamp=datetime.now()
+		)
+        
+        embed.add_field(name="Ticket Management", value=mgmt_team, inline=False)
+        embed.add_field(name="Ticket Staff", value=modmail_team, inline=False)
+        
+        await interaction.response.send_message(embed=embed)
 
     @ticket.command(name="help", description="Display all commands and their usage.")
     async def commands_help(self, interaction: discord.Interaction):
@@ -306,9 +433,11 @@ class tickets(commands.Cog):
             "🛡️ `/ticket setup`: Interactive setup process for the ticket system. Can configure options here.\n"
             "👥 `/ticket help`: Returns this help menu.\n"
             "🛡️ `/staff panic`: Enables or disables ticket creation.\n"
-            "🛠️ `/staff register`: Registers server staff to the ticket system. Staff members must run this command themselves.\n"
+            "🛠️ `/staff register [member - can be used if you are a person with management access]`: Registers server staff to the ticket system. Staff members must run this command themselves.\n"
             "🛡️ `/staff deregister [member]`: Deregister a specified member from the ticket system and removes standard access from them.\n"
             "🛡️ `/staff blacklist [add/remove/fetch] [member] [reason - optional but recommended]`: Blacklist feature for the ticket system.\n"
+            "🛠️ `/staff history [member]`: Fetch ticket history for a user.\n"
+            "🛠️ `/staff list`: Fetch users that are registered with the ticket system.\n"
             "👥 `/appeal status [appeal id]`: Check an appeal's status via its ID.\n"
         )
         embed.add_field(name="Overview", value=overview, inline=False)

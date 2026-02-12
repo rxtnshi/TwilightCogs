@@ -25,6 +25,7 @@ class Ticket:
         confg = cog.config.guild(interaction.guild)
 
         ticket_channels = await confg.ticket_channels()
+        pings_enabled = await confg.pings_enabled()
         log_ch_id = ticket_channels.get("log_channel")
         log_ch = interaction.guild.get_channel(log_ch_id)
         role = interaction.guild.get_role(self.team)
@@ -45,15 +46,18 @@ class Ticket:
 
         ticket_view = TicketInfo()
         log_view = LogInfo()
-        log_view.set_data(interaction.user, self.cat_name, self.open_title, self.open_description, interaction.guild, channel, self.ticket_id)
+        log_view.set_data(interaction.user, self.cat_name, self.open_title, self.open_description, channel)
         
         await cog.db.create_ticket(self.ticket_id, int(interaction.user.id), int(channel.id), str(category.name), self.open_title, self.open_description)
-        await channel.send(f"{role.mention}", allowed_mentions=discord.AllowedMentions(roles=True))
-        user_msg = await channel.send(view=ticket_view, allowed_mentions=discord.AllowedMentions(users=False))
+
+        if pings_enabled:
+            await channel.send(f"{role.mention}", allowed_mentions=discord.AllowedMentions(roles=True))
+        
+        user_msg = await channel.send(view=ticket_view)
 
         await cog.db.save_view('ticket-view', channel.id, user_msg.id)
-        ticket_view.set_data(interaction.user, self.open_title, self.open_description)
-        await user_msg.edit(view=ticket_view)
+        ticket_view.set_data(interaction.user, self.open_title, self.open_description, self.ticket_id)
+        await user_msg.edit(view=ticket_view, allowed_mentions=discord.AllowedMentions(users=False))
 
         await log_ch.send(view=log_view, allowed_mentions=discord.AllowedMentions(users=False))
         await send_success(interaction, f"Your ticket has been successfully created. You may access it at {channel.mention}.", True)
@@ -96,13 +100,13 @@ class Ticket:
                 await user.send(view=user_view, allowed_mentions=discord.AllowedMentions(users=False))
             
             await log_ch.send(file=log_receipt)
-            await log_ch.send(view=log_view, allowed_mentions=discord.AllowedMentions(users=False))
+            msg = await log_ch.send(view=log_view, allowed_mentions=discord.AllowedMentions(users=False))
         except Exception as e:
             return await send_error(interaction, f"Failed to send transcripts: `{e}`")
     
         try:
             time_float = int(datetime.now().timestamp() + 10)
-            closed = await cog.db.close_ticket(int(interaction.channel.id), int(interaction.user.id), reason)
+            closed = await cog.db.close_ticket(int(interaction.channel.id), int(interaction.user.id), reason, msg.id)
             if not closed:
                 return await send_error(interaction, "No open ticket found for this channel. Please make sure you're running this command in an active ticket channel.")
 
@@ -143,6 +147,7 @@ class Appeal:
         cog = interaction.client.get_cog("tickets")
         confg = cog.config.guild(interaction.guild)
         channels = await confg.ticket_channels()
+        pings_enabled = await confg.pings_enabled()
         roles = await confg.ticket_roles()
         appeal_role_id = roles.get("appeals_access")
         appeal_role = interaction.guild.get_role(appeal_role_id)
@@ -152,14 +157,20 @@ class Appeal:
         try:
             log_view = AppealPanel()
             user_view = AppealPanel()
-            user_view.generate('receipt', self.appeal_id, interaction.user, self.account, self.platform, self.reason, self.info, appeal_role)
+            user_view.generate('receipt', self.appeal_id, interaction.user, self.account, self.platform, self.reason, self.info)
             
-            msg = await appeal_channel.send(f"{appeal_role.mention}",view=log_view, allowed_mentions=discord.AllowedMentions(roles=True))
-            log_view.generate('log', self.appeal_id, interaction.user, self.account, self.platform, self.reason, self.info, appeal_role)
+            if pings_enabled:
+                await appeal_channel.send(f"{appeal_role.mention}", allowed_mentions=discord.AllowedMentions(roles=True))
+
+            msg = await appeal_channel.send(view=log_view)
+            log_view.generate('log', self.appeal_id, interaction.user, self.account, self.platform, self.reason, self.info)
             await msg.edit(view=log_view, allowed_mentions=discord.AllowedMentions(users=False))
+
             await interaction.user.send(view=user_view)
+
             await cog.db.save_view('appeal-panel', appeal_channel_id, msg.id, self.appeal_id)
             await cog.db.create_appeal(self.appeal_id, self.account, self.platform, self.reason, int(interaction.user.id), self.info, int(msg.id))
+
             await send_success(interaction, f"Appeal `{self.appeal_id}` has been opened. Once a decision has been made, you will be notified via DMS. Alternatively, you may check your appeal status using `/appeal status {self.appeal_id}`.", True)
         except Exception as e:
             await send_error(interaction, f"{e}", True)
@@ -204,7 +215,8 @@ class Appeal:
         await cog.db.close_appeal(int(original_message.id), int(interaction.user.id), option, self.reason)
 
         try:
-            await original_message.edit(view=log_view, allowed_mentions=discord.AllowedMentions(users=False))
+            await original_message.delete()
+            await appeal_ch.send(view=log_view, allowed_mentions=discord.AllowedMentions(users=False))
             await self.user.send(view=user_view)
         except discord.Forbidden:
             await send_error(interaction, f"{self.user.mention} has their DMs turned off so I was unable to message them the result.")

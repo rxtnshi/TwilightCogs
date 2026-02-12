@@ -7,5 +7,6 @@ async def setup(bot):
 
     cog.log.info(f"Cog initialized at {datetime.now()}")
     await cog.db.initialize()
-    await bot.add_cog(cog)
     await cog.load_views()
+    
+    await bot.add_cog(cog)

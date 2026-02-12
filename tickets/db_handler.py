@@ -64,7 +64,8 @@ class db:
                 CREATE TABLE IF NOT EXISTS saved_views (
                     message_id INTEGER PRIMARY KEY,
                     channel_id INTEGER,
-                    view_type TEXT
+                    view_type TEXT,
+                    appeal_id TEXT
                 )
             """)
             await db.commit()
@@ -81,7 +82,7 @@ class db:
             except Exception as e:
                 log.error(f"Unable to create a {category_type} ticket for {ticket_user_id}: {e}")
 
-    async def close_ticket(self, ticket_channel_id: int, closed_by: int, reason: str):
+    async def close_ticket(self, ticket_channel_id: int, closed_by: int, reason: str, log_message_id: int):
         close_time = int(datetime.now().timestamp())
 
         async with aiosqlite.connect(self.db_path) as db:
@@ -92,7 +93,7 @@ class db:
 
                 if result:
                     try:
-                        await db.execute("UPDATE ticket_history SET is_open = FALSE, close_time = ?, closed_by = ?, close_reason = ? WHERE ticket_channel_id = ?", (close_time, closed_by, reason, ticket_channel_id,))
+                        await db.execute("UPDATE ticket_history SET is_open = FALSE, close_time = ?, closed_by = ?, close_reason = ?, log_message_id = ? WHERE ticket_channel_id = ?", (close_time, closed_by, reason, log_message_id, ticket_channel_id,))
                         await db.commit()
 
                         log.info(f"{closed_by} successfully closed ticket {ticket_channel_id} for {reason}")
@@ -103,27 +104,7 @@ class db:
                     log.error(f"Unable to find ticket channel {ticket_channel_id} in DB")
             except Exception as e:
                 log.error(f"Unable to close ticket channel {ticket_channel_id} in DB: {e}")
-
-    async def add_ticket_log(self, ticket_channel_id: int, log_message_id: int):
-        async with aiosqlite.connect(self.db_path) as db:
-            try:
-                cursor = await db.execute("SELECT * FROM ticket_history WHERE ticket_channel_id = ?", (ticket_channel_id,))
-                result = await cursor.fetchone()
-                await cursor.close()
-
-                if result:
-                    try:
-                        await db.execute("UPDATE ticket_history SET log_message_id = ? WHERE ticket_channel_id = ?", (log_message_id, ticket_channel_id,))
-                        await db.commit()
-
-                        log.info(f"Successfully DB entry for ticket channel {ticket_channel_id} and log message {log_message_id}")
-                    except Exception as e:
-                        log.warning(f"Found ticket channel {ticket_channel_id} in DB but something happened: {e}")
-                else:
-                    log.error(f"Unable to find ticket channel {ticket_channel_id} in DB")
-            except Exception as e:
-                log.error(f"Unable to update ticket channel {ticket_channel_id} with log message in DB: {e}")
-
+    
     async def fetch_ticket(self, channel: int):
         async with aiosqlite.connect(self.db_path) as db:
             try:
@@ -146,6 +127,25 @@ class db:
                 }
             except Exception as e:
                 log.error(f"Can't fetch ticket opener: {e}")
+
+    async def fetch_ticket_history(self, user: int):
+        async with aiosqlite.connect(self.db_path) as db:
+            try:
+                cursor = await db.execute("SELECT unique_id, ticket_channel_id, log_message_id FROM ticket_history WHERE ticket_user = ?", (user,))
+                results = await cursor.fetchall()
+
+                if results:
+                    return [
+                        {
+                            "ticket_id": result[0],
+                            "ticket_channel": result[1],
+                            "log_message_id": result[2]
+                        } for result in results
+                    ]
+                
+                return None
+            except Exception as e:
+                log.error(f"Exception occured when fetching ticket history for user {user}: {e}")
 
     async def existing_check(self, type: str, target: int):
         async with aiosqlite.connect(self.db_path) as db:
@@ -370,11 +370,14 @@ class db:
     async def save_view(self, view_type: str, channel_id: int, message_id: int, appeal_id: str = None):
         async with aiosqlite.connect(self.db_path) as db:
             async def check_existing(channel_id):
-                cursor = await db.execute("SELECT message_id FROM saved_views WHERE channel_id = ?", (channel_id,))
+                if view_type == "appeal-panel":
+                    cursor = await db.execute("SELECT message_id FROM saved_views WHERE channel_id = ? AND appeal_id = ?", (channel_id, appeal_id,))
+                else:
+                    cursor = await db.execute("SELECT message_id FROM saved_views WHERE channel_id = ? AND view_type = ?", (channel_id, view_type,))
                 result = await cursor.fetchone()
 
                 if result:
-                    await db.execute("DELETE FROM saved_views WHERE channel_id = ?", (channel_id,))
+                    await db.execute("DELETE FROM saved_views WHERE message_id = ?", (message_id,))
                     await db.commit()
                     log.info(f"Deleted {view_type} view with message id {message_id} since a duplicate entry was found.")
             
@@ -408,7 +411,8 @@ class db:
                         {
                             "message_id": result[0],
                             "channel_id": result[1],
-                            "view_type": result[2]
+                            "view_type": result[2],
+                            "appeal_id": result[3]
                         } for result in results
                     ]
                 

@@ -8,12 +8,12 @@ from .creation_handler import Ticket, Appeal, Category, Blacklist
 from .error_handler import send_blocked, send_error, send_success
 
 log = logging.getLogger("twilightcogs.ticketsv2")
-def disable_all(item): # not my code, since idk how to disable button in containers
-            if isinstance(item, ui.ActionRow):
-                for sub in item.children:
+def disable_all(item): # not my code, since idk how to disable buttons in containers
+            if isinstance(item, ui.ActionRow): # understand this code since a container has children within them, then check for an ActionRow
+                for sub in item.children: # for every item in the actionrow, if it is a button have it disabled
                     if isinstance(sub, (ui.Button)):
                         sub.disabled = True
-            if hasattr(item, "children"):
+            if hasattr(item, "children"): # recursive method to disable every child
                 for sub in item.children:
                     disable_all(sub)
 
@@ -52,12 +52,11 @@ class LogInfo(ui.LayoutView):
 
         self.add_item(self.display)
     
-    def set_data(self, author: discord.Member | discord.User, type: str, title: str, description: str, ticket_guild: discord.Guild, ticket_channel: discord.TextChannel):
+    def set_data(self, author: discord.Member | discord.User, type: str, title: str, description: str, ticket_channel: discord.TextChannel):
         self.author = author
         self.type = type
         self.title = title
         self.description = description
-        self.guild = ticket_guild
         self.channel = ticket_channel
 
         container = ui.Container(
@@ -75,10 +74,9 @@ class LogInfo(ui.LayoutView):
                 ui.Button(
                     label="Access Ticket",
                     style=discord.ButtonStyle.link,
-                    url=f"https://discord.com/channels/{self.guild.id}/{self.channel.id}/",
+                    url=self.channel.jump_url
                 )
-            ),
-            id="2"
+            )
         )
 
         self.add_item(container)
@@ -249,6 +247,7 @@ class SettingsPanel(ui.LayoutView):
 
         tickets_enabled = data.get("tickets_enabled")
         appeals_enabled = data.get("appeals_enabled")
+        pings_enabled = data.get("pings_enabled")
         roles = data.get("ticket_roles") or {}
         channels = data.get("ticket_channels") or {}
         panel_cfg = data.get("panel_cfg") or {}
@@ -269,13 +268,11 @@ class SettingsPanel(ui.LayoutView):
         appeal_logs = f"<#{channels.get('appeal_logs')}>" if channels.get('appeal_logs') else "`None set`"
         panel_channel = f"<#{panel_cfg.get('channel')}>" if panel_cfg.get('channel') else "`None set`"
 
-        panel_channel_id = panel_cfg.get("channel")
-        panel_message_id = panel_cfg.get("message_id")
-        panel_link = (
-            f"https://discord.com/channels/{interaction.guild.id}/{panel_channel_id}/{panel_message_id}"
-            if panel_channel_id and panel_message_id
-            else None
-        )
+        panel_ch = interaction.guild.get_channel(panel_cfg.get('channel'))
+        panel_msg_id = panel_cfg.get("message_id")
+        panel_msg = await panel_ch.fetch_message(panel_msg_id)
+        panel_link = panel_msg.jump_url
+    
         container = ui.Container(
             ui.Section(
                 ui.TextDisplay("# ⚙️ Settings"),
@@ -287,6 +284,7 @@ class SettingsPanel(ui.LayoutView):
             ui.TextDisplay(
                 f"`Tickets Creation`: {'`✅ Enabled`' if tickets_enabled is True else '`❌ Disabled`'}\n"
                 f"`Appeals`: {'`✅ Enabled`' if appeals_enabled is True else '`❌ Disabled`'}\n"
+                f"`Staff Pings`: {'`✅ Enabled`' if pings_enabled is True else '`❌ Disabled`'}\n"
             ),
             ui.TextDisplay("### __Configured Roles__"),
             ui.TextDisplay(
@@ -406,7 +404,8 @@ class TicketQuestionaire(ui.Modal):
             description="In short, how can we help you today?",
             component=ui.TextInput(
                 placeholder="I need help!",
-                max_length=40,
+                min_length=1,
+                max_length=100,
                 style=discord.TextStyle.short,
                 required=True
             )
@@ -417,6 +416,7 @@ class TicketQuestionaire(ui.Modal):
             description="Describe your request in a few sentences or so.",
             component=ui.TextInput(
                 placeholder="I need help with something!",
+                min_length=5,
                 max_length=2000,
                 style=discord.TextStyle.paragraph,
                 required=True
@@ -433,116 +433,6 @@ class TicketQuestionaire(ui.Modal):
 
         ticket = Ticket(self.cat_name, self.category, title, description, self.team)
         await ticket.create(interaction, category)
-
-class CategorySelect(ui.Select):
-    def __init__(self, categories: list[dict]):
-        options = []
-        self.map = {}
-        for c in categories:
-            id = c.get("category_id")
-
-            title = c.get("title")
-            desc = c.get("description") or "No description"
-            id_str = str(id)
-            self.map[id_str] = c
-            options.append(
-                discord.SelectOption(
-                    label=title,
-                    value=id,
-                    description=desc
-                )
-            )
-
-        super().__init__(
-            placeholder="Select a Category",
-            min_values=1,
-            max_values=1,
-            options=options,
-        )
-
-    async def callback(self, interaction: discord.Interaction):
-        await interaction.response.defer()
-
-class TicketSelectMenu(ui.Select):
-    def __init__(self, categories: list[dict], appeals_enabled: bool, panel_channel: int):
-        self.map = {str(c["category_id"]): c for c in categories}
-
-        options = [
-            discord.SelectOption(
-                label=c["title"],
-                value=str(c["category_id"]),
-                description=c.get("description" or "No description")
-            )
-            for c in categories
-        ]
-
-        if appeals_enabled:
-            options.append(
-                discord.SelectOption(
-                    label="🔨 Appeals",
-                    value="appeals",
-                    description="Appeal a moderation here."
-                )
-            )
-
-        super().__init__(
-            placeholder="Select a Category",
-            min_values=1,
-            max_values=1,
-            options=options,
-            custom_id=f"ticket-select-menu:{panel_channel}"
-        )
-
-    async def callback(self, interaction: discord.Interaction):
-        select_value = self.values[0]
-        entry = self.map.get(select_value)
-
-        cog = interaction.client.get_cog("tickets")
-        confg = cog.config.guild(interaction.guild)
-        status = await confg.tickets_enabled()
-        ch = await confg.ticket_channels()
-        l_ch = interaction.guild.get_channel(ch.get('logs_channel')) if ch.get('logs_channel') else None
-
-        blacklist_check = await cog.db.fetch_blacklist(int(interaction.user.id))
-        if blacklist_check:
-            if l_ch:
-                await l_ch.send(f"{interaction.user.mention} ({interaction.user.id}) tried opening a ticket but was blocked due to being blacklisted.")
-
-            await interaction.message.edit(view=self.view)
-            return await send_blocked(interaction, "You're forbidden from using the ticket system. If you believe this is an error, please contact server management. You are unable to use the ticket system's appeal feature for this.", True)
-
-        if status:
-            check_dup = await cog.db.existing_check("ticket", interaction.user.id)
-            if check_dup:
-                channel = interaction.guild.get_channel(check_dup)
-
-                await interaction.message.edit(view=self.view)
-                return await send_blocked(interaction, f"You already have an existing ticket open! You can access it here: {channel.mention}", True)
-            
-            if select_value == "appeals":
-                check_dup = await cog.db.existing_check("appeal", interaction.user.id)
-                if check_dup:
-                    await interaction.message.edit(view=self.view)
-                    return await send_blocked(interaction, f"You already have an existing appeal open (Appeal `{check_dup}`). Please run `/appeal status {check_dup}` to check its status.", True)
-                
-                await interaction.message.edit(view=self.view)
-                return await interaction.response.send_modal(OpenAppeal())
-            else:
-                category_check = await cog.db.fetch_category(int(select_value))
-                if not category_check:
-                    return await send_error(interaction, "This category no longer exists. Please contact staff an alternative way.", True)
-                
-                team_id = entry.get("team_id") if entry else None
-                modal = TicketQuestionaire(entry["title"], int(select_value), team_id)
-
-                await interaction.message.edit(view=self.view)
-                await interaction.response.send_modal(modal)
-        else:
-            if l_ch:
-                await l_ch.send(f"{interaction.user.mention} ({interaction.user.id}) tried opening a ticket but was blocked due to the support system being offline.")
-
-            await interaction.message.edit(view=self.view)
-            return await send_blocked(interaction, "Sorry, our support system is currently closed at the moment. Please check back later.", True)
 
 class CloseTicketQuestionaire(ui.Modal):
     def __init__(self, channel: discord.TextChannel):
@@ -576,7 +466,8 @@ class OpenAppeal(ui.Modal):
             description="Please type in the platform you were moderated on as it will pinpoint your account info.",
             component=ui.TextInput(
                 placeholder="Platform (e.g Discord, Minecraft, etc.)",
-                max_length=20,
+                min_length=1,
+                max_length=50,
                 style=discord.TextStyle.short,
                 required=True
             )
@@ -587,6 +478,7 @@ class OpenAppeal(ui.Modal):
             description="Preferably please give us your account name and its ID. A profile link is also allowed.",
             component=ui.TextInput(
                 placeholder="Account Details",
+                min_length=5,
                 max_length=100,
                 style=discord.TextStyle.short,
                 required=True
@@ -598,6 +490,7 @@ class OpenAppeal(ui.Modal):
             description="Please give us the exact reason you were moderated for - telling us makes this process easier.",
             component=ui.TextInput(
                 placeholder="Reason for moderation",
+                min_length=5,
                 max_length=100,
                 style=discord.TextStyle.paragraph,
                 required=True
@@ -609,6 +502,7 @@ class OpenAppeal(ui.Modal):
             description="Please provide us anything that will help us with your case.",
             component=ui.TextInput(
                 placeholder="Include info here",
+                min_length=10,
                 max_length=1000,
                 style=discord.TextStyle.paragraph,
                 required=True
@@ -683,6 +577,7 @@ class AppealDecision(ui.Modal):
             component=ui.TextInput(
                 style=discord.TextStyle.paragraph,
                 min_length=10,
+                max_length=2000,
                 required=False
             )
         )
@@ -699,7 +594,10 @@ class AppealDecision(ui.Modal):
         reason_text = f"{value} - {custom_reason}" if custom_reason else f"{value}"
 
         if value == "custom-reason":
-            reason_text = f"{custom_reason}"
+            if not custom_reason:
+                reason_text = "No reason provided."
+            else:
+                reason_text = f"{custom_reason}"
         
         if decision == "accept":
             await Appeal.close(self, interaction, True, reason_text, self.a_id, self.user)
@@ -845,6 +743,7 @@ class AddCatModal(ui.Modal):
             component=ui.TextInput(
                 placeholder="Title of category",
                 style=discord.TextStyle.short,
+                min_length=1,
                 max_length=25,
                 required=True
             )
@@ -856,6 +755,7 @@ class AddCatModal(ui.Modal):
             component=ui.TextInput(
                 placeholder="Description of category",
                 style=discord.TextStyle.paragraph,
+                min_length=10,
                 max_length=100,
                 required=True
             )
@@ -868,7 +768,8 @@ class AddCatModal(ui.Modal):
                 placeholder="Select a Category",
                 channel_types=[discord.ChannelType.category],
                 min_values=1,
-                max_values=1
+                max_values=1,
+                required=True
             )
         )
 
@@ -879,6 +780,7 @@ class AddCatModal(ui.Modal):
                 placeholder="Select a Role",
                 min_values=1,
                 max_values=1,
+                required=True
             )
         )
 
@@ -970,19 +872,20 @@ class SetDescriptionModal(ui.Modal):
 
         self.default_text = default_text
 
-        self.Description_text = ui.Label(
+        self.description_text = ui.Label(
             text="Create/Edit Description",
             description="Set rules to be displayed in the ticket panel",
             component=ui.TextInput(
-                placeholder="f",
+                placeholder="Set your description here!",
                 default=self.default_text,
                 style=discord.TextStyle.paragraph,
+                min_length=10,
                 max_length=2000,
                 required=True
             )
         )
 
-        self.add_item(self.Description_text)
+        self.add_item(self.description_text)
 
     async def on_submit(self, interaction: discord.Interaction):
         await interaction.response.defer()
@@ -994,10 +897,10 @@ class SetDescriptionModal(ui.Modal):
         try:
             await confg.panel_cfg.set({
                 **panel_cfg,
-                "description": self.Description_text.component.value
+                "description": self.description_text.component.value
             })
             
-            await send_success(interaction, f"New description set:\n\n ```{self.Description_text.component.value}```")
+            await send_success(interaction, f"New description set:\n\n ```{self.description_text.component.value}```")
         except Exception as e:
             await send_error(interaction, f"{e}")
 
@@ -1055,6 +958,117 @@ class BlacklistInfo(ui.Modal):
                     await Blacklist.delete(self, interaction, user)
                 case "no":
                     return await send_success(interaction, "No action was taken as you chose not to remove this user from the blacklist.", True)
+
+# -- Selects -- #           
+class CategorySelect(ui.Select):
+    def __init__(self, categories: list[dict]):
+        options = []
+        self.map = {}
+        for c in categories:
+            id = c.get("category_id")
+
+            title = c.get("title")
+            desc = c.get("description") or "No description"
+            id_str = str(id)
+            self.map[id_str] = c
+            options.append(
+                discord.SelectOption(
+                    label=title,
+                    value=id,
+                    description=desc
+                )
+            )
+
+        super().__init__(
+            placeholder="Select a Category",
+            min_values=1,
+            max_values=1,
+            options=options,
+        )
+
+    async def callback(self, interaction: discord.Interaction):
+        await interaction.response.defer()
+
+class TicketSelectMenu(ui.Select):
+    def __init__(self, categories: list[dict], appeals_enabled: bool, panel_channel: int):
+        self.map = {str(c["category_id"]): c for c in categories}
+
+        options = [
+            discord.SelectOption(
+                label=c["title"],
+                value=str(c["category_id"]),
+                description=c.get("description" or "No description")
+            )
+            for c in categories
+        ]
+
+        if appeals_enabled:
+            options.append(
+                discord.SelectOption(
+                    label="🔨 Appeals",
+                    value="appeals",
+                    description="Appeal a moderation here."
+                )
+            )
+
+        super().__init__(
+            placeholder="Select a Category",
+            min_values=1,
+            max_values=1,
+            options=options,
+            custom_id=f"ticket-select-menu:{panel_channel}"
+        )
+
+    async def callback(self, interaction: discord.Interaction):
+        select_value = self.values[0]
+        entry = self.map.get(select_value)
+
+        cog = interaction.client.get_cog("tickets")
+        confg = cog.config.guild(interaction.guild)
+        status = await confg.tickets_enabled()
+        ch = await confg.ticket_channels()
+        l_ch = interaction.guild.get_channel(ch.get('logs_channel')) if ch.get('logs_channel') else None
+
+        blacklist_check = await cog.db.fetch_blacklist(int(interaction.user.id))
+        if blacklist_check:
+            if l_ch:
+                await l_ch.send(f"{interaction.user.mention} ({interaction.user.id}) tried opening a ticket but was blocked due to being blacklisted.")
+
+            await interaction.message.edit(view=self.view)
+            return await send_blocked(interaction, "You're forbidden from using the ticket system. If you believe this is an error, please contact server management. You are unable to use the ticket system's appeal feature for this.", True)
+
+        if status:
+            check_dup = await cog.db.existing_check("ticket", interaction.user.id)
+            if check_dup:
+                channel = interaction.guild.get_channel(check_dup)
+
+                await interaction.message.edit(view=self.view)
+                return await send_blocked(interaction, f"You already have an existing ticket open! You can access it here: {channel.mention}", True)
+            
+            if select_value == "appeals":
+                check_dup = await cog.db.existing_check("appeal", interaction.user.id)
+                if check_dup:
+                    await interaction.message.edit(view=self.view)
+                    return await send_blocked(interaction, f"You already have an existing appeal open (Appeal `{check_dup}`). Please run `/appeal status {check_dup}` to check its status.", True)
+                
+                await interaction.message.edit(view=self.view)
+                return await interaction.response.send_modal(OpenAppeal())
+            else:
+                category_check = await cog.db.fetch_category(int(select_value))
+                if not category_check:
+                    return await send_error(interaction, "This category no longer exists. Please contact staff an alternative way.", True)
+                
+                team_id = entry.get("team_id") if entry else None
+                modal = TicketQuestionaire(entry["title"], int(select_value), team_id)
+
+                await interaction.message.edit(view=self.view)
+                await interaction.response.send_modal(modal)
+        else:
+            if l_ch:
+                await l_ch.send(f"{interaction.user.mention} ({interaction.user.id}) tried opening a ticket but was blocked due to the support system being offline.")
+
+            await interaction.message.edit(view=self.view)
+            return await send_blocked(interaction, "Sorry, our support system is currently closed at the moment. Please check back later.", True)
 
 # -- Buttons -- #
 class CloseTicket(ui.Button):
@@ -1126,7 +1140,7 @@ class DelCategories(ui.Button):
 
 class AcceptAppeal(ui.Button):
     def __init__(self, a_id: str, user: discord.Member | discord.User):
-        super().__init__(label="✅ Accept Appeal", style=discord.ButtonStyle.green, custom_id="accept-appeal-button")
+        super().__init__(label="✅ Accept Appeal", style=discord.ButtonStyle.green, custom_id=f"accept-appeal-button:{a_id}")
         self.a_id = a_id
         self.user = user
 
@@ -1135,7 +1149,7 @@ class AcceptAppeal(ui.Button):
 
 class DenyAppeal(ui.Button):
     def __init__(self, a_id: str , user: discord.Member | discord.User):
-        super().__init__(label="❌ Deny Appeal", style=discord.ButtonStyle.danger, custom_id="deny-appeal-button")
+        super().__init__(label="❌ Deny Appeal", style=discord.ButtonStyle.danger, custom_id=f"deny-appeal-button:{a_id}")
         self.a_id = a_id
         self.user = user
 
@@ -1147,6 +1161,11 @@ class SendPanel(ui.Button):
         super().__init__(label="✈️ Send Panel", style=discord.ButtonStyle.green, custom_id="send-panel-button")
 
     async def callback(self, interaction: discord.Interaction):
+        if interaction.message and interaction.message.interaction_metadata:
+            original_author = interaction.message.interaction_metadata.user
+            if interaction.user != original_author:
+                return await send_blocked(interaction, "Only the person who initiated this command can send the panel.", True)
+            
         cog = interaction.client.get_cog("tickets")
         confg = cog.config.guild(interaction.guild)
         panel_cfg = await confg.panel_cfg()
@@ -1182,7 +1201,6 @@ class SendPanel(ui.Button):
         
         await confg.panel_cfg.set({**panel_cfg, "message_id": msg.id})
         await send_success(interaction, f"The panel has been sent to {channel.mention}!")
-        await SettingsPanel(interaction, interaction.user, interaction.message).update_view(interaction, message=interaction.message)
 
 class ResetConfig(ui.Button):
     def __init__(self):
