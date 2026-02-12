@@ -248,9 +248,9 @@ class SettingsPanel(ui.LayoutView):
         tickets_enabled = data.get("tickets_enabled")
         appeals_enabled = data.get("appeals_enabled")
         pings_enabled = data.get("pings_enabled")
-        roles = data.get("ticket_roles") or {}
-        channels = data.get("ticket_channels") or {}
-        panel_cfg = data.get("panel_cfg") or {}
+        roles = data.get("ticket_roles") or None
+        channels = data.get("ticket_channels") or None
+        panel_cfg = data.get("panel_cfg") or None
 
         staff_roles = []
         for role in (roles.get("staff_roles") or []):
@@ -259,7 +259,11 @@ class SettingsPanel(ui.LayoutView):
 
         staff_roles_txt = ",".join(staff_roles) if staff_roles else "`None set`"
 
-        is_setup = bool(roles and channels and panel_cfg)
+        roles_statuses = bool(roles and roles.get("modmail_access") and roles.get("modmail_mgmt") and roles.get("appeals_access"))
+        ch_statuses = bool(channels and channels.get("log_channel") and channels.get("appeal_logs"))
+        panel_status = bool(panel_cfg and panel_cfg.get("channel") and panel_cfg.get("message_id"))
+
+        is_setup = roles_statuses and ch_statuses and panel_status
 
         modmail_access = f"<@&{roles.get('modmail_access')}>" if roles.get('modmail_access') else "`None set`"
         modmail_mgmt = f"<@&{roles.get('modmail_mgmt')}>" if roles.get('modmail_mgmt') else "`None set`"
@@ -267,14 +271,18 @@ class SettingsPanel(ui.LayoutView):
         log_channel = f"<#{channels.get('log_channel')}>" if channels.get('log_channel') else "`None set`"
         appeal_logs = f"<#{channels.get('appeal_logs')}>" if channels.get('appeal_logs') else "`None set`"
         panel_channel = f"<#{panel_cfg.get('channel')}>" if panel_cfg.get('channel') else "`None set`"
-
-        panel_ch = interaction.guild.get_channel(panel_cfg.get('channel')) or None
-        panel_msg_id = panel_cfg.get("message_id")
-        panel_msg = None
+        panel_ch = None
+        panel_msg_id = None
         panel_link = None
+        panel_msg = None
+
+        if panel_cfg.get('channel'):
+            panel_ch = interaction.guild.get_channel(panel_cfg.get('channel'))
         if panel_ch:
-            panel_msg = await panel_ch.fetch_message(panel_msg_id) or None
-            panel_link = panel_msg.jump_url if panel_msg else None
+            panel_msg_id = panel_cfg.get("message_id")
+            if panel_msg_id:
+                panel_msg = await panel_ch.fetch_message(panel_msg_id)
+                panel_link = panel_msg.jump_url
     
         container = ui.Container(
             ui.Section(
@@ -303,7 +311,7 @@ class SettingsPanel(ui.LayoutView):
             ),
             ui.TextDisplay("### __Panel Channels__"),
             ui.TextDisplay(f"`Panel Channel`: {panel_channel}\n"),
-            ui.TextDisplay(f"[Link to panel]({panel_link})" if panel_msg else "`No panel message set`"),
+            ui.TextDisplay(f"[Link to panel]({panel_link})" if panel_link else "`No panel message set`"),
             ui.Separator(visible=True, spacing=discord.SeparatorSpacing.small),
             ui.TextDisplay("### 💻 Action Center"),
             ui.TextDisplay("-# Channels & Categories"),
