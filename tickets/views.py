@@ -270,8 +270,8 @@ class SettingsPanel(ui.LayoutView):
 
         panel_ch = interaction.guild.get_channel(panel_cfg.get('channel'))
         panel_msg_id = panel_cfg.get("message_id")
-        panel_msg = await panel_ch.fetch_message(panel_msg_id)
-        panel_link = panel_msg.jump_url
+        panel_msg = await panel_ch.fetch_message(panel_msg_id) or None
+        panel_link = panel_msg.jump_url if panel_msg else None
     
         container = ui.Container(
             ui.Section(
@@ -300,7 +300,7 @@ class SettingsPanel(ui.LayoutView):
             ),
             ui.TextDisplay("### __Panel Channels__"),
             ui.TextDisplay(f"`Panel Channel`: {panel_channel}\n"),
-            ui.TextDisplay(f"[Link to panel]({panel_link})" if panel_link else "`No panel message set`"),
+            ui.TextDisplay(f"[Link to panel]({panel_link})" if panel_msg else "`No panel message set`"),
             ui.Separator(visible=True, spacing=discord.SeparatorSpacing.small),
             ui.TextDisplay("### 💻 Action Center"),
             ui.TextDisplay("-# Channels & Categories"),
