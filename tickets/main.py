@@ -284,6 +284,9 @@ class tickets(commands.Cog):
         ]
     )
     async def statuses(self, interaction: discord.Interaction, option: str, type: str):
+        if not await self.elevated_check(interaction):
+            return await send_blocked(interaction, "You cannot run this command!", True)
+        
         confg = self.config.guild(interaction.guild)
         tickets_status = await confg.tickets_enabled()
         appeals_status = await confg.appeals_enabled()
@@ -345,6 +348,9 @@ class tickets(commands.Cog):
                         
     @staff.command(name="history", description="Fetch ticket history for a user")
     async def ticket_history(self, interaction: discord.Interaction, user: discord.User | discord.Member):
+        if not await self.staff_check(interaction):
+            return await send_blocked(interaction, "You cannot run this command!", True)
+        
         confg = self.config.guild(interaction.guild)
         channels = await confg.ticket_channels()
         log_ch_id = channels.get('log_channel')
@@ -388,6 +394,9 @@ class tickets(commands.Cog):
 
     @staff.command(name="list", description="Get a list of users registered to the ticket system.")
     async def get_staff_list(self, interaction: discord.Interaction):
+        if not await self.staff_check(interaction):
+            return await send_blocked(interaction, "You cannot run this command!", True)
+        
         confg = self.config.guild(interaction.guild)
         roles = await confg.ticket_roles()
 
