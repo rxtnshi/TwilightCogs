@@ -268,7 +268,7 @@ class SettingsPanel(ui.LayoutView):
         appeal_logs = f"<#{channels.get('appeal_logs')}>" if channels.get('appeal_logs') else "`None set`"
         panel_channel = f"<#{panel_cfg.get('channel')}>" if panel_cfg.get('channel') else "`None set`"
 
-        panel_ch = interaction.guild.get_channel(panel_cfg.get('channel'))
+        panel_ch = interaction.guild.get_channel(panel_cfg.get('channel')) or None
         panel_msg_id = panel_cfg.get("message_id")
         panel_msg = await panel_ch.fetch_message(panel_msg_id) or None
         panel_link = panel_msg.jump_url if panel_msg else None
@@ -299,7 +299,7 @@ class SettingsPanel(ui.LayoutView):
                 f"`Appeals`: {appeal_logs}\n"
             ),
             ui.TextDisplay("### __Panel Channels__"),
-            ui.TextDisplay(f"`Panel Channel`: {panel_channel}\n"),
+            ui.TextDisplay(f"`Panel Channel`: {panel_channel if panel_channel else '`None set`'}\n"),
             ui.TextDisplay(f"[Link to panel]({panel_link})" if panel_msg else "`No panel message set`"),
             ui.Separator(visible=True, spacing=discord.SeparatorSpacing.small),
             ui.TextDisplay("### 💻 Action Center"),
