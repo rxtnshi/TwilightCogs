@@ -270,6 +270,8 @@ class SettingsPanel(ui.LayoutView):
 
         panel_ch = interaction.guild.get_channel(panel_cfg.get('channel')) or None
         panel_msg_id = panel_cfg.get("message_id")
+        panel_msg = None
+        panel_link = None
         if panel_ch:
             panel_msg = await panel_ch.fetch_message(panel_msg_id) or None
             panel_link = panel_msg.jump_url if panel_msg else None
