@@ -674,7 +674,7 @@ class ConfigChannelsModal(ui.Modal):
         })
 
         await interaction.response.defer()
-        await SettingsPanel(interaction.user, self.setup_msg).update_view(interaction, message=self.setup_msg)
+        await SettingsPanel(interaction, interaction.user, self.setup_msg).update_view(interaction, message=self.setup_msg)
 
 class ConfigRolesModal(ui.Modal):
     def __init__(self, std_acc, mgm_acc, appeals_acc, staff_roles):
@@ -742,7 +742,7 @@ class ConfigRolesModal(ui.Modal):
         })
 
         await interaction.response.defer()
-        await SettingsPanel(interaction.user, self.setup_msg).update_view(interaction, message=self.setup_msg)
+        await SettingsPanel(interaction, interaction.user, self.setup_msg).update_view(interaction, message=self.setup_msg)
 
 class AddCatModal(ui.Modal):
     def __init__(self):
@@ -818,7 +818,7 @@ class AddCatModal(ui.Modal):
             await send_error(interaction, f"Unable to create category: {e}")
 
         await interaction.response.defer()
-        await SettingsPanel(interaction.user, interaction.message).update_view(interaction, interaction.message)
+        await SettingsPanel(interaction, interaction.user, interaction.message).update_view(interaction, interaction.message)
         
 class DelCatModal(ui.Modal):
     def __init__(self, categories: list[dict]):
@@ -875,7 +875,7 @@ class ResetModal(ui.Modal):
         else:
             await interaction.response.send_message("❌ Reset aborted.")
 
-        await SettingsPanel(interaction.user, self.setup_msg).update_view(interaction, message=self.setup_msg)
+        await SettingsPanel(interaction, interaction.user, self.setup_msg).update_view(interaction, message=self.setup_msg)
 
 class SetDescriptionModal(ui.Modal):
     def __init__(self, default_text: str):
