@@ -891,7 +891,7 @@ class SetDescriptionModal(ui.Modal):
                 default=self.default_text,
                 style=discord.TextStyle.paragraph,
                 min_length=10,
-                max_length=2000,
+                max_length=1024,
                 required=True
             )
         )
