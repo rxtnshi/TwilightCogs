@@ -73,6 +73,7 @@ class Ticket:
         
         await cog.db.create_ticket(self.ticket_id, int(interaction.user.id), int(channel.id), str(category.name), int(role.id), self.open_title, self.open_description)
 
+        ping_msg = None
         if pings_enabled:
             ping_msg = await channel.send(f"{role.mention}", allowed_mentions=discord.AllowedMentions(roles=True))
         
@@ -185,7 +186,8 @@ class Appeal:
             log_view = AppealPanel()
             user_view = AppealPanel()
             user_view.generate('receipt', self.appeal_id, interaction.user, self.account, self.platform, self.reason, self.info, appeal_role)
-            
+            ping_msg = None
+
             if pings_enabled:
                 ping_msg = await appeal_channel.send(f"{appeal_role.mention}", allowed_mentions=discord.AllowedMentions(roles=True))
 
