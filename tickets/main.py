@@ -113,10 +113,16 @@ class tickets(commands.Cog):
                         if not appeal_id:
                             continue
                         
+                        channel = await self.bot.fetch_channel(view_channel_id)
                         confg = self.config.guild(channel.guild)
                         roles = await confg.ticket_roles()
+
                         appeal = await self.db.fetch_appeal(appeal_id)
-                        channel = await self.bot.fetch_channel(view_channel_id)
+                        if not appeal:
+                            await self.db.delete_view(view_id)
+                            self.log.info(f"Deleted {view_type} view with message ID {view_id} as it doesn't exist anymore.")
+                            continue
+
                         appeal_user = await self.bot.fetch_user(appeal.get('appealer_id'))
                         moderated_account = appeal.get('account')
                         moderated_platform = appeal.get('platform')
@@ -143,10 +149,7 @@ class tickets(commands.Cog):
                             appeal_role
                         )
                     case 'ticket-view':
-                        ticket = await self.db.fetch_ticket(view_channel_id)
-                        if not ticket:
-                            continue
-
+                        channel = None
                         try:
                             channel = await self.bot.fetch_channel(view_channel_id)
                         except discord.NotFound:
@@ -154,6 +157,7 @@ class tickets(commands.Cog):
                             self.log.info(f"Deleted {view_type} view with message ID {view_id} as it doesn't exist anymore.")
                             continue
                         
+                        ticket = await self.db.fetch_ticket(view_channel_id)
                         ticket_user = await self.bot.fetch_user(ticket.get('ticket_user'))
                         team_role_id = ticket.get("category_team_id")
 

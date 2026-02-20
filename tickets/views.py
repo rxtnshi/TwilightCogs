@@ -108,7 +108,7 @@ class AppealPanel(ui.LayoutView):
                 container = ui.Container(
                     ui.Section(
                         ui.TextDisplay(f"## 🚨 Appeal `{self.appeal_id}` Submitted"),
-                        ui.TextDisplay(f"{self.appeal_role.mention}\n\nAn appeal was submitted by {self.user.mention}. The information below has been provided and review any available evidence to process this appeal."),
+                        ui.TextDisplay(f"{self.appeal_role.mention if self.appeal_role else None}\n\nAn appeal was submitted by {self.user.mention}. The information below has been provided and review any available evidence to process this appeal."),
                         accessory=discord.ui.Thumbnail(media="https://cdn.rxtnshi.xyz/raw/pending.png")
                     ),
                     ui.TextDisplay("### Moderated Account Info"),
@@ -149,7 +149,7 @@ class DecisionAppeal(ui.LayoutView):
         self.appealer = appealer
 
         decision = f"## ✅ Appeal `{self.appeal_id}` Accepted" if self.accepted is True else f"## 🚫 Appeal `{self.appeal_id}` Rejected"
-        decision_desc = "Your appeal has been accepted. Apologies for the inconvenience." if self.accepted is True else "Unfortunately, your appeal has been rejected. Please review the rejection reason below for further information."
+        decision_desc = "Your appeal has been accepted.\nApologies for the inconvenience." if self.accepted is True else "Unfortunately, your appeal has been rejected. Please review the rejection reason below for further information."
         accent_color = discord.Color.green() if self.accepted is True else discord.Color.red()
         icon = ui.Thumbnail(media="https://cdn.rxtnshi.xyz/raw/approved.png") if self.accepted is True else ui.Thumbnail(media="https://cdn.rxtnshi.xyz/raw/denied.png")
         decision_time = int(datetime.now().timestamp())
@@ -162,7 +162,7 @@ class DecisionAppeal(ui.LayoutView):
                     ui.TextDisplay(f"{decision_desc}"),
                     accessory=icon
                 ),
-                ui.TextDisplay(f"### __Information__"),
+                ui.Separator(visible=True, spacing=discord.SeparatorSpacing.small),
                 ui.TextDisplay(f"**Date Submitted**\n<t:{self.create_time}:F>\n\n"),
                 ui.TextDisplay(f"**Decision Time**\n<t:{decision_time}:F>\n\n"),
                 ui.TextDisplay(f"**The server staff have provided the following reason for this decision:**"),
@@ -173,10 +173,10 @@ class DecisionAppeal(ui.LayoutView):
                 container = ui.Container(
                 ui.Section(
                     ui.TextDisplay(f"{decision}"),
-                    ui.TextDisplay(f"This appeal has been resolved by {staff_member.mention}. The details are below."),
+                    ui.TextDisplay(f"This appeal has been resolved by {staff_member.mention}.\nThe details are below."),
                     accessory=icon
                 ),
-                ui.TextDisplay(f"### __Information__"),
+                ui.Separator(visible=True, spacing=discord.SeparatorSpacing.small),
                 ui.TextDisplay(f"**Appealer**\n{self.appealer.mention}\n\n"),
                 ui.TextDisplay(f"**Staff Member**\n{staff_member.mention}\n\n"),
                 ui.TextDisplay(f"**Date Submitted**\n<t:{self.create_time}:F>\n\n"),
@@ -570,14 +570,14 @@ class AppealDecision(ui.Modal):
                 discord.SelectOption(
                         label="Lack of Evidence",
                         description="The evidence provided is not sufficient to make a decision",
-                        value="The evidence provided is not sufficient to make a decision"
+                        value="The evidence provided is not sufficient to make a decision."
                 )
             )
             options.append(
                 discord.SelectOption(
                     label="Non-appealable Offense",
                     description="This offense is non-appealable",
-                    value="This offense is non-appealable"
+                    value="This offense is non-appealable."
                 )
             )
 
@@ -611,7 +611,7 @@ class AppealDecision(ui.Modal):
         decision = self.decision.lower()
         value = self.prefined_reasons.component.values[0]
         custom_reason = self.reason.component.value
-        reason_text = f"{value} - {custom_reason}" if custom_reason else f"{value}"
+        reason_text = f"{value} Additional information: {custom_reason}" if custom_reason else f"{value}"
 
         if value == "custom-reason":
             if not custom_reason:
