@@ -25,12 +25,11 @@ class TicketInfo(ui.LayoutView):
 
         self.add_item(self.display)
 
-    def set_data(self, author: discord.Member | discord.User, title: str, description: str, ticket_id: str):
+    def set_data(self, author: discord.Member | discord.User, title: str, description: str, ticket_id: str, role: discord.Role):
         container = ui.Container(
             ui.Section(
                 ui.TextDisplay(f"## 🛈 Request Information"),
-                ui.TextDisplay(f"{author.mention} ({author.id}) has created a support ticket.\n\n"),
-                ui.TextDisplay(f"-# Thank you for contacting us. A member of our staff team will get to you shortly."),
+                ui.TextDisplay(f"{role.mention}\n\n{author.mention} ({author.id}) has created a support ticket. Please review the information below or check the ticket logs channel for further information like support history."),
                 accessory=discord.ui.Thumbnail(media="https://cdn.rxtnshi.xyz/raw/hat-kid-wave.gif")
             ),
             ui.TextDisplay("## Title"),
@@ -39,7 +38,8 @@ class TicketInfo(ui.LayoutView):
             ui.TextDisplay(f"{description}"),
             ui.Separator(visible=True, spacing=discord.SeparatorSpacing.small),
             ui.TextDisplay(f"### Action Center"),
-            ui.ActionRow(CloseTicket(ticket_id))
+            ui.ActionRow(CloseTicket(ticket_id)),
+            ui.TextDisplay(f"\n-# Thank you for contacting us. A member of our staff team will get to you shortly.")
         )
         self.add_item(container)
         self.remove_item(self.display)
@@ -52,23 +52,27 @@ class LogInfo(ui.LayoutView):
 
         self.add_item(self.display)
     
-    def set_data(self, author: discord.Member | discord.User, type: str, title: str, description: str, ticket_channel: discord.TextChannel):
+    def set_data(self, author: discord.Member | discord.User, type: str, title: str, description: str, ticket_channel: discord.TextChannel, history: str):
         self.author = author
         self.type = type
         self.title = title
         self.description = description
         self.channel = ticket_channel
+        self.history = history
 
         container = ui.Container(
             ui.Section(
-                ui.TextDisplay(f"## 🚨 New Support Request!"),
-                ui.TextDisplay(f"A new `{self.type}` request was opened by {self.author.mention}. Please review it as soon as possible and notify appropriate staff if needed."),
+                ui.TextDisplay(f"## 🛈 New Support Request!"),
+                ui.TextDisplay(f"A new `{self.type}` request was opened by {self.author.mention}. Please review it as soon as possible and notify appropriate staff if needed. You may also review the support history for this user if there is any."),
                 accessory=discord.ui.Thumbnail(media="https://cdn.rxtnshi.xyz/raw/clipboard.png")
             ),
+            ui.Separator(visible=True, spacing=discord.SeparatorSpacing.small),
             ui.TextDisplay("### Request Title"),
             ui.TextDisplay(f"{self.title}"),
             ui.TextDisplay("### Request Description"),
             ui.TextDisplay(f"{self.description}"),
+            ui.TextDisplay("### Support History"),
+            ui.TextDisplay(f"{self.history}"),
             ui.Separator(visible=True, spacing=discord.SeparatorSpacing.small),
             ui.ActionRow(
                 ui.Button(
@@ -90,20 +94,21 @@ class AppealPanel(ui.LayoutView):
 
         self.add_item(self.display)
 
-    def generate(self, type: str, appeal_id: str, user: discord.Member, moderated_account: str, platform: str, moderated_reason: str, appeal_info: str):
+    def generate(self, type: str, appeal_id: str, user: discord.Member, moderated_account: str, platform: str, moderated_reason: str, appeal_info: str, appeal_role: discord.Role):
         self.appeal_id = appeal_id
         self.user = user
         self.platform = platform
         self.moderated_account = moderated_account
         self.moderated_reason = moderated_reason
         self.appeal_info = appeal_info
+        self.appeal_role = appeal_role
         
         match type:
             case 'log':
                 container = ui.Container(
                     ui.Section(
-                        ui.TextDisplay(f"## 🚨 Appeal `{self.appeal_id}`Submitted"),
-                        ui.TextDisplay(f"An appeal was submitted by {self.user.mention}. The information below has been provided and review any available evidence to process this appeal."),
+                        ui.TextDisplay(f"## 🚨 Appeal `{self.appeal_id}` Submitted"),
+                        ui.TextDisplay(f"{self.appeal_role.mention}\n\nAn appeal was submitted by {self.user.mention}. The information below has been provided and review any available evidence to process this appeal."),
                         accessory=discord.ui.Thumbnail(media="https://cdn.rxtnshi.xyz/raw/pending.png")
                     ),
                     ui.TextDisplay("### Moderated Account Info"),
@@ -118,7 +123,7 @@ class AppealPanel(ui.LayoutView):
             case 'receipt':
                 container = ui.Container(
                     ui.Section(
-                        ui.TextDisplay(f"## 🚨 Appeal `{self.appeal_id}`Submitted"),
+                        ui.TextDisplay(f"## 🚨 Appeal `{self.appeal_id}` Submitted"),
                         ui.TextDisplay(f"Your appeal has been submitted to staff and is now in review. Please allow up to **3-5 business days** for the server staff to process your appeal. Attempts to make several appeals will result in a blacklist from the system and your appeal will be rejected."),
                         accessory=discord.ui.Thumbnail(media="https://cdn.rxtnshi.xyz/raw/pending.png")
                     ),
@@ -190,13 +195,13 @@ class SupportPanel(ui.LayoutView):
 
         self.add_item(self.display)
     
-    def generate(self, guild: discord.Guild, description: str | None, categories: list[dict], appeals_enabled: bool, tickets_enabled: bool, panel_channel: int):
-        self.guild = guild
+    def generate(self, title: str, description: str | None, categories: list[dict], appeals_enabled: bool, tickets_enabled: bool, panel_channel: int):
+        self.title = title
         self.description = description
 
         container = ui.Container(
             ui.Section(
-                ui.TextDisplay(f"## 📫 {self.guild}'s Support Center"),
+                ui.TextDisplay(f"## {self.title if self.title else  '📥 Support Center'}"),
                 ui.TextDisplay(f"{f'{self.description}' if self.description else 'Please be respectful when contacting staff!'}"),
                 accessory=ui.Thumbnail(media="https://cdn.rxtnshi.xyz/raw/hat-kid-idle.gif"),
             ),
@@ -281,8 +286,11 @@ class SettingsPanel(ui.LayoutView):
         if panel_ch:
             panel_msg_id = panel_cfg.get("message_id")
             if panel_msg_id:
-                panel_msg = await panel_ch.fetch_message(panel_msg_id)
-                panel_link = panel_msg.jump_url
+                try:
+                    panel_msg = await panel_ch.fetch_message(panel_msg_id)
+                    panel_link = panel_msg.jump_url
+                except Exception:
+                    panel_link = None
     
         container = ui.Container(
             ui.Section(
@@ -381,7 +389,7 @@ class LogsReceipt(ui.LayoutView):
 
         container = ui.Container(
             ui.Section(
-                ui.TextDisplay(f"## 🗒️ Transcript for {self.title}"),
+                ui.TextDisplay(f"## 🗒️ Transcript for `{self.title}`"),
                 ui.TextDisplay(f"Here is the transcript for `{self.title}`. The ticket information can be found below."),
                 accessory=ui.Thumbnail(media="https://cdn.rxtnshi.xyz/raw/clipboard.png"),
             ),
@@ -878,10 +886,24 @@ class ResetModal(ui.Modal):
         await SettingsPanel(interaction, interaction.user, self.setup_msg).update_view(interaction, message=self.setup_msg)
 
 class SetDescriptionModal(ui.Modal):
-    def __init__(self, default_text: str):
+    def __init__(self, default_title: str, default_text: str):
         super().__init__(title=f"Setting Description", timeout=None)
 
+        self.default_title = default_title
         self.default_text = default_text
+
+        self.description_title = ui.Label(
+            text="Create/Edit Title",
+            description="Set title to be displayed in the ticket panel",
+            component=ui.TextInput(
+                placeholder="Set your title here!",
+                default=self.default_title,
+                style=discord.TextStyle.short,
+                min_length=10,
+                max_length=100,
+                required=True
+            )
+        )
 
         self.description_text = ui.Label(
             text="Create/Edit Description",
@@ -891,11 +913,12 @@ class SetDescriptionModal(ui.Modal):
                 default=self.default_text,
                 style=discord.TextStyle.paragraph,
                 min_length=10,
-                max_length=1024,
+                max_length=2000,
                 required=True
             )
         )
 
+        self.add_item(self.description_title)
         self.add_item(self.description_text)
 
     async def on_submit(self, interaction: discord.Interaction):
@@ -908,10 +931,13 @@ class SetDescriptionModal(ui.Modal):
         try:
             await confg.panel_cfg.set({
                 **panel_cfg,
+                "title": self.description_title.component.value,
                 "description": self.description_text.component.value
             })
-            
-            await send_success(interaction, f"New description set:\n\n ```{self.description_text.component.value}```")
+            if interaction.response.is_done():
+                await interaction.followup.send(f">>> __**`✅ Successfully set Title and Description!`**__\n\n**Title:** {self.description_title.component.value}\n**Description:** {self.description_text.component.value}")
+            else:
+                await interaction.response.send_message(f">>> __**`✅ Successfully set Title and Description!`**__\n{self.description_title.component.value}\n\n{self.description_text.component.value}")
         except Exception as e:
             await send_error(interaction, f"{e}")
 
@@ -1190,6 +1216,7 @@ class SendPanel(ui.Button):
             return
         
         channel = await interaction.guild.fetch_channel(channel_id)
+        title = panel_cfg.get("title")
         description = panel_cfg.get("description")
         panel_msg_id =  panel_cfg.get("message_id")
 
@@ -1204,7 +1231,7 @@ class SendPanel(ui.Button):
         
         try:
             msg = await channel.send(view=view)
-            view.generate(interaction.guild, description, categories, appeals_enabled, tickets_enabled, channel_id)
+            view.generate(title, description, categories, appeals_enabled, tickets_enabled, channel_id)
             await msg.edit(view=view)
             await cog.db.save_view('support-panel', channel_id, msg.id)
         except Exception as e:
@@ -1224,20 +1251,27 @@ class ResetConfig(ui.Button):
 
 class SetDescription(ui.Button):
     def __init__(self):
-        super().__init__(label="🗒️ Set Description", style=discord.ButtonStyle.primary, custom_id="set-gl-button")
+        super().__init__(label="🗒️ Set Title/Desc", style=discord.ButtonStyle.primary, custom_id="set-gl-button")
 
     async def callback(self, interaction: discord.Interaction):
         cog = interaction.client.get_cog("tickets")
         confg = cog.config.guild(interaction.guild)
 
         panel_cfg = await confg.panel_cfg()
+        title = panel_cfg.get("title")
         description = panel_cfg.get("description")
-        text = ""
+        title_text = ""
+        desc_text = ""
+
+        if title:
+            title_text = title
+        else:
+            title_text = "No title has been set. Delete and make your own!"
 
         if description:
-            text = description
+            desc_text = description
         else:
-            text = "No panel description has been set. Please delete this and create your own. Discord Markdown is supported!"
+            desc_text = "No panel description has been set. Please delete this and create your own. Discord Markdown is supported!"
 
-        modal = SetDescriptionModal(text)
+        modal = SetDescriptionModal(title_text, desc_text)
         await interaction.response.send_modal(modal)

@@ -44,20 +44,46 @@ class Ticket:
             overwrites=overwrites
         )
 
+        history = await cog.db.fetch_ticket_history(interaction.user.id) or None
+        history_text = ""
+
+        if history:
+            ticket_history = []
+            for ticket in history:
+                ticket_id = ticket.get('ticket_id')
+                log_message_id = ticket.get('log_message_id')
+                status = ticket.get('is_open')
+                status_txt = 'Open' if status else 'Closed'
+
+                try:
+                    log_msg = await log_ch.fetch_message(log_message_id)
+                    msg_link = log_msg.jump_url
+                    ticket_history.append(f"[`{ticket_id} - {status_txt}`]({msg_link})")
+                except Exception:
+                    cog.log.warning(f"Unable to find message ID {log_message_id} in the ticket logs channel. Ticket {ticket_id} will not have a link.")
+                    ticket_history.append(f"`{ticket_id} - {status_txt} (Log message not found!)`")
+
+            history_text = "\n".join(ticket_history)
+        else:
+            history_text = "No ticket history was found for this user!"
+
         ticket_view = TicketInfo()
         log_view = LogInfo()
-        log_view.set_data(interaction.user, self.cat_name, self.open_title, self.open_description, channel)
+        log_view.set_data(interaction.user, self.cat_name, self.open_title, self.open_description, channel, history_text)
         
-        await cog.db.create_ticket(self.ticket_id, int(interaction.user.id), int(channel.id), str(category.name), self.open_title, self.open_description)
+        await cog.db.create_ticket(self.ticket_id, int(interaction.user.id), int(channel.id), str(category.name), int(role.id), self.open_title, self.open_description)
 
         if pings_enabled:
-            await channel.send(f"{role.mention}", allowed_mentions=discord.AllowedMentions(roles=True))
+            ping_msg = await channel.send(f"{role.mention}", allowed_mentions=discord.AllowedMentions(roles=True))
         
         user_msg = await channel.send(view=ticket_view)
 
         await cog.db.save_view('ticket-view', channel.id, user_msg.id)
-        ticket_view.set_data(interaction.user, self.open_title, self.open_description, self.ticket_id)
-        await user_msg.edit(view=ticket_view, allowed_mentions=discord.AllowedMentions(users=False))
+        ticket_view.set_data(interaction.user, self.open_title, self.open_description, self.ticket_id, role)
+        
+        if ping_msg:
+            await ping_msg.delete()
+        await user_msg.edit(view=ticket_view, allowed_mentions=discord.AllowedMentions(users=False, roles=True))
 
         await log_ch.send(view=log_view, allowed_mentions=discord.AllowedMentions(users=False))
         await send_success(interaction, f"Your ticket has been successfully created. You may access it at {channel.mention}.", True)
@@ -82,13 +108,14 @@ class Ticket:
         close_reason = reason
 
         user_id = ticket.get("ticket_user")
+        ticket_id = ticket.get("ticket_id")
         user = None
 
         if user_id:
             user = interaction.guild.get_member(user_id)
         
         try:
-            user_receipt, log_receipt = await Ticket.gen_transcript(interaction, channel)
+            user_receipt, log_receipt = await Ticket.gen_transcript(interaction, channel, ticket_id)
 
             user_view = Receipt()
             user_view.set_data(interaction.channel.name, user, interaction.user, open_reason, close_reason, open_time, close_time)
@@ -116,7 +143,7 @@ class Ticket:
         except Exception as e:
             return await send_error(interaction, f"Failed to delete the channel: `{e}`")
         
-    async def gen_transcript(interaction: discord.Interaction, channel: discord.TextChannel):
+    async def gen_transcript(interaction: discord.Interaction, channel: discord.TextChannel, ticket_id: str):
         cog = interaction.client.get_cog("tickets")
 
         transcript = await chat_exporter.export(
@@ -129,8 +156,8 @@ class Ticket:
         if transcript is None:
             return await send_error(interaction, "Unable to generate transcript.")
         
-        user_receipt = discord.File(io.BytesIO(transcript.encode()), filename=f"transcript.html")
-        log_receipt = discord.File(io.BytesIO(transcript.encode()), filename=f"transcript.html")
+        user_receipt = discord.File(io.BytesIO(transcript.encode()), filename=f"transcript-{ticket_id}.html")
+        log_receipt = discord.File(io.BytesIO(transcript.encode()), filename=f"transcript-{ticket_id}.html")
 
         return user_receipt, log_receipt
 
@@ -157,14 +184,17 @@ class Appeal:
         try:
             log_view = AppealPanel()
             user_view = AppealPanel()
-            user_view.generate('receipt', self.appeal_id, interaction.user, self.account, self.platform, self.reason, self.info)
+            user_view.generate('receipt', self.appeal_id, interaction.user, self.account, self.platform, self.reason, self.info, appeal_role)
             
             if pings_enabled:
-                await appeal_channel.send(f"{appeal_role.mention}", allowed_mentions=discord.AllowedMentions(roles=True))
+                ping_msg = await appeal_channel.send(f"{appeal_role.mention}", allowed_mentions=discord.AllowedMentions(roles=True))
 
             msg = await appeal_channel.send(view=log_view)
-            log_view.generate('log', self.appeal_id, interaction.user, self.account, self.platform, self.reason, self.info)
-            await msg.edit(view=log_view, allowed_mentions=discord.AllowedMentions(users=False))
+            log_view.generate('log', self.appeal_id, interaction.user, self.account, self.platform, self.reason, self.info, appeal_role)
+
+            if ping_msg:
+                await ping_msg.delete()
+            await msg.edit(view=log_view, allowed_mentions=discord.AllowedMentions(users=False, roles=True))
 
             await interaction.user.send(view=user_view)
 

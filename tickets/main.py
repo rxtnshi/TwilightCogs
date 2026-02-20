@@ -34,6 +34,7 @@ class tickets(commands.Cog):
 			},
 			"panel_cfg": {
 				"channel": None,
+                "title": None,
                 "description": None,
 				"message_id": None,
 			}
@@ -89,10 +90,18 @@ class tickets(commands.Cog):
                         tickets_enabled = await confg.tickets_enabled()
                         appeals_enabled = await confg.appeals_enabled()
                         categories = await self.db.list_categories() or []
+                        title = panel_cfg.get("title")
                         description = panel_cfg.get("description")
 
+                        try:
+                            await channel.fetch_message(view_id)
+                        except discord.NotFound:
+                            await self.db.delete_view(view_id)
+                            self.log.info(f"Deleted {view_type} view with message ID {view_id} as it doesn't exist anymore.")
+                            continue
+
                         vieww = views.SupportPanel().generate(
-                            channel.guild,
+                            title,
                             description,
                             categories,
                             appeals_enabled,
@@ -104,6 +113,8 @@ class tickets(commands.Cog):
                         if not appeal_id:
                             continue
                         
+                        confg = self.config.guild(channel.guild)
+                        roles = await confg.ticket_roles()
                         appeal = await self.db.fetch_appeal(appeal_id)
                         channel = await self.bot.fetch_channel(view_channel_id)
                         appeal_user = await self.bot.fetch_user(appeal.get('appealer_id'))
@@ -111,6 +122,8 @@ class tickets(commands.Cog):
                         moderated_platform = appeal.get('platform')
                         moderated_reason = appeal.get('reason')
                         appeal_info = appeal.get('appeal_info')
+                        appeal_role_id = roles.get("appeals_access")
+                        appeal_role = channel.guild.get_role(appeal_role_id)
 
                         try:
                             await channel.fetch_message(view_id)
@@ -126,13 +139,14 @@ class tickets(commands.Cog):
                             moderated_account,
                             moderated_platform,
                             moderated_reason,
-                            appeal_info
+                            appeal_info,
+                            appeal_role
                         )
                     case 'ticket-view':
                         ticket = await self.db.fetch_ticket(view_channel_id)
                         if not ticket:
                             continue
-                        
+
                         try:
                             channel = await self.bot.fetch_channel(view_channel_id)
                         except discord.NotFound:
@@ -141,18 +155,27 @@ class tickets(commands.Cog):
                             continue
                         
                         ticket_user = await self.bot.fetch_user(ticket.get('ticket_user'))
+                        team_role_id = ticket.get("category_team_id")
 
-                        vieww = views.TicketInfo().set_data(
-                            ticket_user,
-                            ticket.get('title'),
-                            ticket.get('description'),
-                            ticket.get('ticket_id')
-                        )
+                        try:
+                            team_role = channel.guild.get_role(team_role_id)
+                            vieww = views.TicketInfo().set_data(
+                                ticket_user,
+                                ticket.get('title'),
+                                ticket.get('description'),
+                                ticket.get('ticket_id'),
+                                team_role
+                            )
+                        except Exception:
+                            self.log.error(f"Unable to find the team role for ticket {ticket.get('ticket_id')}. Skipping.")
+                            continue
                 try:
                     self.bot.add_view(vieww, message_id=view_id)
                     self.log.info(f"Loaded {view_type} view from message {view_id}")
                 except Exception as e:
                     self.log.error(f"Unable to load view with message id {view_id}: {e}")
+        
+        self.log.info("Loaded all views!")
 
     staff = app_commands.Group(name="staff", description="Staff commands", guild_only=True)
     ticket = app_commands.Group(name="ticket", description="Ticket commands", guild_only=True)
@@ -377,11 +400,15 @@ class tickets(commands.Cog):
                 if status:
                     ticket_history.append(f"[`{ticket_id} - {status_txt}`]({ch_url})")
                 else:
-                    log_msg = await log_ch.fetch_message(log_message_id)
-                    msg_link = log_msg.jump_url
-                    ticket_history.append(f"[`{ticket_id} - {status_txt}`]({msg_link})")
+                    try:
+                        log_msg = await log_ch.fetch_message(log_message_id)
+                        msg_link = log_msg.jump_url
+                        ticket_history.append(f"[`{ticket_id} - {status_txt}`]({msg_link})")
+                    except Exception:
+                        self.log.warning(f"Unable to find message ID {log_message_id} in the ticket logs channel. Ticket {ticket_id} will not have a link.")
+                        ticket_history.append(f"`{ticket_id} - {status_txt} (Log message not found!)`")
 
-            history_text = ", ".join(ticket_history)
+            history_text = "\n".join(ticket_history)
         else:
             history_text = "No ticket history was found for this user!"
 

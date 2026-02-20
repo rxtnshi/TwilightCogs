@@ -19,6 +19,7 @@ class db:
                     ticket_user INTEGER,
                     ticket_channel_id INTEGER,
                     category_type TEXT,
+                    category_team_id INT,
                     is_open BOOLEAN DEFAULT TRUE,
                     open_time REAL,
                     close_time REAL,
@@ -70,15 +71,15 @@ class db:
             """)
             await db.commit()
 
-    async def create_ticket(self, unique_id: str, ticket_user_id: int, ticket_channel_id: int, category_type: str, ticket_title: str, ticket_description: str):
+    async def create_ticket(self, unique_id: str, ticket_user_id: int, ticket_channel_id: int, category_type: str, category_team_id: int, ticket_title: str, ticket_description: str):
         open_time = int(datetime.now().timestamp())
 
         async with aiosqlite.connect(self.db_path) as db:
             try:
-                await db.execute("INSERT INTO ticket_history (unique_id, ticket_user, ticket_channel_id, category_type, open_time, ticket_title, ticket_description) VALUES (?, ?, ?, ?, ?, ?, ?)", (unique_id, ticket_user_id, ticket_channel_id, category_type, open_time, ticket_title, ticket_description,))
+                await db.execute("INSERT INTO ticket_history (unique_id, ticket_user, ticket_channel_id, category_type, category_team_id, open_time, ticket_title, ticket_description) VALUES (?, ?, ?, ?, ?, ?, ?, ?)", (unique_id, ticket_user_id, ticket_channel_id, category_type, category_team_id, open_time, ticket_title, ticket_description,))
                 await db.commit()
 
-                log.info(f"Created a {category_type} ticket for {ticket_user_id}: {ticket_title} - {ticket_description}")
+                log.info(f"Created a {category_type} (team: {category_team_id}) ticket for {ticket_user_id}")
             except Exception as e:
                 log.error(f"Unable to create a {category_type} ticket for {ticket_user_id}: {e}")
 
@@ -108,7 +109,7 @@ class db:
     async def fetch_ticket(self, channel: int):
         async with aiosqlite.connect(self.db_path) as db:
             try:
-                cursor = await db.execute("SELECT unique_id, ticket_user, ticket_channel_id, category_type, is_open, open_time, close_time, ticket_title, ticket_description, closed_by, close_reason FROM ticket_history WHERE ticket_channel_id = ?", (channel,))
+                cursor = await db.execute("SELECT unique_id, ticket_user, ticket_channel_id, category_type, category_team_id, is_open, open_time, close_time, ticket_title, ticket_description, closed_by, close_reason FROM ticket_history WHERE ticket_channel_id = ?", (channel,))
                 results = await cursor.fetchone()
                 await cursor.close()
 
@@ -117,13 +118,14 @@ class db:
                     "ticket_user": results[1],
                     "ticket_channel": results[2],
                     "category_type": results[3],
-                    "is_open": results[4],
-                    "open_time": results[5],
-                    "close_time": results[6],
-                    "title": results[7],
-                    "description": results[8],
-                    "closed_by": results[9],
-                    "close_reason": results[10],
+                    "category_team_id": results[4],
+                    "is_open": results[5],
+                    "open_time": results[6],
+                    "close_time": results[7],
+                    "title": results[8],
+                    "description": results[9],
+                    "closed_by": results[10],
+                    "close_reason": results[11],
                 }
             except Exception as e:
                 log.error(f"Can't fetch ticket opener: {e}")
