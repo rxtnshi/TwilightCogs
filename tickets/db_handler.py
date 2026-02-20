@@ -43,7 +43,8 @@ class db:
                     decision_time REAL,
                     decision_option TEXT,
                     decision_reason TEXT,
-                    decision_staff_id INTEGER
+                    decision_staff_id INTEGER,
+                    log_message_id INTEGER
                 )
             """)
             await db.execute("""
