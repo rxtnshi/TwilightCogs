@@ -21,6 +21,9 @@ class Ticket:
     async def create(self, interaction: discord.Interaction, category: discord.CategoryChannel):
         from .views import TicketInfo, LogInfo
 
+        if not interaction.response.is_done():
+            await interaction.response.defer(thinking=True, ephemeral=True)
+
         cog = interaction.client.get_cog("tickets")
         confg = cog.config.guild(interaction.guild)
 
@@ -92,6 +95,9 @@ class Ticket:
     async def close(self, interaction: discord.Interaction, reason: str):
         from .views import LogsReceipt, Receipt
 
+        if not interaction.response.is_done():
+            await interaction.response.defer(thinking=True)
+
         cog = interaction.client.get_cog("tickets")
         confg = cog.config.guild(interaction.guild)
         
@@ -110,6 +116,7 @@ class Ticket:
 
         user_id = ticket.get("ticket_user")
         ticket_id = ticket.get("ticket_id")
+        team_role_id = ticket.get("category_team_id")
         user = None
 
         if user_id:
@@ -136,8 +143,14 @@ class Ticket:
             time_float = int(datetime.now().timestamp() + 10)
             closed = await cog.db.close_ticket(int(interaction.channel.id), int(interaction.user.id), reason, msg.id)
             if not closed:
-                return await send_error(interaction, "No open ticket found for this channel. Please make sure you're running this command in an active ticket channel.")
-
+                return await send_error(interaction, "No open ticket found for this channel in the database. Please make sure you're running this command in an active ticket channel. You may need to go into the database file to mark as open if this is a valid ticket channel.")
+            
+            overwrites = {
+                interaction.user: discord.PermissionOverwrite(view_channel=True, send_messages=False),
+                discord.utils.get(interaction.guild.roles, id=team_role_id): discord.PermissionOverwrite(view_channel=True, send_messages=False)
+            }
+            await interaction.channel.edit(overwrites=overwrites, reason=f"Ticket {ticket_id} marked for closure")
+            
             await send_success(interaction, f"⌛ Closing the ticket and creating a transcript.\nThis channel will be deleted <t:{time_float}:R>.")
             await asyncio.sleep(10)
             await interaction.channel.delete(reason="Ticket channel deleted because it was closed")
@@ -172,6 +185,10 @@ class Appeal:
 
     async def create(self, interaction: discord.Interaction):
         from .views import AppealPanel
+
+        if not interaction.response.is_done():
+            await interaction.response.defer(thinking=True, ephemeral=True)
+        
         cog = interaction.client.get_cog("tickets")
         confg = cog.config.guild(interaction.guild)
         channels = await confg.ticket_channels()
@@ -209,6 +226,10 @@ class Appeal:
 
     async def close(self, interaction: discord.Interaction, accepted: bool, reason: str, a_id: str, user: discord.Member | discord.User):
         from .views import DecisionAppeal
+
+        if not interaction.response.is_done():
+            await interaction.response.defer(thinking=True)
+        
         self.accepted = accepted
         self.reason = reason
         self.a_id = a_id
