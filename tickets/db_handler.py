@@ -128,7 +128,7 @@ class db:
                     "close_reason": results[11],
                 }
             except Exception as e:
-                log.error(f"Can't fetch ticket opener: {e}")
+                log.error(f"Can't fetch ticket from channel id {channel}: {e}")
 
     async def fetch_ticket_history(self, user: int):
         async with aiosqlite.connect(self.db_path) as db:

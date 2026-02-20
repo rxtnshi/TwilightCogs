@@ -473,9 +473,10 @@ class CloseTicketQuestionaire(ui.Modal):
     async def on_submit(self, interaction: discord.Interaction):
         reason = self.reason.component.value
         view = ui.LayoutView.from_message(interaction.message)
-        await Ticket.close(self, interaction, reason)
         for child in view.children:
             disable_all(child)
+        await interaction.message.edit(view=view)
+        await Ticket.close(self, interaction, reason)
 
 class OpenAppeal(ui.Modal):
     def __init__(self):
@@ -1062,7 +1063,8 @@ class TicketSelectMenu(ui.Select):
 
         cog = interaction.client.get_cog("tickets")
         confg = cog.config.guild(interaction.guild)
-        status = await confg.tickets_enabled()
+        tickets_status = await confg.tickets_enabled()
+        appeals_status = await confg.appeals_enabled()
         ch = await confg.ticket_channels()
         l_ch = interaction.guild.get_channel(ch.get('logs_channel')) if ch.get('logs_channel') else None
 
@@ -1074,15 +1076,8 @@ class TicketSelectMenu(ui.Select):
             await interaction.message.edit(view=self.view)
             return await send_blocked(interaction, "You're forbidden from using the ticket system. If you believe this is an error, please contact server management. You are unable to use the ticket system's appeal feature for this.", True)
 
-        if status:
-            check_dup = await cog.db.existing_check("ticket", interaction.user.id)
-            if check_dup:
-                channel = interaction.guild.get_channel(check_dup)
-
-                await interaction.message.edit(view=self.view)
-                return await send_blocked(interaction, f"You already have an existing ticket open! You can access it here: {channel.mention}", True)
-            
-            if select_value == "appeals":
+        if select_value == "appeals":
+            if appeals_status:
                 check_dup = await cog.db.existing_check("appeal", interaction.user.id)
                 if check_dup:
                     await interaction.message.edit(view=self.view)
@@ -1091,6 +1086,20 @@ class TicketSelectMenu(ui.Select):
                 await interaction.message.edit(view=self.view)
                 return await interaction.response.send_modal(OpenAppeal())
             else:
+                if l_ch:
+                    await l_ch.send(f"{interaction.user.mention} ({interaction.user.id}) tried opening an appeal but was blocked due to the support system not accepting appeals.")
+
+                await interaction.message.edit(view=self.view)
+                return await send_blocked(interaction, "Sorry, our support system isn't accepting appeals at the moment. Please check back later.", True)
+        else:
+            if tickets_status:
+                check_dup = await cog.db.existing_check("ticket", interaction.user.id)
+                if check_dup:
+                    channel = interaction.guild.get_channel(check_dup)
+                    if channel and channel.category_id == int(select_value):
+                        await interaction.message.edit(view=self.view)
+                        return await send_blocked(interaction, f"You already have an existing ticket open! You can access it here: {channel.mention}", True)
+                
                 category_check = await cog.db.fetch_category(int(select_value))
                 if not category_check:
                     return await send_error(interaction, "This category no longer exists. Please contact staff an alternative way.", True)
@@ -1100,13 +1109,13 @@ class TicketSelectMenu(ui.Select):
 
                 await interaction.message.edit(view=self.view)
                 await interaction.response.send_modal(modal)
-        else:
-            if l_ch:
-                await l_ch.send(f"{interaction.user.mention} ({interaction.user.id}) tried opening a ticket but was blocked due to the support system being offline.")
+            else:
+                if l_ch:
+                    await l_ch.send(f"{interaction.user.mention} ({interaction.user.id}) tried opening a ticket but was blocked due to the support system being closed.")
 
-            await interaction.message.edit(view=self.view)
-            return await send_blocked(interaction, "Sorry, our support system is currently closed at the moment. Please check back later.", True)
-
+                await interaction.message.edit(view=self.view)
+                return await send_blocked(interaction, "Sorry, our support system is closed at the moment. Please check back later.", True)
+            
 # -- Buttons -- #
 class CloseTicket(ui.Button):
     def __init__(self, ticket_id):
@@ -1118,7 +1127,7 @@ class CloseTicket(ui.Button):
         if not check:
             return await send_blocked(interaction, "You're not permitted to close this ticket. Please contact server staff to close your ticket.", True)
         await interaction.response.send_modal(CloseTicketQuestionaire(interaction.channel))
-        
+         
 class ConfigRoles(ui.Button):
     def __init__(self):
         super().__init__(label="⚙️ Configure Roles", style=discord.ButtonStyle.primary, custom_id="config-roles-button")
