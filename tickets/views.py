@@ -1066,7 +1066,7 @@ class TicketSelectMenu(ui.Select):
         tickets_status = await confg.tickets_enabled()
         appeals_status = await confg.appeals_enabled()
         ch = await confg.ticket_channels()
-        l_ch = interaction.guild.get_channel(ch.get('logs_channel')) if ch.get('logs_channel') else None
+        l_ch = interaction.guild.get_channel(ch.get('log_channel')) if ch.get('log_channel') else None
 
         blacklist_check = await cog.db.fetch_blacklist(int(interaction.user.id))
         if blacklist_check:
