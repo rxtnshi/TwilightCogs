@@ -134,7 +134,7 @@ class db:
     async def fetch_ticket_history(self, user: int):
         async with aiosqlite.connect(self.db_path) as db:
             try:
-                cursor = await db.execute("SELECT unique_id, ticket_channel_id, log_message_id FROM ticket_history WHERE ticket_user = ?", (user,))
+                cursor = await db.execute("SELECT unique_id, ticket_channel_id, log_message_id, is_open FROM ticket_history WHERE ticket_user = ?", (user,))
                 results = await cursor.fetchall()
 
                 if results:
@@ -142,7 +142,8 @@ class db:
                         {
                             "ticket_id": result[0],
                             "ticket_channel": result[1],
-                            "log_message_id": result[2]
+                            "log_message_id": result[2],
+                            "is_open": result[3]
                         } for result in results
                     ]
                 
@@ -223,10 +224,10 @@ class db:
                         log.warning(f"Found appeal {result[0]} in DB but something happened: {e}")
                         raise Exception(f"Found appeal {result[0]} in DB but something happened: {e}")
                 else:
-                    log.error(f"Unable to find appeal {result[0]} in DB")
+                    log.error(f"Unable to find appeal with log_message_id {log_message_id} in DB")
             except Exception as e:
-                log.error(f"Unable to close appeal {result[0]} in DB: {e}")
-                raise Exception(f"Unable to close appeal {result[0]} in DB: {e}")
+                log.error(f"Unable to close appeal with log_message_id {log_message_id} in DB: {e}")
+                raise Exception(f"Unable to close appeal with log_message_id {log_message_id} in DB: {e}")
 
     async def fetch_appeal(self, target: str):
         async with aiosqlite.connect(self.db_path) as db:
@@ -380,9 +381,9 @@ class db:
                 result = await cursor.fetchone()
 
                 if result:
-                    await db.execute("DELETE FROM saved_views WHERE message_id = ?", (message_id,))
+                    await db.execute("DELETE FROM saved_views WHERE message_id = ?", (result[0],))
                     await db.commit()
-                    log.info(f"Deleted {view_type} view with message id {message_id} since a duplicate entry was found.")
+                    log.info(f"Deleted {view_type} view with message id {result[0]} since a duplicate entry was found.")
             
             try:
                 match view_type:

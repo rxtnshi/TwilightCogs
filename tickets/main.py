@@ -327,24 +327,21 @@ class tickets(commands.Cog):
                 match type:
                     case "tickets":
                         if not tickets_status:
-                            new_tickets_status = not tickets_status
-                            await confg.tickets_enabled.set(new_tickets_status)
+                            await confg.tickets_enabled.set(True)
 
                             return await send_success(interaction, f"The ticket system is now **`enabled`**! Please resend the support panel using `/ticket setup` to close tickets.")
                         else:
                             return await send_blocked(interaction, "This option is already enabled!", True)
                     case "appeals":
                         if not appeals_status:
-                            new_appeals_status = not appeals_status
-                            await confg.appeals_enabled.set(new_appeals_status)
+                            await confg.appeals_enabled.set(True)
 
                             return await send_success(interaction, f"The appeal system is now **`enabled`**! Please resend the support panel using `/ticket setup` to close appeals.")
                         else:
                             return await send_blocked(interaction, "This option is already enabled!", True)
                     case "staff-pings":
                         if not pings_status:
-                            new_ping_status = not pings_status
-                            await confg.pings_enabled.set(new_ping_status)
+                            await confg.pings_enabled.set(True)
 
                             return await send_success(interaction, f"Staff pings is now **`enabled`**!.")
                         else:
@@ -353,24 +350,21 @@ class tickets(commands.Cog):
                 match type:
                     case "tickets":
                         if tickets_status:
-                            new_tickets_status = not tickets_status
-                            await confg.tickets_enabled.set(new_tickets_status)
+                            await confg.tickets_enabled.set(False)
 
                             return await send_success(interaction, f"The ticket system is now **`disabled`**! Please resend the support panel using `/ticket setup` to close tickets.")
                         else:
                             return await send_blocked(interaction, "This option is already disabled!", True)
                     case "appeals":
                         if appeals_status:
-                            new_appeals_status = not appeals_status
-                            await confg.appeals_enabled.set(new_appeals_status)
+                            await confg.appeals_enabled.set(False)
 
                             return await send_success(interaction, f"The appeal system is now **`disabled`**! Please resend the support panel using `/ticket setup` to close appeals.")
                         else:
                             return await send_blocked(interaction, "This option is already disabled!", True)
                     case "staff-pings":
                         if pings_status:
-                            new_ping_status = not pings_status
-                            await confg.pings_enabled.set(new_ping_status)
+                            await confg.pings_enabled.set(False)
 
                             return await send_success(interaction, f"Staff pings is now **`disabled`**!")
                         else:
@@ -386,7 +380,7 @@ class tickets(commands.Cog):
         log_ch_id = channels.get('log_channel')
         log_ch = interaction.guild.get_channel(log_ch_id)
 
-        history = await self.db.fetch_ticket_history(user.id) or None
+        history = await self.db.fetch_ticket_history(user.id)
         history_text = ""
 
         if history:
