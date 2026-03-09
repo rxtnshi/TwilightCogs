@@ -192,7 +192,7 @@ class GiveawayModal(discord.ui.Modal):
         seconds = CreateGiveaway.parse_duration(duration)
 
         if self.ga_channel and self.ga_channel.component.values:
-            ga_channel_id = int(self.ga_channel.component.values[0])
+            ga_channel_id = self.ga_channel.component.values[0].id
         else:
             ga_channel_id = interaction.channel.id
 
