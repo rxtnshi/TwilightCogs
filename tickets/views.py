@@ -228,8 +228,8 @@ class SettingsPanel(ui.LayoutView):
     async def interaction_check(self, interaction: discord.Interaction):
         if interaction.user and interaction.user.id == self.author:
             return True
-        else:
-            return False, await send_blocked(interaction, "Only the person who initiated this command can change the settings.", True)
+        await send_blocked(interaction, "Only the person who initiated this command can change the settings.", True)
+        return False
         
     async def on_timeout(self): 
         for child in self.children:
@@ -882,7 +882,7 @@ class ResetModal(ui.Modal):
             await send_success(interaction, "The config was reset.")
             cog.log.info("TicketSystem settings (config) was reset.")
         else:
-            await interaction.response.send_message("❌ Reset aborted.")
+            await interaction.followup.send("❌ Reset aborted.")
 
         await SettingsPanel(interaction, interaction.user, self.setup_msg).update_view(interaction, message=self.setup_msg)
 
@@ -1035,7 +1035,7 @@ class TicketSelectMenu(ui.Select):
             discord.SelectOption(
                 label=c["title"],
                 value=str(c["category_id"]),
-                description=c.get("description" or "No description")
+                description=c.get("description") or "No description"
             )
             for c in categories
         ]

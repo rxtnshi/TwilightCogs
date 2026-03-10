@@ -47,7 +47,7 @@ class Ticket:
             overwrites=overwrites
         )
 
-        history = await cog.db.fetch_ticket_history(interaction.user.id) or None
+        history = await cog.db.fetch_ticket_history(interaction.user.id)
         history_text = ""
 
         if history:
